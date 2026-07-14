@@ -22,8 +22,12 @@ export const Navigation: React.FC<NavigationProps> = ({ currentTab, setCurrentTa
     <>
       {/* Mobile Top Header (hidden on desktop) */}
       <header className="app-header">
-        <div className="brand-title">
-          DeV Fit<span className="brand-dot">.</span>
+        <div className="brand-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <img 
+            src="/logo_no_bg.png" 
+            alt="DeV Fit" 
+            style={{ height: '28px', width: 'auto', objectFit: 'contain' }} 
+          />
         </div>
         <div className="header-actions">
           {activeWorkout && (
@@ -51,8 +55,12 @@ export const Navigation: React.FC<NavigationProps> = ({ currentTab, setCurrentTa
       {/* Sidebar (Desktop) / Bottom Nav (Mobile) */}
       <nav className="bottom-nav">
         {/* Brand title inside sidebar - visible only on desktop */}
-        <div className="brand-title desktop-only-logo" style={{ margin: '0 0 24px 20px', fontSize: '1.8rem', display: 'block' }}>
-          DeV Fit<span className="brand-dot">.</span>
+        <div className="brand-title desktop-only-logo" style={{ margin: '0 0 24px 14px', display: 'block', textAlign: 'center' }}>
+          <img 
+            src="/logo_no_bg.png" 
+            alt="DeV Fit" 
+            style={{ height: '56px', width: 'auto', objectFit: 'contain', display: 'block', margin: '0 auto' }} 
+          />
         </div>
 
         {menuItems.map((item) => {

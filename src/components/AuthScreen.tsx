@@ -51,20 +51,23 @@ export const AuthScreen: React.FC = () => {
       flexDirection: 'column',
       justifyContent: 'center',
       padding: '24px',
-      background: 'radial-gradient(circle at 50% 30%, #1e1b4b 0%, #08080a 70%)',
+      background: 'radial-gradient(circle at 50% 30%, #281d06 0%, #050506 80%)',
       color: 'white'
     }}>
       <div style={{ maxWidth: '400px', margin: '0 auto', width: '100%', display: 'flex', flexDirection: 'column', gap: '24px' }}>
         
         {/* Brand Logo */}
-        <div style={{ textAlign: 'center' }}>
-          <h1 style={{ fontSize: '3rem', fontWeight: 900, letterSpacing: '-1.5px', background: 'linear-gradient(135deg, white 30%, var(--color-primary) 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-            DeV Fit<span style={{ color: 'var(--color-secondary)', WebkitTextFillColor: 'initial' }}>.</span>
-          </h1>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', marginTop: '6px' }}>
+        <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+          <img 
+            src="/logo_no_bg.png" 
+            alt="DeV Fit Logo" 
+            style={{ height: '90px', width: 'auto', objectFit: 'contain', filter: 'drop-shadow(0 0 12px var(--color-primary-glow))' }} 
+          />
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem', marginTop: '4px' }}>
             Il tuo diario intelligente di allenamento e dieta
           </p>
         </div>
+
 
         {/* Auth Card */}
         <div className="glass-card animate-scale-in" style={{ padding: '28px', border: '1px solid var(--border-color)' }}>
