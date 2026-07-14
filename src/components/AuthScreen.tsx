@@ -190,64 +190,37 @@ export const AuthScreen: React.FC = () => {
                 <div style={{ flex: 1, height: '1px', background: 'rgba(255, 255, 255, 0.05)' }}></div>
               </div>
               
-              <div style={{ display: 'flex', gap: '10px' }}>
-                {/* Google Button */}
-                <button 
-                  type="button" 
-                  className="btn-secondary" 
-                  disabled={loading}
-                  onClick={() => signInWithOAuth('google')}
-                  style={{ 
-                    flex: 1, 
-                    height: '40px', 
-                    padding: 0, 
-                    fontSize: '0.75rem', 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'center', 
-                    gap: '8px',
-                    background: 'white',
-                    color: 'black',
-                    border: 'none'
-                  }}
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24">
-                    <path fill="#ea4335" d="M12 5.04c1.78 0 3.38.61 4.64 1.82l3.46-3.46C17.97 1.54 15.22 1 12 1 7.35 1 3.39 3.68 1.48 7.57l4.08 3.16C6.54 7.6 9 5.04 12 5.04z" />
-                    <path fill="#4285f4" d="M23.49 12.27c0-.81-.07-1.59-.2-2.35H12v4.51h6.48c-.29 1.48-1.14 2.73-2.42 3.58l3.77 2.92c2.2-2.03 3.46-5.02 3.46-8.66z" />
-                    <path fill="#fbbc05" d="M5.56 10.73A7.24 7.24 0 0 1 5.04 12c0 .44.04.87.12 1.3l-4.08 3.16A11.94 11.94 0 0 1 0 12c0-1.58.31-3.09.88-4.47l4.68 3.2z" />
-                    <path fill="#34a853" d="M12 18.96c-3 0-5.46-2.56-6.44-5.69l-4.08 3.16C3.39 20.32 7.35 23 12 23c3.24 0 5.97-1.07 7.96-2.91l-3.77-2.92c-1.12.79-2.55 1.79-4.19 1.79z" />
-                  </svg>
-                  Google
-                </button>
-
-                {/* Facebook Button */}
-                <button 
-                  type="button" 
-                  className="btn-secondary" 
-                  disabled={loading}
-                  onClick={() => signInWithOAuth('facebook')}
-                  style={{ 
-                    flex: 1, 
-                    height: '40px', 
-                    padding: 0, 
-                    fontSize: '0.75rem', 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'center', 
-                    gap: '8px',
-                    background: '#1877f2',
-                    color: 'white',
-                    border: 'none'
-                  }}
-                >
-                  <svg width="16" height="16" fill="white" viewBox="0 0 24 24">
-                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
-                  </svg>
-                  Facebook
-                </button>
-              </div>
+              {/* Google Button - Full Width */}
+              <button 
+                type="button" 
+                className="btn-secondary" 
+                disabled={loading}
+                onClick={() => signInWithOAuth('google')}
+                style={{ 
+                  width: '100%', 
+                  height: '42px', 
+                  fontSize: '0.78rem', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center', 
+                  gap: '8px',
+                  background: 'white',
+                  color: 'black',
+                  border: 'none',
+                  fontWeight: 'bold'
+                }}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24">
+                  <path fill="#ea4335" d="M12 5.04c1.78 0 3.38.61 4.64 1.82l3.46-3.46C17.97 1.54 15.22 1 12 1 7.35 1 3.39 3.68 1.48 7.57l4.08 3.16C6.54 7.6 9 5.04 12 5.04z" />
+                  <path fill="#4285f4" d="M23.49 12.27c0-.81-.07-1.59-.2-2.35H12v4.51h6.48c-.29 1.48-1.14 2.73-2.42 3.58l3.77 2.92c2.2-2.03 3.46-5.02 3.46-8.66z" />
+                  <path fill="#fbbc05" d="M5.56 10.73A7.24 7.24 0 0 1 5.04 12c0 .44.04.87.12 1.3l-4.08 3.16A11.94 11.94 0 0 1 0 12c0-1.58.31-3.09.88-4.47l4.68 3.2z" />
+                  <path fill="#34a853" d="M12 18.96c-3 0-5.46-2.56-6.44-5.69l-4.08 3.16C3.39 20.32 7.35 23 12 23c3.24 0 5.97-1.07 7.96-2.91l-3.77-2.92c-1.12.79-2.55 1.79-4.19 1.79z" />
+                </svg>
+                Accedi con Google
+              </button>
             </div>
           )}
+
 
 
           {/* Mode Switchers */}
