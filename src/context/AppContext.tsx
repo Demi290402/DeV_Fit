@@ -198,21 +198,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [socialPosts, setSocialPosts] = useState<SocialPost[]>(() => {
     const saved = localStorage.getItem('df_social_posts');
-    return saved ? JSON.parse(saved) : [
-      {
-        id: 'soc-mock-1',
-        username: 'Alessia_Trainer',
-        userAvatar: 'AT',
-        date: '3 ore fa',
-        workoutName: 'Gambe & Glutei Tonificazione',
-        duration: '45m',
-        volume: 1850,
-        recordsCount: 2,
-        likes: ['Utente DeV Fit'],
-        comments: [{ username: 'Utente DeV Fit', text: 'Grande coach! 💪' }]
-      }
-    ];
+    return saved ? JSON.parse(saved) : [];
   });
+
 
   // --- PERSISTENCE ---
   useEffect(() => {
