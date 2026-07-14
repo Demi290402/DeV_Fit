@@ -1,8 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Trash, Check, Clock, X, Info, ChevronDown } from 'lucide-react';
+import { Plus, Trash, Check, Clock, X, ChevronDown } from 'lucide-react';
+
 import { useApp } from '../context/AppContext';
 import type { SetLog } from '../context/AppContext';
-import { mockExercises } from '../data/mockExercises';
+import { mockExercises, renderMuscleIcon } from '../data/mockExercises';
+import { ExerciseBrowserModal } from './ExerciseBrowserModal';
+
+
 
 export const ActiveWorkout: React.FC = () => {
   const {
@@ -246,9 +250,10 @@ export const ActiveWorkout: React.FC = () => {
             <div key={exLog.exerciseId} className="glass-card exercise-log-card">
               <div className="flex-between exercise-header-clickable" onClick={() => setSelectedDetailExerciseId(exLog.exerciseId)}>
                 <div className="exercise-title-row">
-                  <div className="exercise-icon" style={{ background: 'var(--color-primary-glow)', color: 'var(--color-primary)' }}>
-                    <Info size={16} />
+                  <div className="exercise-icon" style={{ width: '40px', height: '40px', background: 'transparent', padding: 0 }}>
+                    {renderMuscleIcon(exDetail.muscleGroup)}
                   </div>
+
                   <div>
                     <h4 className="exercise-title">{exDetail.name}</h4>
                     <span className="exercise-meta">{exDetail.category} • Vedi istruzioni e video</span>
@@ -403,35 +408,16 @@ export const ActiveWorkout: React.FC = () => {
       )}
 
       {/* Add Exercise Modal */}
-      {showAddExercise && (
-        <div className="drawer-backdrop" onClick={() => setShowAddExercise(false)}>
-          <div className="drawer-content animate-fade-in-up" onClick={e => e.stopPropagation()}>
-            <div className="drawer-header">
-              <h3 className="section-title">Aggiungi Esercizio</h3>
-              <button className="drawer-close" onClick={() => setShowAddExercise(false)}><X size={20} /></button>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '10px', maxHeight: '400px', overflowY: 'auto' }}>
-              {mockExercises.map(ex => (
-                <div 
-                  key={ex.id} 
-                  className="glass-card" 
-                  style={{ padding: '14px', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
-                  onClick={() => {
-                    addExerciseToActiveWorkout(ex.id);
-                    setShowAddExercise(false);
-                  }}
-                >
-                  <div>
-                    <h4 style={{ fontSize: '0.9rem', fontWeight: 700 }}>{ex.name}</h4>
-                    <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{ex.category}</span>
-                  </div>
-                  <Plus size={16} color="var(--color-primary)" />
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
+      <ExerciseBrowserModal 
+        isOpen={showAddExercise}
+        onClose={() => setShowAddExercise(false)}
+        onSelectExercise={(id) => {
+          addExerciseToActiveWorkout(id);
+          setShowAddExercise(false);
+        }}
+        selectedIds={activeWorkout ? activeWorkout.exercises.map(e => e.exerciseId) : []}
+      />
+
 
       {/* Exercise Details Drawer */}
       {selectedDetailExerciseId && selectedExercise && (

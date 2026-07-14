@@ -3,6 +3,7 @@ import { User, Scale, Activity, Calendar as CalendarIcon, Check, Settings, LogOu
 import { useApp } from '../context/AppContext';
 import type { WorkoutLog } from '../context/AppContext';
 import { CycleTracker } from './CycleTracker';
+import { DeviceSyncHub } from './DeviceSyncHub';
 
 export const Profile: React.FC = () => {
   const { profile, updateProfile, workoutHistory, foodLogs, signOut, deleteAccountAndData } = useApp();
@@ -359,6 +360,9 @@ export const Profile: React.FC = () => {
         </button>
       </div>
 
+      {/* Smart wearable sync hub */}
+      <DeviceSyncHub />
+
       {/* Embedded Cycle Tracker: Render only for Female Users */}
       {profile.gender === 'female' && (
         <div style={{ marginTop: '4px' }}>
@@ -428,7 +432,7 @@ export const Profile: React.FC = () => {
       {/* Compliance / Privacy Policy / Deletion Area */}
       <div className="glass-card" style={{ border: '1px dashed rgba(239, 68, 68, 0.3)', background: 'rgba(239, 68, 68, 0.02)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
         <h3 style={{ fontSize: '0.92rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--color-error)' }}>
-          <ShieldAlert size={16} /> Sicurezza & Conformità GDPR
+          <ShieldAlert size={16} /> Data Security & GDPR
         </h3>
         <p style={{ fontSize: '0.75rem', lineHeight: '1.4', color: 'var(--text-muted)' }}>
           Gestisci i tuoi consensi e la rimozione definitiva dei tuoi dati personali ed account (conforme alle linee guida di Google Play e Apple Store).

@@ -30,7 +30,8 @@ body {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  max-width: 480px; /* Centered mobile container on desktop */
+  width: 100%;
+  max-width: 480px; /* Centered mobile container on desktop by default */
   margin: 0 auto;
   background-color: var(--background-dark);
   position: relative;
@@ -38,12 +39,6 @@ body {
   border-left: 1px solid var(--border-color);
   border-right: 1px solid var(--border-color);
   padding-bottom: 84px; /* Space for navbar */
-}
-
-@media (min-width: 768px) {
-  body {
-    background: radial-gradient(circle at 20% 20%, #1e1b4b 0%, #09090b 80%);
-  }
 }
 
 /* Header Component */
@@ -238,4 +233,91 @@ body {
 .btn-secondary:hover {
   background: rgba(255, 255, 255, 0.12);
   border-color: var(--border-hover);
+}
+
+/* RESPONSIVE DESIGN FOR COMPUTERS & TABLETS */
+@media (min-width: 768px) {
+  body {
+    background: radial-gradient(circle at 20% 20%, #1e1b4b 0%, #09090b 80%);
+  }
+
+  .app-container {
+    max-width: 1200px;
+    flex-direction: row; /* Sidebar on left, Main content on right */
+    padding-bottom: 0;
+    box-shadow: none;
+    border: none;
+  }
+
+  .app-header {
+    display: none !important; /* Hide mobile top header */
+  }
+
+  .bottom-nav {
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 260px;
+    height: 100vh;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: flex-start;
+    padding: 40px 24px;
+    border-right: 1px solid var(--border-color);
+    border-top: none;
+    background: rgba(10, 10, 14, 0.95);
+    z-index: 100;
+    gap: 12px;
+  }
+
+  .nav-item {
+    flex-direction: row !important;
+    gap: 16px !important;
+    width: 100%;
+    padding: 14px 20px !important;
+    font-size: 0.95rem !important;
+    border-radius: var(--radius-md);
+    justify-content: flex-start !important;
+  }
+
+  .nav-item.active {
+    background: var(--color-primary-glow);
+    border: 1px solid rgba(139, 92, 246, 0.2);
+  }
+
+  .nav-item.active::after {
+    display: none !important; /* Remove bottom bar line indicator */
+  }
+
+  .app-content {
+    margin-left: 260px; /* Leave space for left sidebar navigation */
+    padding: 40px;
+    gap: 30px;
+    overflow-y: auto;
+    height: 100vh;
+  }
+
+  /* Grid optimizations for dashboard and cards */
+  .dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
+  }
+
+  .streak-counter {
+    grid-column: span 1;
+  }
+
+  .tip-widget {
+    grid-column: span 1;
+  }
+
+  .macro-card {
+    grid-column: span 2;
+  }
+
+  .recipes-grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
 }

@@ -20,6 +20,7 @@ export const Navigation: React.FC<NavigationProps> = ({ currentTab, setCurrentTa
 
   return (
     <>
+      {/* Mobile Top Header (hidden on desktop) */}
       <header className="app-header">
         <div className="brand-title">
           DeV_Fit<span className="brand-dot">.</span>
@@ -47,7 +48,13 @@ export const Navigation: React.FC<NavigationProps> = ({ currentTab, setCurrentTa
         </div>
       </header>
 
+      {/* Sidebar (Desktop) / Bottom Nav (Mobile) */}
       <nav className="bottom-nav">
+        {/* Brand title inside sidebar - visible only on desktop */}
+        <div className="brand-title desktop-only-logo" style={{ margin: '0 0 24px 20px', fontSize: '1.8rem', display: 'block' }}>
+          DeV_Fit<span className="brand-dot">.</span>
+        </div>
+
         {menuItems.map((item) => {
           const Icon = item.icon;
           return (
@@ -61,7 +68,43 @@ export const Navigation: React.FC<NavigationProps> = ({ currentTab, setCurrentTa
             </div>
           );
         })}
+
+        {/* Active workout indicator inside sidebar - visible only on desktop */}
+        {activeWorkout && (
+          <div 
+            className="timer-box animate-glow desktop-only-logo" 
+            style={{ 
+              background: 'var(--color-secondary-glow)', 
+              padding: '12px 16px', 
+              borderRadius: 'var(--radius-md)',
+              fontSize: '0.8rem',
+              cursor: 'pointer',
+              marginTop: 'auto',
+              border: '1px solid rgba(6, 182, 212, 0.2)',
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}
+            onClick={() => setCurrentTab('workout')}
+          >
+            <Dumbbell size={16} className="animate-pulse" color="var(--color-secondary)" />
+            <div>
+              <span style={{ fontWeight: 'bold', display: 'block' }}>Allenamento in corso</span>
+              <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>Fai clic per riprendere</span>
+            </div>
+          </div>
+        )}
       </nav>
+
+      {/* CSS injection for responsive sidebar logo toggle */}
+      <style>{`
+        @media (max-width: 767px) {
+          .desktop-only-logo {
+            display: none !important;
+          }
+        }
+      `}</style>
     </>
   );
 };
