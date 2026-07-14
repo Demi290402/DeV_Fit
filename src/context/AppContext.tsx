@@ -98,6 +98,7 @@ interface AppContextType {
   user: { id: string; email: string; name: string } | null;
   signUp: (email: string, pass: string, name: string) => Promise<void>;
   signIn: (email: string, pass: string) => Promise<void>;
+  signInWithOAuth: (provider: 'google' | 'facebook') => Promise<void>;
   signOut: () => Promise<void>;
   deleteAccountAndData: () => Promise<void>;
   hasConsented: boolean;
@@ -307,6 +308,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setUser(mockUser);
         setProfile(prev => ({ ...prev, name: mockUser.name }));
       }
+    }
+  };
+
+  const signInWithOAuth = async (provider: 'google' | 'facebook') => {
+    if (supabase) {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: window.location.origin
+        }
+      });
+      if (error) throw error;
+    } else {
+      // Mock OAuth Login
+      const mockUser = {
+        id: `oauth-${provider}-${Date.now()}`,
+        email: `${provider}-user@example.com`,
+        name: `${provider === 'google' ? 'Google' : 'Facebook'} User`
+      };
+      setUser(mockUser);
+      setProfile(prev => ({ ...prev, name: mockUser.name }));
     }
   };
 
@@ -659,6 +681,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       user,
       signUp,
       signIn,
+      signInWithOAuth,
       signOut,
       deleteAccountAndData,
       hasConsented,
