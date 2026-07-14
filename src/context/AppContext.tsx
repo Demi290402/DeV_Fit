@@ -1,6 +1,14 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import confetti from 'canvas-confetti';
+import { createClient } from '@supabase/supabase-js';
 
+// Supabase client initialization (automatic fallback if env variables are missing)
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+
+export const supabase = supabaseUrl && supabaseAnonKey 
+  ? createClient(supabaseUrl, supabaseAnonKey) 
+  : null;
 
 export interface ProfileData {
   name: string;
@@ -87,6 +95,13 @@ export interface SocialPost {
 }
 
 interface AppContextType {
+  user: { id: string; email: string; name: string } | null;
+  signUp: (email: string, pass: string, name: string) => Promise<void>;
+  signIn: (email: string, pass: string) => Promise<void>;
+  signOut: () => Promise<void>;
+  deleteAccountAndData: () => Promise<void>;
+  hasConsented: boolean;
+  setHasConsented: (consent: boolean) => void;
   profile: ProfileData;
   updateProfile: (data: Partial<ProfileData>) => void;
   routines: Routine[];
@@ -120,139 +135,46 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // --- MOCK INITIATORS ---
-  const initialProfile: ProfileData = {
-    name: 'DevFit User',
+  // --- MOCK CONSTANTS ---
+  const defaultProfile: ProfileData = {
+    name: 'Utente DeV_Fit',
     gender: 'female',
-    weight: 65.4,
-    bodyFat: 21.5,
-    waist: 68,
-    arms: 29.5,
-    thighs: 54,
+    weight: 60.0,
+    bodyFat: 22.0,
+    waist: 66,
+    arms: 28,
+    thighs: 52,
     targetCalories: 1800,
-    targetProtein: 120,
-    targetCarbs: 185,
-    targetFat: 55,
-    streak: 5,
+    targetProtein: 110,
+    targetCarbs: 190,
+    targetFat: 50,
+    streak: 1,
     lastLoggedDate: new Date().toISOString().split('T')[0]
   };
 
-  const initialRoutines: Routine[] = [
-    {
-      id: 'rot-1',
-      name: 'Gambe & Glutei Tonificazione',
-      description: 'Creata da Coach Alessia. Focus su forza submassimale e stimolo glutei.',
-      exercises: [
-        { exerciseId: 'ex-squat', defaultSets: [{ weight: 40, reps: 10 }, { weight: 45, reps: 10 }, { weight: 50, reps: 8 }] },
-        { exerciseId: 'ex-crunch', defaultSets: [{ weight: 0, reps: 15 }, { weight: 0, reps: 15 }] }
-      ]
-    },
-    {
-      id: 'rot-2',
-      name: 'Spinta & Petto Sviluppo',
-      description: 'Ideata da Trainer Fabio. Per spessore pettorali e tricipiti.',
-      exercises: [
-        { exerciseId: 'ex-chest-press', defaultSets: [{ weight: 45, reps: 12 }, { weight: 55, reps: 10 }, { weight: 65, reps: 8 }, { weight: 70, reps: 6 }] },
-        { exerciseId: 'ex-alzate-laterali', defaultSets: [{ weight: 8, reps: 12 }, { weight: 8, reps: 12 }, { weight: 8, reps: 10 }] },
-        { exerciseId: 'ex-pushdown', defaultSets: [{ weight: 20, reps: 12 }, { weight: 25, reps: 10 }] }
-      ]
-    }
-  ];
-
-  const initialHistory: WorkoutLog[] = [
-    {
-      id: 'log-prev-1',
-      name: 'Spinta & Petto Sviluppo',
-      date: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
-      duration: 2700,
-      volume: 1680,
-      exercises: [
-        {
-          exerciseId: 'ex-chest-press',
-          sets: [
-            { id: '1', weight: 40, reps: 12, completed: true },
-            { id: '2', weight: 50, reps: 10, completed: true },
-            { id: '3', weight: 60, reps: 8, completed: true }
-          ]
-        }
-      ]
-    },
-    {
-      id: 'log-prev-2',
-      name: 'Gambe & Glutei Tonificazione',
-      date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-      duration: 3200,
-      volume: 1200,
-      exercises: [
-        {
-          exerciseId: 'ex-squat',
-          sets: [
-            { id: '4', weight: 35, reps: 10, completed: true },
-            { id: '5', weight: 40, reps: 10, completed: true }
-          ]
-        }
-      ]
-    }
-  ];
-
-  const initialFoodLogs: FoodLogs = {
-    [new Date().toISOString().split('T')[0]]: [
-      { id: 'f-1', name: 'Yogurt Greco 0% Fage', mealType: 'Colazione', calories: 114, protein: 20, carbs: 6, fat: 0, weight: 200 },
-      { id: 'f-2', name: 'Farina d\'Avena Integrale', mealType: 'Colazione', calories: 150, protein: 5, carbs: 26, fat: 3, weight: 40 },
-      { id: 'f-3', name: 'Riso Basmati con Pollo e Zucchine', mealType: 'Pranzo', calories: 480, protein: 38, carbs: 60, fat: 8, weight: 350 }
-    ]
-  };
-
-  const initialCycleData: CycleData = {
-    lastPeriodStart: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 12 days ago
-    cycleLength: 28,
-    periodLength: 5
-  };
-
-  const initialSocial: SocialPost[] = [
-    {
-      id: 'soc-1',
-      username: 'Marco_Gains',
-      userAvatar: 'MG',
-      date: '2 ore fa',
-      workoutName: 'Gambe Devastanti (Domenica)',
-      duration: '1h 15m',
-      volume: 4850,
-      recordsCount: 2,
-      likes: ['DevFit User', 'Sarah_Fit'],
-      comments: [
-        { username: 'Sarah_Fit', text: 'Grande volume di squat! 🔥' },
-        { username: 'FabioTrainer', text: 'Ottima profondità su quelle rep!' }
-      ]
-    },
-    {
-      id: 'soc-2',
-      username: 'Sarah_Fit',
-      userAvatar: 'SF',
-      date: '5 ore fa',
-      workoutName: 'Upper Body Focus Spalle',
-      duration: '52m',
-      volume: 2150,
-      recordsCount: 1,
-      likes: ['Marco_Gains'],
-      comments: []
-    }
-  ];
-
   // --- STATE ---
+  const [user, setUser] = useState<{ id: string; email: string; name: string } | null>(() => {
+    const saved = localStorage.getItem('df_user');
+    return saved ? JSON.parse(saved) : null;
+  });
+
+  const [hasConsented, setHasConsentedState] = useState<boolean>(() => {
+    return localStorage.getItem('df_consent') === 'true';
+  });
+
   const [profile, setProfile] = useState<ProfileData>(() => {
     const saved = localStorage.getItem('df_profile');
-    return saved ? JSON.parse(saved) : initialProfile;
+    return saved ? JSON.parse(saved) : defaultProfile;
   });
 
   const [routines, setRoutines] = useState<Routine[]>(() => {
     const saved = localStorage.getItem('df_routines');
-    return saved ? JSON.parse(saved) : initialRoutines;
+    return saved ? JSON.parse(saved) : [];
   });
 
   const [workoutHistory, setWorkoutHistory] = useState<WorkoutLog[]>(() => {
     const saved = localStorage.getItem('df_history');
-    return saved ? JSON.parse(saved) : initialHistory;
+    return saved ? JSON.parse(saved) : [];
   });
 
   const [activeWorkout, setActiveWorkout] = useState<AppContextType['activeWorkout']>(() => {
@@ -262,20 +184,45 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [foodLogs, setFoodLogs] = useState<FoodLogs>(() => {
     const saved = localStorage.getItem('df_food_logs');
-    return saved ? JSON.parse(saved) : initialFoodLogs;
+    return saved ? JSON.parse(saved) : {};
   });
 
   const [cycleData, setCycleData] = useState<CycleData>(() => {
     const saved = localStorage.getItem('df_cycle_data');
-    return saved ? JSON.parse(saved) : initialCycleData;
+    return saved ? JSON.parse(saved) : {
+      lastPeriodStart: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      cycleLength: 28,
+      periodLength: 5
+    };
   });
 
   const [socialPosts, setSocialPosts] = useState<SocialPost[]>(() => {
     const saved = localStorage.getItem('df_social_posts');
-    return saved ? JSON.parse(saved) : initialSocial;
+    return saved ? JSON.parse(saved) : [
+      {
+        id: 'soc-mock-1',
+        username: 'Alessia_Trainer',
+        userAvatar: 'AT',
+        date: '3 ore fa',
+        workoutName: 'Gambe & Glutei Tonificazione',
+        duration: '45m',
+        volume: 1850,
+        recordsCount: 2,
+        likes: ['Utente DeV_Fit'],
+        comments: [{ username: 'Utente DeV_Fit', text: 'Grande coach! 💪' }]
+      }
+    ];
   });
 
-  // --- PERSISTENCE EFFECT ---
+  // --- PERSISTENCE ---
+  useEffect(() => {
+    if (user) {
+      localStorage.setItem('df_user', JSON.stringify(user));
+    } else {
+      localStorage.removeItem('df_user');
+    }
+  }, [user]);
+
   useEffect(() => {
     localStorage.setItem('df_profile', JSON.stringify(profile));
   }, [profile]);
@@ -308,9 +255,123 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.setItem('df_social_posts', JSON.stringify(socialPosts));
   }, [socialPosts]);
 
-  // --- HELPER FUNCTION: PREVIOUS EXERCISE VALUES ---
+  // --- SUPABASE SESSION WATCH ---
+  useEffect(() => {
+    if (!supabase) return;
+    
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        setUser({
+          id: session.user.id,
+          email: session.user.email || '',
+          name: session.user.user_metadata.name || 'Utente'
+        });
+      }
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) {
+        setUser({
+          id: session.user.id,
+          email: session.user.email || '',
+          name: session.user.user_metadata.name || 'Utente'
+        });
+      } else {
+        setUser(null);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // --- AUTH ACTIONS ---
+  const signUp = async (email: string, pass: string, name: string) => {
+    if (supabase) {
+      const { error } = await supabase.auth.signUp({
+        email,
+        password: pass,
+        options: { data: { name } }
+      });
+      if (error) throw error;
+    } else {
+      // Mock SignUp
+      const mockId = `usr-${Date.now()}`;
+      const newUser = { id: mockId, email, name };
+      setUser(newUser);
+      setProfile(prev => ({ ...prev, name }));
+    }
+  };
+
+  const signIn = async (email: string, pass: string) => {
+    if (supabase) {
+      const { error } = await supabase.auth.signInWithPassword({ email, password: pass });
+      if (error) throw error;
+    } else {
+      // Mock SignIn
+      const savedUser = localStorage.getItem('df_user');
+      const u = savedUser ? JSON.parse(savedUser) : null;
+      if (u && u.email === email) {
+        setUser(u);
+        setProfile(prev => ({ ...prev, name: u.name }));
+      } else {
+        // Create user on fly for demonstration in mock mode
+        const mockUser = { id: `usr-${Date.now()}`, email, name: email.split('@')[0] };
+        setUser(mockUser);
+        setProfile(prev => ({ ...prev, name: mockUser.name }));
+      }
+    }
+  };
+
+  const signOut = async () => {
+    if (supabase) {
+      await supabase.auth.signOut();
+    }
+    setUser(null);
+  };
+
+  const deleteAccountAndData = async () => {
+    if (supabase) {
+      // 1. Delete user database rows
+      if (user) {
+        await supabase.from('profiles').delete().eq('id', user.id);
+        // Note: other tables cascade delete if configured in Postgres,
+        // otherwise we manually delete them:
+        await supabase.from('food_logs').delete().eq('user_id', user.id);
+        await supabase.from('workout_logs').delete().eq('user_id', user.id);
+        await supabase.from('routines').delete().eq('user_id', user.id);
+      }
+      // Note: Supabase free tier doesn't allow users to delete themselves from Auth easily without an admin API,
+      // so we call a custom edge function if implemented, or we sign out and let user settings trigger:
+      await supabase.auth.signOut();
+    }
+    
+    // Clear LocalStorage data (right to be forgotten / data deletion compliance)
+    localStorage.removeItem('df_user');
+    localStorage.removeItem('df_profile');
+    localStorage.removeItem('df_routines');
+    localStorage.removeItem('df_history');
+    localStorage.removeItem('df_food_logs');
+    localStorage.removeItem('df_cycle_data');
+    localStorage.removeItem('df_active_workout');
+    localStorage.removeItem('df_consent');
+
+    // Reset state to default values
+    setUser(null);
+    setHasConsentedState(false);
+    setProfile(defaultProfile);
+    setRoutines([]);
+    setWorkoutHistory([]);
+    setFoodLogs({});
+    setActiveWorkout(null);
+  };
+
+  const setHasConsented = (consent: boolean) => {
+    setHasConsentedState(consent);
+    localStorage.setItem('df_consent', consent ? 'true' : 'false');
+  };
+
+  // --- PREVIOUS EXERCISE VALUES ---
   const getPreviousPerformances = (exerciseId: string): { weight: number; reps: number }[] => {
-    // Search history for last workout containing this exercise
     const sortedHistory = [...workoutHistory].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     for (const log of sortedHistory) {
       const match = log.exercises.find(e => e.exerciseId === exerciseId);
@@ -321,11 +382,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return [];
   };
 
-  // --- ACTIONS ---
+  // --- PROFILE ACTIONS ---
   const updateProfile = (data: Partial<ProfileData>) => {
     setProfile(prev => {
       const updated = { ...prev, ...data };
-      // Check for streak calculation on new log dates
       if (data.lastLoggedDate && data.lastLoggedDate !== prev.lastLoggedDate) {
         const lastDate = new Date(prev.lastLoggedDate);
         const newDate = new Date(data.lastLoggedDate);
@@ -370,7 +430,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return;
       }
     }
-    // Launch an empty workout (circunstance workout)
     setActiveWorkout({
       name: 'Allenamento di Circostanza',
       startTime: Date.now(),
@@ -386,7 +445,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         updatedSets[setIndex] = {
           ...updatedSets[setIndex],
           [field]: value,
-          completed: false // Reset completed on change to allow re-evaluating records
+          completed: false
         };
         return { ...ex, sets: updatedSets };
       }
@@ -418,7 +477,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           const current1RM = currentSet.weight * (1 + currentSet.reps / 30);
           const currentVol = currentSet.weight * currentSet.reps;
 
-          // Look at historical logs for records
           let historicalMax1RM = 0;
           let historicalMaxVol = 0;
           let historicalMaxWeight = 0;
@@ -436,7 +494,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             }
           });
 
-          // Check if current values beat the history
           const is1RM = current1RM > 0 && current1RM >= historicalMax1RM;
           const isMaxVolume = currentVol > 0 && currentVol >= historicalMaxVol;
           const isMaxWeight = currentSet.weight > 0 && currentSet.weight >= historicalMaxWeight;
@@ -476,11 +533,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const addExerciseToActiveWorkout = (exerciseId: string) => {
     if (!activeWorkout) return;
     
-    // Check if exercise already in active list
     const exists = activeWorkout.exercises.some(e => e.exerciseId === exerciseId);
     if (exists) return;
 
-    // Load previous set default template or simple empty set
     const prevSets = getPreviousPerformances(exerciseId);
     const defaultSets = prevSets.length > 0
       ? prevSets.map((ps, idx) => ({ id: `s-${Date.now()}-${idx}`, weight: ps.weight, reps: ps.reps, completed: false }))
@@ -496,8 +551,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!activeWorkout || !activeWorkout.startTime) return;
 
     const duration = Math.round((Date.now() - activeWorkout.startTime) / 1000);
-    
-    // Calculate total volume and count records
     let totalVolume = 0;
     let recordsCount = 0;
     const exercisesToSave = activeWorkout.exercises.filter(ex => ex.sets.some(s => s.completed));
@@ -522,10 +575,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       exercises: exercisesToSave
     };
 
-    // Add to history
     setWorkoutHistory(prev => [newLog, ...prev]);
 
-    // Add to social feed
     const durationMin = `${Math.floor(duration / 60)}m`;
     addSocialPost({
       username: profile.name,
@@ -537,11 +588,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       recordsCount
     });
 
-    // Update streak and last active log
     const todayStr = new Date().toISOString().split('T')[0];
     updateProfile({ lastLoggedDate: todayStr });
 
-    // Clean up active workout
     setActiveWorkout(null);
     triggerConfetti();
   };
@@ -564,7 +613,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       };
     });
 
-    // Update streak and last active log
     updateProfile({ lastLoggedDate: dateStr });
   };
 
@@ -620,6 +668,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   return (
     <AppContext.Provider value={{
+      user,
+      signUp,
+      signIn,
+      signOut,
+      deleteAccountAndData,
+      hasConsented,
+      setHasConsented,
       profile,
       updateProfile,
       routines,

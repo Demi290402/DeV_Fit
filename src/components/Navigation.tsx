@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, Dumbbell, Apple, Heart, Users, User } from 'lucide-react';
+import { Home, Dumbbell, Apple, Users, User } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
 interface NavigationProps {
@@ -8,13 +8,12 @@ interface NavigationProps {
 }
 
 export const Navigation: React.FC<NavigationProps> = ({ currentTab, setCurrentTab }) => {
-  const { activeWorkout, profile } = useApp();
+  const { activeWorkout } = useApp();
 
   const menuItems = [
     { id: 'dashboard', label: 'Casa', icon: Home },
     { id: 'workout', label: 'Allenamento', icon: Dumbbell },
     { id: 'diet', label: 'Dieta', icon: Apple },
-    ...(profile.gender === 'female' ? [{ id: 'cycle', label: 'Ciclo', icon: Heart }] : []),
     { id: 'social', label: 'Social', icon: Users },
     { id: 'profile', label: 'Profilo', icon: User },
   ];

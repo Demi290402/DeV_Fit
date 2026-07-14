@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
-import { User, Scale, Activity, Calendar as CalendarIcon, Check, Settings } from 'lucide-react';
+import { User, Scale, Activity, Calendar as CalendarIcon, Check, Settings, LogOut, Trash2, ShieldAlert } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import type { WorkoutLog } from '../context/AppContext';
-
+import { CycleTracker } from './CycleTracker';
 
 export const Profile: React.FC = () => {
-  const { profile, updateProfile, workoutHistory, foodLogs } = useApp();
+  const { profile, updateProfile, workoutHistory, foodLogs, signOut, deleteAccountAndData } = useApp();
   const [editing, setEditing] = useState(false);
+  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
   
   // Profile settings state
   const [name, setName] = useState(profile.name);
@@ -48,6 +49,15 @@ export const Profile: React.FC = () => {
     alert('Misurazioni aggiornate!');
   };
 
+  const handleDeleteAccount = async () => {
+    const confirmation = window.confirm(
+      'ATTENZIONE: Questa azione è irreversibile. Verranno eliminati permanentemente il tuo account, il tuo profilo e tutta la cronologia dei tuoi allenamenti e pasti. Vuoi procedere?'
+    );
+    if (confirmation) {
+      await deleteAccountAndData();
+    }
+  };
+
   // --- STATS COMPUTATION FOR CHARTS ---
   const getFilteredLogs = (): WorkoutLog[] => {
     const limitDate = new Date();
@@ -74,7 +84,6 @@ export const Profile: React.FC = () => {
       } else if (metricType === 'duration') {
         val = Math.round(log.duration / 60); // minutes
       } else if (metricType === 'reps') {
-        // sum all completed reps
         log.exercises.forEach(ex => {
           ex.sets.forEach(s => {
             if (s.completed) val += s.reps;
@@ -119,7 +128,6 @@ export const Profile: React.FC = () => {
 
             return (
               <g key={i}>
-                {/* Glowing bar */}
                 <rect 
                   x={x} 
                   y={y} 
@@ -129,11 +137,9 @@ export const Profile: React.FC = () => {
                   fill={`url(#glowGrad-${metricType})`}
                   style={{ filter: 'drop-shadow(0px 2px 4px rgba(139, 92, 246, 0.15))' }}
                 />
-                {/* Value text */}
                 <text x={x + barWidth/2} y={y - 5} fill="white" fontSize="7" fontWeight="700" textAnchor="middle">
                   {d.value}
                 </text>
-                {/* Label text */}
                 <text x={x + barWidth/2} y={svgH - 5} fill="var(--text-muted)" fontSize="7" textAnchor="middle">
                   {d.label}
                 </text>
@@ -170,21 +176,20 @@ export const Profile: React.FC = () => {
       d.setDate(today.getDate() - i);
       const dStr = d.toISOString().split('T')[0];
 
-      // Check training or diet logs
       const hasWorkout = workoutHistory.some(log => log.date.split('T')[0] === dStr);
       const hasFood = !!foodLogs[dStr] && foodLogs[dStr].length > 0;
 
-      let color = 'rgba(255, 255, 255, 0.03)'; // gray default
+      let color = 'rgba(255, 255, 255, 0.03)';
       let title = `Nessun record per il ${d.toLocaleDateString()}`;
 
       if (hasWorkout && hasFood) {
-        color = 'var(--color-success)'; // Emerald green for full consistency
+        color = 'var(--color-success)';
         title = `Allenamento e Dieta loggati! (${d.toLocaleDateString()})`;
       } else if (hasWorkout) {
-        color = 'var(--color-primary)'; // Violet for workout
+        color = 'var(--color-primary)';
         title = `Solo Allenamento loggato (${d.toLocaleDateString()})`;
       } else if (hasFood) {
-        color = 'var(--color-secondary)'; // Cyan for food
+        color = 'var(--color-secondary)';
         title = `Solo Dieta loggata (${d.toLocaleDateString()})`;
       }
 
@@ -306,16 +311,21 @@ export const Profile: React.FC = () => {
         </div>
       ) : (
         /* Account Info Display */
-        <div className="glass-card" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <div style={{ width: '56px', height: '56px', borderRadius: 'var(--radius-full)', background: 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem', fontWeight: 800 }}>
-            {profile.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+        <div className="glass-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <div style={{ width: '56px', height: '56px', borderRadius: 'var(--radius-full)', background: 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem', fontWeight: 800 }}>
+              {profile.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+            </div>
+            <div>
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 800 }}>{profile.name}</h3>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'capitalize' }}>
+                Genere: {profile.gender === 'female' ? 'Femmina' : 'Maschio'} • Peso: {profile.weight} kg
+              </span>
+            </div>
           </div>
-          <div>
-            <h3 style={{ fontSize: '1.1rem', fontWeight: 800 }}>{profile.name}</h3>
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'capitalize' }}>
-              Genere: {profile.gender === 'female' ? 'Femmina' : 'Maschio'} • Peso: {profile.weight} kg
-            </span>
-          </div>
+          <button className="icon-btn" onClick={signOut} title="Sloggati" style={{ color: 'var(--color-error)' }}>
+            <LogOut size={16} />
+          </button>
         </div>
       )}
 
@@ -349,15 +359,20 @@ export const Profile: React.FC = () => {
         </button>
       </div>
 
+      {/* Embedded Cycle Tracker: Render only for Female Users */}
+      {profile.gender === 'female' && (
+        <div style={{ marginTop: '4px' }}>
+          <CycleTracker />
+        </div>
+      )}
+
       {/* Fitness Logs Statistics with filters */}
       <div className="glass-card">
         <h3 style={{ fontSize: '0.98rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
           <Activity size={16} color="var(--color-primary)" /> Dashboard Statistiche
         </h3>
 
-        {/* Filter selectors */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', marginTop: '12px' }}>
-          {/* Time range */}
           <div style={{ display: 'flex', gap: '4px' }}>
             {(['7', '30', '90'] as const).map(range => (
               <button 
@@ -371,7 +386,6 @@ export const Profile: React.FC = () => {
             ))}
           </div>
 
-          {/* Metric Selector */}
           <select 
             className="set-input" 
             value={metricType}
@@ -384,7 +398,6 @@ export const Profile: React.FC = () => {
           </select>
         </div>
 
-        {/* SVG chart rendering */}
         {renderStatsChart()}
       </div>
 
@@ -411,6 +424,73 @@ export const Profile: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Compliance / Privacy Policy / Deletion Area */}
+      <div className="glass-card" style={{ border: '1px dashed rgba(239, 68, 68, 0.3)', background: 'rgba(239, 68, 68, 0.02)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        <h3 style={{ fontSize: '0.92rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--color-error)' }}>
+          <ShieldAlert size={16} /> Sicurezza & Conformità GDPR
+        </h3>
+        <p style={{ fontSize: '0.75rem', lineHeight: '1.4', color: 'var(--text-muted)' }}>
+          Gestisci i tuoi consensi e la rimozione definitiva dei tuoi dati personali ed account (conforme alle linee guida di Google Play e Apple Store).
+        </p>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button 
+            className="btn-secondary" 
+            onClick={() => setShowPrivacyModal(true)}
+            style={{ flex: 1, padding: '8px', fontSize: '0.72rem' }}
+          >
+            Informativa Privacy
+          </button>
+          <button 
+            className="btn-primary" 
+            onClick={handleDeleteAccount}
+            style={{ flex: 1, padding: '8px', fontSize: '0.72rem', background: 'linear-gradient(135deg, var(--color-error) 0%, #b91c1c 100%)', boxShadow: 'none' }}
+          >
+            <Trash2 size={12} /> Elimina Account & Dati
+          </button>
+        </div>
+      </div>
+
+      {/* Privacy Policy Modal */}
+      {showPrivacyModal && (
+        <div className="drawer-backdrop" onClick={() => setShowPrivacyModal(false)}>
+          <div className="drawer-content animate-fade-in-up" onClick={e => e.stopPropagation()} style={{ maxHeight: '80vh', paddingBottom: '30px' }}>
+            <div className="drawer-header">
+              <h3 className="section-title">Informativa sulla Privacy</h3>
+              <button className="drawer-close" onClick={() => setShowPrivacyModal(false)}><Check size={20} /></button>
+            </div>
+            
+            <div style={{ fontSize: '0.78rem', lineHeight: '1.5', color: 'var(--text-primary)', display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '10px', maxHeight: '450px', overflowY: 'auto', paddingRight: '6px' }}>
+              <p><strong>Ultimo aggiornamento: 14 Luglio 2026</strong></p>
+              
+              <p>La presente Informativa sulla Privacy descrive come raccogliamo, utilizziamo e proteggiamo i tuoi dati sensibili all'interno dell'applicazione DeV_Fit, in conformità con il Regolamento Generale sulla Protezione dei Dati (GDPR) e i requisiti delle piattaforme Google Play e App Store.</p>
+              
+              <h5 style={{ color: 'var(--color-secondary)', fontWeight: 'bold' }}>1. Dati Raccolti</h5>
+              <p>Raccogliamo le seguenti categorie di dati per consentire il funzionamento corretto delle funzioni dell'app:</p>
+              <ul>
+                <li><strong>Dati di Autenticazione:</strong> Email, password e nome forniti durante la registrazione.</li>
+                <li><strong>Metriche Fisiche:</strong> Peso, percentuale di grasso, e circonferenze corporee (vita, braccia, cosce).</li>
+                <li><strong>Dati di Allenamento:</strong> Esercizi eseguiti, carichi sollevati, ripetizioni e tempi di recupero.</li>
+                <li><strong>Dati Nutrizionali:</strong> Alimenti e cibi registrati nel diario alimentare giornaliero.</li>
+                <li><strong>Dati Sanitari Femminili (opzionale):</strong> Date di inizio del ciclo mestruale e sintomi segnalati, per il calcolo delle fasi del ciclo.</li>
+              </ul>
+
+              <h5 style={{ color: 'var(--color-secondary)', fontWeight: 'bold' }}>2. Finalità del Trattamento</h5>
+              <p>I dati sono utilizzati esclusivamente per mostrarti statistiche personali, calcolare i tuoi massimali (1RM), visualizzare il diario alimentare e fornire suggerimenti sportivi/nutrizionali personalizzati. Nessun dato viene venduto o condiviso con scopi commerciali.</p>
+
+              <h5 style={{ color: 'var(--color-secondary)', fontWeight: 'bold' }}>3. Condivisione dei Dati (Social)</h5>
+              <p>Gli allenamenti completati (durata, volume totale e record infranti) vengono pubblicati sul feed social visibile esclusivamente agli utenti con cui hai stretto amicizia nell'applicazione. Puoi smettere di condividere in qualsiasi momento.</p>
+
+              <h5 style={{ color: 'var(--color-secondary)', fontWeight: 'bold' }}>4. Diritti dell'Utente e Cancellazione dei Dati</h5>
+              <p>In conformità con il GDPR e le linee guida per gli store, hai il diritto di accedere ai tuoi dati ed ottenerne la rimozione permanente in qualsiasi momento. All'interno del tuo Profilo è presente il pulsante <strong>"Elimina Account & Dati"</strong>, il quale provvederà a cancellare istantaneamente e in modo irreversibile ogni traccia del tuo profilo e dei tuoi registri fisici dal nostro database cloud e locale.</p>
+            </div>
+            
+            <button className="btn-primary" onClick={() => setShowPrivacyModal(false)} style={{ width: '100%', marginTop: '20px' }}>
+              Ho Capito
+            </button>
+          </div>
+        </div>
+      )}
 
     </div>
   );
