@@ -14,8 +14,9 @@ const compressImage = (file: File, maxWidth: number, maxHeight: number): Promise
     }
 
     const reader = new FileReader();
-    reader.onload = () => {
-      const img = document.createElement('img');
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
       img.onload = () => {
         const canvas = document.createElement('canvas');
         let width = img.naturalWidth || img.width || maxWidth;
@@ -35,6 +36,7 @@ const compressImage = (file: File, maxWidth: number, maxHeight: number): Promise
 
         canvas.width = width;
         canvas.height = height;
+
         const ctx = canvas.getContext('2d');
         if (!ctx) {
           reject(new Error("Impossibile inizializzare il contesto Canvas."));
@@ -42,25 +44,38 @@ const compressImage = (file: File, maxWidth: number, maxHeight: number): Promise
         }
 
         ctx.drawImage(img, 0, 0, width, height);
-        
-        try {
-          const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
-          resolve(compressedBase64);
-        } catch (e) {
-          reject(new Error("Errore durante l'esportazione dell'immagine."));
-        }
+
+        // Convert to JPEG blob first (more memory efficient than toDataURL on mobile)
+        canvas.toBlob(
+          (blob) => {
+            if (blob) {
+              const fileReader = new FileReader();
+              fileReader.onloadend = () => {
+                resolve(fileReader.result as string);
+              };
+              fileReader.onerror = () => {
+                reject(new Error("Errore durante la codifica base64."));
+              };
+              fileReader.readAsDataURL(blob);
+            } else {
+              reject(new Error("Errore nella compressione del blob."));
+            }
+          },
+          'image/jpeg',
+          0.7
+        );
       };
       img.onerror = () => {
         reject(new Error("Errore nel caricamento dei dati dell'immagine."));
       };
-      img.src = reader.result as string;
+      img.src = event.target?.result as string;
     };
     reader.onerror = () => {
       reject(new Error("Errore di lettura del file."));
     };
-    reader.readAsDataURL(file);
   });
 };
+
 
 
 export const Profile: React.FC = () => {
