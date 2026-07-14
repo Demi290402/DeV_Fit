@@ -24,7 +24,7 @@ export const Navigation: React.FC<NavigationProps> = ({ currentTab, setCurrentTa
       <header className="app-header">
         <div className="brand-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <img 
-            src="/logo_no_bg.png" 
+            src="/DeVFitLogo.png" 
             alt="DeV Fit" 
             style={{ height: '28px', width: 'auto', objectFit: 'contain' }} 
           />
@@ -57,7 +57,7 @@ export const Navigation: React.FC<NavigationProps> = ({ currentTab, setCurrentTa
         {/* Brand title inside sidebar - visible only on desktop */}
         <div className="brand-title desktop-only-logo" style={{ margin: '0 0 24px 14px', display: 'block', textAlign: 'center' }}>
           <img 
-            src="/logo_no_bg.png" 
+            src="/DeVFitLogo.png" 
             alt="DeV Fit" 
             style={{ height: '56px', width: 'auto', objectFit: 'contain', display: 'block', margin: '0 auto' }} 
           />

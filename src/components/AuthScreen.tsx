@@ -59,10 +59,11 @@ export const AuthScreen: React.FC = () => {
         {/* Brand Logo */}
         <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
           <img 
-            src="/logo_no_bg.png" 
+            src="/DeVFitLogo.png" 
             alt="DeV Fit Logo" 
             style={{ height: '90px', width: 'auto', objectFit: 'contain', filter: 'drop-shadow(0 0 12px var(--color-primary-glow))' }} 
           />
+
           <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem', marginTop: '4px' }}>
             Il tuo diario intelligente di allenamento e dieta
           </p>
