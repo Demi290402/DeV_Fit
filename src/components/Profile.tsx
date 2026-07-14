@@ -14,6 +14,8 @@ export const Profile: React.FC = () => {
   // Profile settings state
   const [name, setName] = useState(profile.name);
   const [gender, setGender] = useState(profile.gender);
+  const [height, setHeight] = useState(profile.height ? profile.height.toString() : '165');
+  const [weight, setWeight] = useState(profile.weight.toString());
   const [targetKcal, setTargetKcal] = useState(profile.targetCalories.toString());
   const [targetP, setTargetP] = useState(profile.targetProtein.toString());
   const [targetC, setTargetC] = useState(profile.targetCarbs.toString());
@@ -25,6 +27,23 @@ export const Profile: React.FC = () => {
   const [thighs, setThighs] = useState(profile.thighs.toString());
   const [bf, setBf] = useState(profile.bodyFat.toString());
 
+  // Sync state with profile (e.g. from smartscale data update)
+  React.useEffect(() => {
+    setName(profile.name);
+    setGender(profile.gender);
+    setHeight(profile.height ? profile.height.toString() : '165');
+    setWeight(profile.weight.toString());
+    setTargetKcal(profile.targetCalories.toString());
+    setTargetP(profile.targetProtein.toString());
+    setTargetC(profile.targetCarbs.toString());
+    setTargetF(profile.targetFat.toString());
+    
+    setWaist(profile.waist.toString());
+    setArms(profile.arms.toString());
+    setThighs(profile.thighs.toString());
+    setBf(profile.bodyFat.toString());
+  }, [profile]);
+
   // Chart stats selector
   const [timeRange, setTimeRange] = useState<'7' | '30' | '90'>('7');
   const [metricType, setMetricType] = useState<'volume' | 'duration' | 'reps'>('volume');
@@ -33,6 +52,8 @@ export const Profile: React.FC = () => {
     updateProfile({
       name,
       gender,
+      height: parseFloat(height) || 165,
+      weight: parseFloat(weight) || 60.0,
       targetCalories: parseInt(targetKcal) || 1800,
       targetProtein: parseInt(targetP) || 120,
       targetCarbs: parseInt(targetC) || 185,
@@ -40,6 +61,7 @@ export const Profile: React.FC = () => {
     });
     setEditing(false);
   };
+
 
   const handleSaveMeasurements = () => {
     updateProfile({
@@ -263,6 +285,29 @@ export const Profile: React.FC = () => {
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <label style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Altezza (cm)</label>
+              <input 
+                type="number" 
+                className="set-input" 
+                value={height} 
+                onChange={e => setHeight(e.target.value)}
+                style={{ width: '100%', height: '38px' }}
+              />
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <label style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Peso (kg)</label>
+              <input 
+                type="number" 
+                className="set-input" 
+                value={weight} 
+                onChange={e => setWeight(e.target.value)}
+                style={{ width: '100%', height: '38px' }}
+              />
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
               <label style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Calorie Obiettivo</label>
               <input 
                 type="number" 
@@ -321,7 +366,7 @@ export const Profile: React.FC = () => {
             <div>
               <h3 style={{ fontSize: '1.1rem', fontWeight: 800 }}>{profile.name}</h3>
               <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'capitalize' }}>
-                Genere: {profile.gender === 'female' ? 'Femmina' : 'Maschio'} • Peso: {profile.weight} kg
+                Genere: {profile.gender === 'female' ? 'Femmina' : 'Maschio'} • Altezza: {profile.height || 165} cm • Peso: {profile.weight} kg
               </span>
             </div>
           </div>

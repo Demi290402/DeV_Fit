@@ -13,11 +13,13 @@ export const supabase = supabaseUrl && supabaseAnonKey
 export interface ProfileData {
   name: string;
   gender: 'female' | 'male';
+  height: number; // in cm
   weight: number; // in kg
   bodyFat: number; // in %
   waist: number; // in cm
   arms: number; // in cm
   thighs: number; // in cm
+
   targetCalories: number;
   targetProtein: number; // g
   targetCarbs: number; // g
@@ -140,7 +142,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const defaultProfile: ProfileData = {
     name: 'Utente DeV Fit',
     gender: 'female',
+    height: 165,
     weight: 60.0,
+
     bodyFat: 22.0,
     waist: 66,
     arms: 28,
