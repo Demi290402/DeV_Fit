@@ -8,15 +8,18 @@ import { DeviceSyncHub } from './DeviceSyncHub';
 
 const compressImage = (file: File, maxWidth: number, maxHeight: number): Promise<string> => {
   return new Promise((resolve, reject) => {
+    if (!file.type.startsWith('image/')) {
+      reject(new Error("Il file selezionato non è un'immagine valida."));
+      return;
+    }
+
     const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = (event) => {
-      const img = new Image();
-      img.src = event.target?.result as string;
+    reader.onload = () => {
+      const img = document.createElement('img');
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        let width = img.width;
-        let height = img.height;
+        let width = img.naturalWidth || img.width || maxWidth;
+        let height = img.naturalHeight || img.height || maxHeight;
 
         if (width > height) {
           if (width > maxWidth) {
@@ -34,19 +37,31 @@ const compressImage = (file: File, maxWidth: number, maxHeight: number): Promise
         canvas.height = height;
         const ctx = canvas.getContext('2d');
         if (!ctx) {
-          reject(new Error('Canvas context not available'));
+          reject(new Error("Impossibile inizializzare il contesto Canvas."));
           return;
         }
 
         ctx.drawImage(img, 0, 0, width, height);
-        const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
-        resolve(compressedBase64);
+        
+        try {
+          const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+          resolve(compressedBase64);
+        } catch (e) {
+          reject(new Error("Errore durante l'esportazione dell'immagine."));
+        }
       };
-      img.onerror = (err) => reject(err);
+      img.onerror = () => {
+        reject(new Error("Errore nel caricamento dei dati dell'immagine."));
+      };
+      img.src = reader.result as string;
     };
-    reader.onerror = (err) => reject(err);
+    reader.onerror = () => {
+      reject(new Error("Errore di lettura del file."));
+    };
+    reader.readAsDataURL(file);
   });
 };
+
 
 export const Profile: React.FC = () => {
   const { profile, updateProfile, workoutHistory, foodLogs, signOut, deleteAccountAndData } = useApp();
