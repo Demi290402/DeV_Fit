@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { User, Scale, Activity, Calendar as CalendarIcon, Check, Settings, LogOut, Trash2, ShieldAlert } from 'lucide-react';
+import { User, Scale, Activity, Calendar as CalendarIcon, Check, Settings, LogOut, Trash2, ShieldAlert, Download } from 'lucide-react';
+
 import { useApp } from '../context/AppContext';
 import type { WorkoutLog } from '../context/AppContext';
 import { CycleTracker } from './CycleTracker';
@@ -426,6 +427,24 @@ export const Profile: React.FC = () => {
             <div style={{ width: '10px', height: '10px', borderRadius: '2px', background: 'var(--color-secondary)' }} />
             <span>Solo Dieta</span>
           </div>
+        </div>
+      </div>
+
+      {/* PWA Install Guide Card */}
+      <div className="glass-card" style={{ border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        <h3 style={{ fontSize: '0.95rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <Download size={16} color="var(--color-primary)" /> Installa DeV Fit sul tuo Dispositivo
+        </h3>
+        <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: '1.4' }}>
+          Installa l'app per un'esperienza a tutto schermo fluida ed immediata:
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.72rem', background: 'rgba(255,255,255,0.01)', padding: '12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}>
+          <p>
+            <strong>📱 Su iPhone/iPad (Safari)</strong>: Tocca il pulsante di <strong>Condividi</strong> (quadrato con freccia verso l'alto) nel browser, scorri verso il basso e seleziona <strong>"Aggiungi alla schermata Home"</strong>.
+          </p>
+          <p style={{ borderTop: '1px solid rgba(255,255,255,0.03)', paddingTop: '6px' }}>
+            <strong>🤖 Su Android (Chrome)</strong>: Tocca il menu a tre puntini in alto a destra e seleziona <strong>"Installa app"</strong>, oppure usa il pulsante nella Dashboard principale.
+          </p>
         </div>
       </div>
 

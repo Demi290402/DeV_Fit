@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Flame, Droplet, Dumbbell, Scale, Check } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Flame, Droplet, Dumbbell, Scale, Check, Download } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
 import { TipWidget } from './TipWidget';
@@ -16,6 +16,40 @@ export const Dashboard: React.FC<DashboardProps> = ({ setCurrentTab }) => {
     const saved = localStorage.getItem(`df_water_${new Date().toISOString().split('T')[0]}`);
     return saved ? parseInt(saved) : 0;
   });
+
+  // PWA Install Prompt State
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [showInstallBanner, setShowInstallBanner] = useState(false);
+
+  useEffect(() => {
+    const handleBeforeInstall = (e: any) => {
+      // Prevent browser's default install banner from showing
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setShowInstallBanner(true);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstall);
+
+    // Check if app is already launched as standalone (PWA)
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+      setShowInstallBanner(false);
+    }
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
+    };
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      setShowInstallBanner(false);
+    }
+    setDeferredPrompt(null);
+  };
 
   const todayStr = new Date().toISOString().split('T')[0];
   const todayFoods = foodLogs[todayStr] || [];
@@ -66,127 +100,161 @@ export const Dashboard: React.FC<DashboardProps> = ({ setCurrentTab }) => {
         </div>
       </div>
 
+      {/* PWA Install Banner */}
+      {showInstallBanner && (
+        <div 
+          className="glass-card animate-scale-in" 
+          style={{ 
+            gridColumn: 'span 2', 
+            border: '1px solid var(--color-primary)', 
+            background: 'linear-gradient(135deg, rgba(212, 175, 55, 0.08) 0%, rgba(10, 10, 12, 0.95) 100%)', 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center', 
+            gap: '14px', 
+            padding: '16px' 
+          }}
+        >
+          <div style={{ flex: 1 }}>
+            <h4 style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--color-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Download size={16} /> Installa DeV Fit!
+            </h4>
+            <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '3px', lineHeight: '1.4' }}>
+              Aggiungi l'applicazione alla tua schermata Home per usarla a tutto schermo, velocizzare gli accessi e salvare i dati.
+            </p>
+          </div>
+          <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
+            <button className="btn-primary" onClick={handleInstallClick} style={{ padding: '8px 12px', fontSize: '0.72rem', height: '32px', boxShadow: 'none' }}>
+              Scarica App
+            </button>
+            <button className="btn-secondary" onClick={() => setShowInstallBanner(false)} style={{ padding: '8px 10px', fontSize: '0.72rem', height: '32px' }}>
+              Nascondi
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Tip Widget */}
       <TipWidget />
 
-      {/* Calories Ring and Macro progress */}
-      <div className="glass-card macro-card">
-        <div className="macro-circle-container">
-          <svg className="macro-svg">
-            <circle className="circle-bg" cx="60" cy="60" r={radius} />
+      {/* Calories Card */}
+      <div className="glass-card macro-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '20px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', flex: 1 }}>
+          <h3 style={{ fontSize: '1rem', fontWeight: 700 }}>Bilancio Calorico</h3>
+          
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <span style={{ fontSize: '1.8rem', fontWeight: 900, color: 'white' }}>
+              {totalCalories} <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 'normal' }}>/ {profile.targetCalories} kcal</span>
+            </span>
+            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '2px' }}>Assunte oggi</span>
+          </div>
+
+          <div style={{ display: 'flex', gap: '10px', fontSize: '0.7rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <span style={{ color: 'white', fontWeight: 'bold' }}>{totalProtein}g / {profile.targetProtein}g</span>
+              <span style={{ color: 'var(--text-muted)', fontSize: '0.62rem' }}>Proteine</span>
+            </div>
+            <div style={{ width: '1px', height: '20px', background: 'var(--border-color)' }} />
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <span style={{ color: 'white', fontWeight: 'bold' }}>{totalCarbs}g / {profile.targetCarbs}g</span>
+              <span style={{ color: 'var(--text-muted)', fontSize: '0.62rem' }}>Carboidrati</span>
+            </div>
+            <div style={{ width: '1px', height: '20px', background: 'var(--border-color)' }} />
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <span style={{ color: 'white', fontWeight: 'bold' }}>{totalFat}g / {profile.targetFat}g</span>
+              <span style={{ color: 'var(--text-muted)', fontSize: '0.62rem' }}>Grassi</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Circular SVG Ring */}
+        <div style={{ position: 'relative', width: '110px', height: '110px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <svg width="110" height="110" style={{ transform: 'rotate(-90deg)' }}>
+            <circle cx="55" cy="55" r={radius} fill="transparent" stroke="var(--border-color)" strokeWidth="8" />
             <circle 
-              className="circle-progress" 
-              cx="60" 
-              cy="60" 
+              cx="55" 
+              cy="55" 
               r={radius} 
+              fill="transparent" 
+              stroke="var(--color-primary)" 
+              strokeWidth="8" 
               strokeDasharray={circumference}
               strokeDashoffset={strokeDashoffset}
+              strokeLinecap="round"
+              style={{ transition: 'stroke-dashoffset 0.35s' }}
             />
           </svg>
-          <div className="macro-circle-text">
-            <span className="macro-calories">{totalCalories}</span>
-            <div className="macro-label">kcal / {profile.targetCalories}</div>
-          </div>
-        </div>
-
-        <div className="macro-stats">
-          <div className="macro-bar-row">
-            <div className="macro-bar-header">
-              <span>Proteine</span>
-              <span style={{ color: '#3b82f6' }}>{totalProtein}g / {profile.targetProtein}g</span>
-            </div>
-            <div className="macro-bar-bg">
-              <div className="macro-bar-fill fill-protein" style={{ width: `${Math.min((totalProtein / profile.targetProtein) * 100, 100)}%` }} />
-            </div>
-          </div>
-          <div className="macro-bar-row">
-            <div className="macro-bar-header">
-              <span>Carboidrati</span>
-              <span style={{ color: '#eab308' }}>{totalCarbs}g / {profile.targetCarbs}g</span>
-            </div>
-            <div className="macro-bar-bg">
-              <div className="macro-bar-fill fill-carbs" style={{ width: `${Math.min((totalCarbs / profile.targetCarbs) * 100, 100)}%` }} />
-            </div>
-          </div>
-          <div className="macro-bar-row">
-            <div className="macro-bar-header">
-              <span>Grassi</span>
-              <span style={{ color: '#ef4444' }}>{totalFat}g / {profile.targetFat}g</span>
-            </div>
-            <div className="macro-bar-bg">
-              <div className="macro-bar-fill fill-fat" style={{ width: `${Math.min((totalFat / profile.targetFat) * 100, 100)}%` }} />
-            </div>
+          <div style={{ position: 'absolute', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <span style={{ fontSize: '0.98rem', fontWeight: 800, color: 'white' }}>{Math.round(progressPercent)}%</span>
+            <span style={{ fontSize: '0.58rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Macro</span>
           </div>
         </div>
       </div>
 
-      {/* Quick Actions */}
-      <div>
-        <h3 className="section-title">Azioni Rapide</h3>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
-          <button className="btn-secondary" onClick={handleAddWater} style={{ flexDirection: 'column', gap: '6px', padding: '12px 8px', fontSize: '0.75rem', height: '80px' }}>
-            <Droplet size={20} color="#06b6d4" />
-            <span>Acqua (+250ml)</span>
-            <span style={{ fontSize: '0.65rem', color: 'var(--color-secondary)', fontWeight: 'bold' }}>{waterCount} ml</span>
-          </button>
-          
-          <button className="btn-secondary" onClick={() => { startWorkout(); setCurrentTab('workout'); }} style={{ flexDirection: 'column', gap: '6px', padding: '12px 8px', fontSize: '0.75rem', height: '80px' }}>
-            <Dumbbell size={20} color="#8b5cf6" />
-            <span>Inizia Allenamento</span>
-            <span style={{ fontSize: '0.65rem', color: 'var(--color-primary)' }}>Vuoto</span>
-          </button>
-
-          <button className="btn-secondary" onClick={() => setShowWeightModal(true)} style={{ flexDirection: 'column', gap: '6px', padding: '12px 8px', fontSize: '0.75rem', height: '80px' }}>
-            <Scale size={20} color="#10b981" />
-            <span>Log Peso</span>
-            <span style={{ fontSize: '0.65rem', color: 'var(--color-success)', fontWeight: 'bold' }}>{profile.weight} kg</span>
-          </button>
+      {/* Quick Action Widgets */}
+      <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '14px' }}>
+        <h3 style={{ fontSize: '0.95rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <Droplet size={16} color="var(--color-info)" /> Acqua Giornaliera
+        </h3>
+        <div>
+          <span style={{ fontSize: '1.4rem', fontWeight: 800, color: 'white' }}>{waterCount} <span style={{ fontSize: '0.8rem', fontWeight: 'normal', color: 'var(--text-muted)' }}>ml</span></span>
+          <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px' }}>Obiettivo: 2000 ml</p>
         </div>
+        <button className="btn-secondary" onClick={handleAddWater} style={{ width: '100%', padding: '8px', fontSize: '0.75rem' }}>
+          + Bicchier d'Acqua (250ml)
+        </button>
       </div>
 
-      {/* Today's Meals Overview */}
-      <div className="glass-card">
-        <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '12px' }}>Pasti Registrati Oggi</h3>
-        {todayFoods.length === 0 ? (
-          <p style={{ fontSize: '0.8rem', color: 'var(--text-dark)', textAlign: 'center', padding: '12px 0' }}>
-            Nessun alimento registrato oggi. Vai nella scheda "Dieta" per aggiungere un pasto!
-          </p>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {todayFoods.map(food => (
-              <div key={food.id} className="food-entry-item" style={{ border: 'none', background: 'rgba(255,255,255,0.02)', padding: '10px 14px', borderRadius: 'var(--radius-sm)' }}>
-                <div>
-                  <span style={{ fontSize: '0.6rem', color: 'var(--color-secondary)', textTransform: 'uppercase', fontWeight: 'bold', display: 'block' }}>{food.mealType}</span>
-                  <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>{food.name}</span>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--text-dark)', marginLeft: '8px' }}>{food.weight}g</span>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>{food.calories} kcal</span>
-                  <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', display: 'block' }}>P:{food.protein} C:{food.carbs} G:{food.fat}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+      <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '14px' }}>
+        <h3 style={{ fontSize: '0.95rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <Scale size={16} color="var(--color-primary)" /> Peso Corporeo
+        </h3>
+        <div>
+          <span style={{ fontSize: '1.4rem', fontWeight: 800, color: 'white' }}>{profile.weight} <span style={{ fontSize: '0.8rem', fontWeight: 'normal', color: 'var(--text-muted)' }}>kg</span></span>
+          <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px' }}>Aggiornato di recente</p>
+        </div>
+        <button className="btn-secondary" onClick={() => setShowWeightModal(true)} style={{ width: '100%', padding: '8px', fontSize: '0.75rem' }}>
+          Aggiorna Peso
+        </button>
       </div>
 
-      {/* Quick Weight Logger Modal */}
+      {/* Quick Start Gym Workout */}
+      <div className="glass-card" style={{ gridColumn: 'span 2', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <h3 style={{ fontSize: '1rem', fontWeight: 700 }}>Inizia la Sessione di Allenamento</h3>
+          <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>Registra carichi, recuperi e statistiche all'istante.</p>
+        </div>
+        <button 
+          className="btn-primary" 
+          onClick={() => {
+            startWorkout();
+            setCurrentTab('workout');
+          }}
+          style={{ padding: '10px 18px', fontSize: '0.75rem' }}
+        >
+          <Dumbbell size={14} /> Inizia Allenamento
+        </button>
+      </div>
+
+      {/* Weight Modal */}
       {showWeightModal && (
         <div className="drawer-backdrop" onClick={() => setShowWeightModal(false)}>
-          <div className="drawer-content animate-fade-in-up" onClick={e => e.stopPropagation()} style={{ paddingBottom: '30px' }}>
-            <h3 className="section-title">Registra Peso Corporeo</h3>
-            <div style={{ display: 'flex', gap: '10px', marginTop: '16px' }}>
+          <div className="drawer-content animate-fade-in-up" onClick={e => e.stopPropagation()}>
+            <div className="drawer-header">
+              <h3 className="section-title">Aggiorna Peso Corporeo</h3>
+              <button className="drawer-close" onClick={() => setShowWeightModal(false)}><Check size={20} /></button>
+            </div>
+            <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
               <input 
                 type="number" 
-                step="0.1" 
                 className="set-input" 
                 value={newWeight}
                 onChange={e => setNewWeight(e.target.value)}
-                style={{ flex: 1, height: '46px', fontSize: '1rem' }}
-                placeholder="es: 65.4"
+                style={{ flex: 1, height: '42px' }}
+                placeholder="es: 65.5"
               />
-              <button className="btn-primary" onClick={handleUpdateWeight} style={{ height: '46px' }}>
-                <Check size={18} /> Salva
+              <button className="btn-primary" onClick={handleUpdateWeight} style={{ height: '42px' }}>
+                Salva
               </button>
             </div>
           </div>
