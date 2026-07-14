@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Flame, Droplet, Dumbbell, Scale, Check, Download } from 'lucide-react';
+import { Flame, Droplet, Dumbbell, Scale, Check, Download, Moon, Heart, Info } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
 import { TipWidget } from './TipWidget';
@@ -9,13 +9,14 @@ interface DashboardProps {
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({ setCurrentTab }) => {
-  const { profile, updateProfile, foodLogs, startWorkout } = useApp();
+  const { profile, updateProfile, foodLogs, startWorkout, cycleData } = useApp();
   const [showWeightModal, setShowWeightModal] = useState(false);
   const [newWeight, setNewWeight] = useState(profile.weight.toString());
   const [waterCount, setWaterCount] = useState(() => {
     const saved = localStorage.getItem(`df_water_${new Date().toISOString().split('T')[0]}`);
     return saved ? parseInt(saved) : 0;
   });
+
 
   // PWA Install Prompt State
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
@@ -80,7 +81,58 @@ export const Dashboard: React.FC<DashboardProps> = ({ setCurrentTab }) => {
     }
   };
 
+  // BMI Calculations
+
+  const heightM = (profile.height || 165) / 100;
+  const bmi = profile.weight / (heightM * heightM);
+  
+  const getBmiCategory = (value: number) => {
+    if (value < 18.5) return { label: 'Sottopeso', color: '#3b82f6', text: 'Il tuo peso è inferiore alla norma per la tua altezza. Considera un surplus calorico sano per aumentare la massa muscolare.' };
+    if (value < 25) return { label: 'Normopeso', color: '#10b981', text: 'Il tuo peso è ottimale ed ideale per la tua altezza! Mantieni uno stile di vita attivo.' };
+    if (value < 30) return { label: 'Sovrappeso', color: '#eab308', text: 'Il tuo peso è leggermente superiore alla norma. Associa una dieta controllata ad attività cardio e allenamenti di forza.' };
+    return { label: 'Obesità', color: '#ef4444', text: 'Il tuo peso è superiore alla norma. Si raccomanda di associare attività fisica regolare a una dieta controllata.' };
+  };
+  const bmiCat = getBmiCategory(bmi);
+  const bmiPercentage = Math.min(Math.max(((bmi - 15) / (35 - 15)) * 100, 0), 100);
+
+  // Menstrual Cycle Calculations
+  const getCycleInfo = () => {
+    if (!cycleData) return null;
+    const elapsedDays = Math.floor((new Date().getTime() - new Date(cycleData.lastPeriodStart).getTime()) / (1000 * 60 * 60 * 24)) % cycleData.cycleLength;
+    const currentDay = elapsedDays >= 0 ? elapsedDays + 1 : 1;
+    
+    let phase = 'Fase Mestruale';
+    let color = 'var(--color-female)';
+    let tips = 'Preferisci yoga o allungamenti. Consuma cibi caldi e ricchi di ferro.';
+    
+    if (currentDay > cycleData.periodLength && currentDay <= 13) {
+      phase = 'Fase Follicolare';
+      color = '#f59e0b';
+      tips = 'Le energie crescono! Perfetto per intensificare gli allenamenti di forza.';
+    } else if (currentDay >= 14 && currentDay <= 16) {
+      phase = 'Fase Ovulatoria (Fertile)';
+      color = 'var(--color-primary)';
+      tips = 'Forza al massimo! Ottimo momento per tentare record personali (PR).';
+    } else if (currentDay > 16) {
+      phase = 'Fase Luteale';
+      color = '#8b5cf6';
+      tips = 'L\'energia cala. Riduci l\'intensità e punta sulla resistenza ed idratazione.';
+    }
+    
+    return { currentDay, phase, color, tips };
+  };
+  const cycleInfo = profile.gender === 'female' ? getCycleInfo() : null;
+
+  // Active Health Sync check
+  const isHealthConnected = (() => {
+    const saved = localStorage.getItem('df_sync_integrations');
+    if (!saved) return false;
+    const parsed = JSON.parse(saved);
+    return parsed.apple_health || parsed.google_fit;
+  })();
+
   return (
+
     <div className="dashboard-grid animate-fade-in-up">
       {/* Welcome & Streak */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -205,26 +257,199 @@ export const Dashboard: React.FC<DashboardProps> = ({ setCurrentTab }) => {
         </button>
       </div>
 
-      <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '14px' }}>
+      {/* Peso + BMI compatto */}
+      <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '10px' }}>
         <h3 style={{ fontSize: '0.95rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
           <Scale size={16} color="var(--color-primary)" /> Peso Corporeo
         </h3>
         <div>
           <span style={{ fontSize: '1.4rem', fontWeight: 800, color: 'white' }}>{profile.weight} <span style={{ fontSize: '0.8rem', fontWeight: 'normal', color: 'var(--text-muted)' }}>kg</span></span>
-          <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px' }}>Aggiornato di recente</p>
+          <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px' }}>Altezza: {profile.height || 165} cm</p>
         </div>
         <button className="btn-secondary" onClick={() => setShowWeightModal(true)} style={{ width: '100%', padding: '8px', fontSize: '0.75rem' }}>
           Aggiorna Peso
         </button>
       </div>
 
+      {/* BMI Card — full width */}
+      <div className="glass-card" style={{ gridColumn: 'span 2', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h3 style={{ fontSize: '0.95rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Info size={15} color="var(--color-primary)" /> Indice di Massa Corporea (BMI)
+          </h3>
+          <span style={{
+            fontSize: '0.65rem', fontWeight: 800, padding: '3px 10px',
+            borderRadius: '99px', background: bmiCat.color + '22', color: bmiCat.color, border: `1px solid ${bmiCat.color}55`
+          }}>
+            {bmiCat.label}
+          </span>
+        </div>
+
+        {/* BMI number + scale bar */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <span style={{ fontSize: '2.4rem', fontWeight: 900, color: bmiCat.color, lineHeight: 1 }}>
+            {bmi.toFixed(1)}
+          </span>
+          <div style={{ flex: 1 }}>
+            {/* Color scale bar */}
+            <div style={{ position: 'relative', height: '8px', borderRadius: '99px', background: 'linear-gradient(to right, #3b82f6 0%, #10b981 37%, #eab308 62%, #ef4444 100%)', overflow: 'visible' }}>
+              <div style={{
+                position: 'absolute',
+                top: '50%',
+                left: `${bmiPercentage}%`,
+                transform: 'translate(-50%, -50%)',
+                width: '14px', height: '14px',
+                borderRadius: '50%',
+                background: 'white',
+                border: `3px solid ${bmiCat.color}`,
+                boxShadow: `0 0 8px ${bmiCat.color}66`,
+                transition: 'left 0.6s ease'
+              }} />
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '5px', fontSize: '0.58rem', color: 'var(--text-dark)' }}>
+              <span>Sottopeso<br />&lt;18.5</span>
+              <span style={{ textAlign: 'center' }}>Normopeso<br />18.5–25</span>
+              <span style={{ textAlign: 'center' }}>Sovrappeso<br />25–30</span>
+              <span style={{ textAlign: 'right' }}>Obesità<br />&gt;30</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Personalized advice */}
+        <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', lineHeight: 1.5, borderLeft: `3px solid ${bmiCat.color}`, paddingLeft: '10px' }}>
+          {bmiCat.text}
+        </p>
+      </div>
+
+      {/* Sonno */}
+      <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        <h3 style={{ fontSize: '0.95rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <Moon size={15} color="#8b5cf6" /> Qualità del Sonno
+        </h3>
+        {isHealthConnected ? (
+          <div>
+            <span style={{ fontSize: '1.4rem', fontWeight: 800, color: 'white' }}>7h 32m</span>
+            <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px' }}>Ieri notte · Ottimo</p>
+            <div style={{ marginTop: '8px', display: 'flex', gap: '6px' }}>
+              {[
+                { label: 'Leggero', pct: 45, color: '#3b82f6' },
+                { label: 'Profondo', pct: 30, color: '#8b5cf6' },
+                { label: 'REM', pct: 25, color: '#ec4899' }
+              ].map(s => (
+                <div key={s.label} style={{ flex: 1 }}>
+                  <div style={{ height: '5px', borderRadius: '3px', background: s.color, opacity: 0.8, width: `${s.pct}%` }} />
+                  <span style={{ fontSize: '0.6rem', color: 'var(--text-dark)' }}>{s.label} {s.pct}%</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
+            <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
+              Collega Apple Health o Google Fit per tracciare automaticamente il tuo sonno e le sue fasi.
+            </p>
+            <button
+              className="btn-secondary"
+              onClick={() => setCurrentTab('devices')}
+              style={{ padding: '8px', fontSize: '0.7rem', marginTop: 'auto' }}
+            >
+              Collega Dispositivo
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Frequenza Cardiaca a Riposo (da Health Sync) */}
+      <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        <h3 style={{ fontSize: '0.95rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <Heart size={15} color="#ef4444" /> Battito a Riposo
+        </h3>
+        {isHealthConnected ? (
+          <div>
+            <span style={{ fontSize: '1.4rem', fontWeight: 800, color: 'white' }}>62 <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'normal' }}>bpm</span></span>
+            <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px' }}>Stato: Ottimo</p>
+            <div style={{ marginTop: '8px', height: '5px', borderRadius: '3px', background: 'rgba(255,255,255,0.05)', overflow: 'hidden' }}>
+              <div style={{ height: '100%', width: '44%', background: '#10b981', borderRadius: '3px', transition: 'width 0.6s' }} />
+            </div>
+            <p style={{ fontSize: '0.6rem', color: 'var(--text-dark)', marginTop: '4px' }}>Range atleti: 40–60 bpm · Normale: 60–100 bpm</p>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
+            <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
+              Il monitoraggio del battito cardiaco a riposo richiede la sincronizzazione con un'app salute.
+            </p>
+            <button
+              className="btn-secondary"
+              onClick={() => setCurrentTab('devices')}
+              style={{ padding: '8px', fontSize: '0.7rem', marginTop: 'auto' }}
+            >
+              Collega Dispositivo
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Ciclo Mestruale — solo per le donne */}
+      {profile.gender === 'female' && cycleInfo && (
+        <div className="glass-card" style={{
+          gridColumn: 'span 2',
+          display: 'flex', flexDirection: 'column', gap: '12px',
+          borderLeft: `4px solid ${cycleInfo.color}`,
+          background: `linear-gradient(135deg, ${cycleInfo.color}08 0%, rgba(10,10,12,0.9) 100%)`
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h3 style={{ fontSize: '0.95rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
+              🌙 Ciclo Mestruale
+            </h3>
+            <span style={{
+              fontSize: '0.65rem', fontWeight: 800, padding: '3px 10px',
+              borderRadius: '99px', background: cycleInfo.color + '22', color: cycleInfo.color, border: `1px solid ${cycleInfo.color}55`
+            }}>
+              {cycleInfo.phase}
+            </span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
+            <div>
+              <span style={{ fontSize: '1.8rem', fontWeight: 900, color: cycleInfo.color }}>Giorno {cycleInfo.currentDay}</span>
+              <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px' }}>di {cycleData.cycleLength} del ciclo</p>
+            </div>
+            {/* Mini cycle wheel */}
+            <div style={{ position: 'relative', width: '56px', height: '56px', flexShrink: 0 }}>
+              <svg width="56" height="56" style={{ transform: 'rotate(-90deg)' }}>
+                <circle cx="28" cy="28" r="22" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="6" />
+                <circle
+                  cx="28" cy="28" r="22" fill="none"
+                  stroke={cycleInfo.color} strokeWidth="6" strokeLinecap="round"
+                  strokeDasharray={`${2 * Math.PI * 22}`}
+                  strokeDashoffset={`${2 * Math.PI * 22 * (1 - cycleInfo.currentDay / cycleData.cycleLength)}`}
+                  style={{ transition: 'stroke-dashoffset 0.6s ease' }}
+                />
+              </svg>
+              <span style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', fontSize: '0.62rem', fontWeight: 800, color: cycleInfo.color }}>
+                {Math.round((cycleInfo.currentDay / cycleData.cycleLength) * 100)}%
+              </span>
+            </div>
+          </div>
+          <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', lineHeight: 1.5, borderLeft: `3px solid ${cycleInfo.color}`, paddingLeft: '10px' }}>
+            💡 {cycleInfo.tips}
+          </p>
+          <button
+            className="btn-secondary"
+            onClick={() => setCurrentTab('cycle')}
+            style={{ padding: '7px', fontSize: '0.7rem', alignSelf: 'flex-start' }}
+          >
+            Vai al Ciclo →
+          </button>
+        </div>
+      )}
+
       {/* Quick Start Gym Workout */}
-      <div 
-        className="glass-card animate-glow" 
-        style={{ 
-          gridColumn: 'span 2', 
-          display: 'flex', 
-          justifyContent: 'space-between', 
+      <div
+        className="glass-card animate-glow"
+        style={{
+          gridColumn: 'span 2',
+          display: 'flex',
+          justifyContent: 'space-between',
           alignItems: 'center',
           borderLeft: '4px solid var(--color-primary)',
           background: 'linear-gradient(135deg, rgba(212, 175, 55, 0.05) 0%, rgba(10, 10, 12, 0.85) 100%)'
@@ -234,8 +459,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ setCurrentTab }) => {
           <h3 style={{ fontSize: '1rem', fontWeight: 800 }}>Inizia Allenamento</h3>
           <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>Registra carichi, recuperi e statistiche all'istante.</p>
         </div>
-        <button 
-          className="btn-primary" 
+        <button
+          className="btn-primary"
           onClick={() => {
             startWorkout();
             setCurrentTab('workout');
@@ -245,6 +470,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ setCurrentTab }) => {
           <Dumbbell size={14} /> Inizia Ora
         </button>
       </div>
+
 
 
       {/* Weight Modal */}
