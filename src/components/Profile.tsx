@@ -6,6 +6,48 @@ import type { WorkoutLog } from '../context/AppContext';
 import { CycleTracker } from './CycleTracker';
 import { DeviceSyncHub } from './DeviceSyncHub';
 
+const compressImage = (file: File, maxWidth: number, maxHeight: number): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target?.result as string;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > maxWidth) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          }
+        } else {
+          if (height > maxHeight) {
+            width = Math.round((width * maxHeight) / height);
+            height = maxHeight;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          reject(new Error('Canvas context not available'));
+          return;
+        }
+
+        ctx.drawImage(img, 0, 0, width, height);
+        const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+        resolve(compressedBase64);
+      };
+      img.onerror = (err) => reject(err);
+    };
+    reader.onerror = (err) => reject(err);
+  });
+};
+
 export const Profile: React.FC = () => {
   const { profile, updateProfile, workoutHistory, foodLogs, signOut, deleteAccountAndData } = useApp();
   const [editing, setEditing] = useState(false);
@@ -16,6 +58,8 @@ export const Profile: React.FC = () => {
   const [gender, setGender] = useState(profile.gender);
   const [height, setHeight] = useState(profile.height ? profile.height.toString() : '165');
   const [weight, setWeight] = useState(profile.weight.toString());
+  const [avatarUrl, setAvatarUrl] = useState(profile.avatarUrl || '');
+  const [bannerUrl, setBannerUrl] = useState(profile.bannerUrl || '');
   const [targetKcal, setTargetKcal] = useState(profile.targetCalories.toString());
   const [targetP, setTargetP] = useState(profile.targetProtein.toString());
   const [targetC, setTargetC] = useState(profile.targetCarbs.toString());
@@ -33,6 +77,8 @@ export const Profile: React.FC = () => {
     setGender(profile.gender);
     setHeight(profile.height ? profile.height.toString() : '165');
     setWeight(profile.weight.toString());
+    setAvatarUrl(profile.avatarUrl || '');
+    setBannerUrl(profile.bannerUrl || '');
     setTargetKcal(profile.targetCalories.toString());
     setTargetP(profile.targetProtein.toString());
     setTargetC(profile.targetCarbs.toString());
@@ -48,12 +94,34 @@ export const Profile: React.FC = () => {
   const [timeRange, setTimeRange] = useState<'7' | '30' | '90'>('7');
   const [metricType, setMetricType] = useState<'volume' | 'duration' | 'reps'>('volume');
 
+  const handleUploadImage = async (e: React.ChangeEvent<HTMLInputElement>, type: 'avatar' | 'banner') => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const maxWidth = type === 'avatar' ? 300 : 800;
+      const maxHeight = type === 'avatar' ? 300 : 260;
+      
+      const compressed = await compressImage(file, maxWidth, maxHeight);
+      if (type === 'avatar') {
+        setAvatarUrl(compressed);
+      } else {
+        setBannerUrl(compressed);
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Errore durante la compressione dell'immagine. Riprova con un altro file.");
+    }
+  };
+
   const handleSaveProfile = () => {
     updateProfile({
       name,
       gender,
       height: parseFloat(height) || 165,
       weight: parseFloat(weight) || 60.0,
+      avatarUrl,
+      bannerUrl,
       targetCalories: parseInt(targetKcal) || 1800,
       targetProtein: parseInt(targetP) || 120,
       targetCarbs: parseInt(targetC) || 185,
@@ -61,6 +129,7 @@ export const Profile: React.FC = () => {
     });
     setEditing(false);
   };
+
 
 
   const handleSaveMeasurements = () => {
@@ -352,27 +421,167 @@ export const Profile: React.FC = () => {
             </div>
           </div>
 
+          {/* Immagini del Profilo */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <label style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Foto Profilo</label>
+              <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  id="avatar-upload" 
+                  onChange={e => handleUploadImage(e, 'avatar')}
+                  style={{ display: 'none' }} 
+                />
+                <label 
+                  htmlFor="avatar-upload" 
+                  className="btn-secondary" 
+                  style={{ 
+                    flex: 1, 
+                    padding: '8px 10px', 
+                    fontSize: '0.7rem', 
+                    height: '34px', 
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    margin: 0
+                  }}
+                >
+                  Carica Foto
+                </label>
+                {avatarUrl && (
+                  <button 
+                    className="icon-btn" 
+                    onClick={() => setAvatarUrl('')} 
+                    style={{ width: '34px', height: '34px', color: 'var(--color-error)', flexShrink: 0 }}
+                    title="Rimuovi Foto Profilo"
+                  >
+                    <Trash2 size={12} />
+                  </button>
+                )}
+              </div>
+            </div>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <label style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Foto Sfondo</label>
+              <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  id="banner-upload" 
+                  onChange={e => handleUploadImage(e, 'banner')}
+                  style={{ display: 'none' }} 
+                />
+                <label 
+                  htmlFor="banner-upload" 
+                  className="btn-secondary" 
+                  style={{ 
+                    flex: 1, 
+                    padding: '8px 10px', 
+                    fontSize: '0.7rem', 
+                    height: '34px', 
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    margin: 0
+                  }}
+                >
+                  Carica Copertina
+                </label>
+                {bannerUrl && (
+                  <button 
+                    className="icon-btn" 
+                    onClick={() => setBannerUrl('')} 
+                    style={{ width: '34px', height: '34px', color: 'var(--color-error)', flexShrink: 0 }}
+                    title="Rimuovi Sfondo"
+                  >
+                    <Trash2 size={12} />
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
           <button className="btn-primary" onClick={handleSaveProfile} style={{ padding: '10px' }}>
             <Check size={16} /> Salva Impostazioni
           </button>
         </div>
       ) : (
-        /* Account Info Display */
-        <div className="glass-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <div style={{ width: '56px', height: '56px', borderRadius: 'var(--radius-full)', background: 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem', fontWeight: 800 }}>
-              {profile.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+        /* Account Info Display (Redesigned with Banner, Avatar & Dynamic BMI - No overlaps) */
+        <div className="glass-card" style={{ padding: '0', overflow: 'hidden', display: 'flex', flexDirection: 'column', border: '1px solid var(--border-color)' }}>
+          {/* Banner container */}
+          <div style={{ 
+            height: '110px', 
+            width: '100%', 
+            backgroundImage: profile.bannerUrl ? `url(${profile.bannerUrl})` : 'linear-gradient(135deg, var(--color-primary) 0%, #1a1505 100%)',
+            backgroundPosition: 'center',
+            backgroundSize: 'cover',
+            backgroundRepeat: 'no-repeat',
+            position: 'relative'
+          }} />
+          
+          {/* Avatar and User details area */}
+          <div style={{ padding: '16px', position: 'relative', marginTop: '-36px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '12px' }}>
+              {/* Avatar circle */}
+              <div style={{ 
+                width: '72px', 
+                height: '72px', 
+                borderRadius: '50%', 
+                border: '3px solid var(--color-primary)', 
+                background: '#050506', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center', 
+                overflow: 'hidden',
+                boxShadow: '0 4px 15px rgba(0,0,0,0.6)',
+                flexShrink: 0
+              }}>
+                {profile.avatarUrl ? (
+                  <img src={profile.avatarUrl} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                  <span style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--color-primary)' }}>
+                    {profile.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                  </span>
+                )}
+              </div>
+              
+              {/* Logout button */}
+              <button 
+                className="icon-btn" 
+                onClick={signOut} 
+                title="Disconnettiti" 
+                style={{ 
+                  color: 'var(--color-error)', 
+                  width: '34px', 
+                  height: '34px', 
+                  background: 'rgba(239, 68, 68, 0.04)',
+                  border: '1px solid rgba(239, 68, 68, 0.1)',
+                  margin: 0
+                }}
+              >
+                <LogOut size={15} />
+              </button>
             </div>
-            <div>
-              <h3 style={{ fontSize: '1.1rem', fontWeight: 800 }}>{profile.name}</h3>
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'capitalize' }}>
-                Genere: {profile.gender === 'female' ? 'Femmina' : 'Maschio'} • Altezza: {profile.height || 165} cm • Peso: {profile.weight} kg
-              </span>
+            
+            {/* Info details aligned cleanly below to prevent overlap */}
+            <div style={{ marginTop: '2px' }}>
+              <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'white' }}>{profile.name}</h3>
+              
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 14px', marginTop: '6px', fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                <span>Genere: <strong style={{ color: 'white', textTransform: 'capitalize' }}>{profile.gender === 'female' ? 'Femmina' : 'Maschio'}</strong></span>
+                <span>Altezza: <strong style={{ color: 'white' }}>{profile.height || 165} cm</strong></span>
+                <span>Peso: <strong style={{ color: 'white' }}>{profile.weight} kg</strong></span>
+                {profile.height && profile.weight && (
+                  <span>BMI: <strong style={{ color: 'var(--color-primary)' }}>
+                    {(profile.weight / Math.pow((profile.height || 165) / 100, 2)).toFixed(1)}
+                  </strong></span>
+                )}
+              </div>
             </div>
           </div>
-          <button className="icon-btn" onClick={signOut} title="Sloggati" style={{ color: 'var(--color-error)' }}>
-            <LogOut size={16} />
-          </button>
         </div>
       )}
 

@@ -19,6 +19,8 @@ export interface ProfileData {
   waist: number; // in cm
   arms: number; // in cm
   thighs: number; // in cm
+  avatarUrl?: string;
+  bannerUrl?: string;
 
   targetCalories: number;
   targetProtein: number; // g
@@ -146,8 +148,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     gender: 'female',
     height: 165,
     weight: 60.0,
-
     bodyFat: 22.0,
+    avatarUrl: '',
+    bannerUrl: '',
     waist: 66,
     arms: 28,
     thighs: 52,
