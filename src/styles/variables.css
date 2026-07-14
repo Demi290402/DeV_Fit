@@ -1,0 +1,51 @@
+:root {
+  /* Color System */
+  --background-dark: #08080a;
+  --background-card: rgba(18, 18, 24, 0.75);
+  --background-card-hover: rgba(26, 26, 36, 0.85);
+  --border-color: rgba(255, 255, 255, 0.08);
+  --border-hover: rgba(255, 255, 255, 0.15);
+  
+  --color-primary: #8b5cf6; /* Violet */
+  --color-primary-glow: rgba(139, 92, 246, 0.25);
+  --color-secondary: #06b6d4; /* Cyan/Teal */
+  --color-secondary-glow: rgba(6, 182, 212, 0.25);
+  --color-female: #ec4899; /* Pink / Cycle */
+  --color-female-glow: rgba(236, 72, 153, 0.2);
+  
+  --text-primary: #f4f4f5;
+  --text-muted: #a1a1aa;
+  --text-dark: #71717a;
+  
+  /* Status Colors */
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-error: #ef4444;
+  --color-info: #3b82f6;
+
+  /* Achievement Badges */
+  --badge-1rm: #fbbf24;     /* Gold */
+  --badge-volume: #3b82f6;  /* Blue */
+  --badge-weight: #10b981;  /* Emerald */
+  
+  /* Fonts & Radius */
+  --font-sans: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-full: 9999px;
+  
+  /* Effects */
+  --glass-blur: blur(12px);
+  --shadow-main: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+  --shadow-glow: 0 0 20px rgba(139, 92, 246, 0.15);
+  --transition-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-normal: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
