@@ -6,7 +6,7 @@ import type { Recipe } from '../data/mockRecipes';
 
 
 export const RecipeBook: React.FC = () => {
-  const { addFoodLog } = useApp();
+  const { addFoodLog, mealsList } = useApp();
   
   // Filter states
   const [selectedType, setSelectedType] = useState<'all' | 'fit' | 'sgarro'>('all');
@@ -33,7 +33,7 @@ export const RecipeBook: React.FC = () => {
     return matchesType && matchesDiff && matchesTime && matchesSearch;
   });
 
-  const handleAddRecipeToDiary = (mealType: 'Colazione' | 'Pranzo' | 'Spuntino' | 'Cena') => {
+  const handleAddRecipeToDiary = (mealType: string) => {
     if (!selectedRecipe) return;
 
     const todayStr = new Date().toISOString().split('T')[0];
@@ -215,8 +215,8 @@ export const RecipeBook: React.FC = () => {
                   <span style={{ fontSize: '0.75rem', fontWeight: 'bold' }}>Seleziona il Pasto:</span>
                   <button style={{ background: 'none', border: 'none', color: 'var(--text-dark)', cursor: 'pointer' }} onClick={() => setShowMealSelector(false)}><X size={14} /></button>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}>
-                  {(['Colazione', 'Pranzo', 'Spuntino', 'Cena'] as const).map(type => (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(78px, 1fr))', gap: '6px' }}>
+                  {mealsList.map(type => (
                     <button 
                       key={type} 
                       className="btn-secondary" 

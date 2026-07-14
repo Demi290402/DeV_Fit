@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
-import { Plus, Trash2, Camera, Search, X, ChevronLeft, ChevronRight, Barcode } from 'lucide-react';
+import { Plus, Trash2, Camera, Search, X, ChevronLeft, ChevronRight, Barcode, Sliders } from 'lucide-react';
+
 import { useApp } from '../context/AppContext';
-import type { FoodLogItem } from '../context/AppContext';
+
+
 
 interface FoodDbItem {
   name: string;
@@ -25,13 +27,19 @@ const mockFoodDb: FoodDbItem[] = [
 ];
 
 export const FoodScanner: React.FC = () => {
-  const { foodLogs, addFoodLog, deleteFoodLog, profile } = useApp();
+  const { foodLogs, addFoodLog, deleteFoodLog, profile, mealsList, updateMealsList } = useApp();
   
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
-  const [activeMealType, setActiveMealType] = useState<FoodLogItem['mealType'] | null>(null);
+  const [activeMealType, setActiveMealType] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [customWeight, setCustomWeight] = useState('100');
   
+  // Custom meals configuration state
+  const [showMealSettings, setShowMealSettings] = useState(false);
+  const [newMealName, setNewMealName] = useState('');
+  const [editingMealIndex, setEditingMealIndex] = useState<number | null>(null);
+  const [editingMealName, setEditingMealName] = useState('');
+
   // Scanner state
   const [isScanning, setIsScanning] = useState(false);
   const [scanResult, setScanResult] = useState<FoodDbItem | null>(null);
@@ -104,12 +112,42 @@ export const FoodScanner: React.FC = () => {
     }
   };
 
+  // Meal list handlers
+  const handleAddMeal = () => {
+    const trimmedName = newMealName.trim();
+    if (trimmedName && !mealsList.includes(trimmedName)) {
+      updateMealsList([...mealsList, trimmedName]);
+      setNewMealName('');
+    }
+  };
+
+  const handleRemoveMeal = (index: number) => {
+    const mealName = mealsList[index];
+    const confirmed = window.confirm(
+      `Vuoi rimuovere il pasto "${mealName}"? I cibi già inseriti in questo pasto non verranno eliminati ma non potrai più loggare cibi sotto questa categoria.`
+    );
+    if (confirmed) {
+      updateMealsList(mealsList.filter((_, i) => i !== index));
+    }
+  };
+
+  const handleRenameMeal = (index: number) => {
+    const trimmedName = editingMealName.trim();
+    if (trimmedName && !mealsList.includes(trimmedName)) {
+      const updated = [...mealsList];
+      updated[index] = trimmedName;
+      updateMealsList(updated);
+      setEditingMealIndex(null);
+      setEditingMealName('');
+    }
+  };
+
   // Total daily stats
   const totalKcal = dayLogs.reduce((sum, i) => sum + i.calories, 0);
   const totalProt = dayLogs.reduce((sum, i) => sum + i.protein, 0);
   const totalCarbs = dayLogs.reduce((sum, i) => sum + i.carbs, 0);
 
-  const mealTypes: FoodLogItem['mealType'][] = ['Colazione', 'Pranzo', 'Spuntino', 'Cena'];
+  const mealTypes = mealsList;
 
   return (
     <div className="animate-fade-in-up" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -124,6 +162,86 @@ export const FoodScanner: React.FC = () => {
         </span>
         <button className="icon-btn" onClick={handleNextDay}><ChevronRight size={18} /></button>
       </div>
+
+      <div className="flex-between" style={{ marginTop: '-8px' }}>
+        <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Diario Alimentare</span>
+        <button 
+          className="btn-secondary" 
+          onClick={() => setShowMealSettings(!showMealSettings)} 
+          style={{ padding: '4px 10px', fontSize: '0.7rem', height: '26px', display: 'flex', alignItems: 'center', gap: '4px' }}
+        >
+          <Sliders size={12} color="var(--color-primary)" />
+          {showMealSettings ? 'Chiudi Impostazioni' : 'Personalizza Pasti'}
+        </button>
+      </div>
+
+      {/* Meals customization panel */}
+      {showMealSettings && (
+        <div className="glass-card animate-scale-in" style={{ display: 'flex', flexDirection: 'column', gap: '12px', border: '1px solid var(--border-color)', background: 'linear-gradient(135deg, rgba(212, 175, 55, 0.03) 0%, rgba(10, 10, 12, 0.95) 100%)' }}>
+          <h4 style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--color-primary)' }}>Personalizza Pasti della Giornata</h4>
+          <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', lineHeight: '1.4' }}>
+            Aggiungi nuovi pasti, rimuovi quelli esistenti o rinominali a tuo piacimento per adattare il diario alimentare al tuo stile di vita (es. Dieta Warrior, Digiuno Intermittente o 6 pasti al giorno).
+          </p>
+
+          {/* Meals list editor */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', margin: '4px 0' }}>
+            {mealsList.map((meal, index) => (
+              <div key={index} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', background: 'rgba(255,255,255,0.02)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}>
+                {editingMealIndex === index ? (
+                  <div style={{ display: 'flex', gap: '6px', width: '100%' }}>
+                    <input 
+                      type="text" 
+                      className="set-input" 
+                      value={editingMealName} 
+                      onChange={e => setEditingMealName(e.target.value)}
+                      style={{ flex: 1, height: '28px', fontSize: '0.75rem', textAlign: 'left', padding: '0 8px' }}
+                    />
+                    <button className="btn-primary" onClick={() => handleRenameMeal(index)} style={{ padding: '0 10px', height: '28px', fontSize: '0.7rem' }}>Salva</button>
+                    <button className="btn-secondary" onClick={() => setEditingMealIndex(null)} style={{ padding: '0 8px', height: '28px', fontSize: '0.7rem' }}>Annulla</button>
+                  </div>
+                ) : (
+                  <>
+                    <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>{meal}</span>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button 
+                        style={{ background: 'none', border: 'none', color: 'var(--color-primary)', cursor: 'pointer', fontSize: '0.7rem' }}
+                        onClick={() => {
+                          setEditingMealIndex(index);
+                          setEditingMealName(meal);
+                        }}
+                      >
+                        Rinomina
+                      </button>
+                      <button 
+                        style={{ background: 'none', border: 'none', color: 'var(--color-error)', cursor: 'pointer', fontSize: '0.7rem' }}
+                        onClick={() => handleRemoveMeal(index)}
+                      >
+                        Elimina
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Add meal input */}
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <input 
+              type="text" 
+              className="set-input" 
+              value={newMealName} 
+              onChange={e => setNewMealName(e.target.value)}
+              placeholder="Aggiungi pasto (es. Spuntino ore 16)"
+              style={{ flex: 1, height: '34px', fontSize: '0.78rem', textAlign: 'left', padding: '0 10px' }}
+            />
+            <button className="btn-primary" onClick={handleAddMeal} style={{ padding: '0 14px', height: '34px', fontSize: '0.72rem' }}>
+              Aggiungi
+            </button>
+          </div>
+        </div>
+      )}
+
 
       {/* Daily Macro Progress in Diary */}
       <div className="glass-card" style={{ display: 'flex', justifyContent: 'space-around', textAlign: 'center', padding: '16px' }}>

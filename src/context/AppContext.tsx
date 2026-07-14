@@ -65,7 +65,7 @@ export interface Routine {
 export interface FoodLogItem {
   id: string;
   name: string;
-  mealType: 'Colazione' | 'Pranzo' | 'Spuntino' | 'Cena';
+  mealType: string; // Dynamic meal type (Colazione, Pranzo, etc.)
   calories: number;
   protein: number;
   carbs: number;
@@ -106,6 +106,8 @@ interface AppContextType {
   hasConsented: boolean;
   setHasConsented: (consent: boolean) => void;
   profile: ProfileData;
+  mealsList: string[];
+  updateMealsList: (list: string[]) => void;
   updateProfile: (data: Partial<ProfileData>) => void;
   routines: Routine[];
   addRoutine: (routine: Routine) => void;
@@ -206,6 +208,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return saved ? JSON.parse(saved) : [];
   });
 
+  const [mealsList, setMealsList] = useState<string[]>(() => {
+    const saved = localStorage.getItem('df_meals_list');
+    return saved ? JSON.parse(saved) : ['Colazione', 'Pranzo', 'Spuntino', 'Cena'];
+  });
+
 
   // --- PERSISTENCE ---
   useEffect(() => {
@@ -243,6 +250,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     localStorage.setItem('df_cycle_data', JSON.stringify(cycleData));
   }, [cycleData]);
+
+  useEffect(() => {
+    localStorage.setItem('df_meals_list', JSON.stringify(mealsList));
+  }, [mealsList]);
+
+  const updateMealsList = (newList: string[]) => {
+    setMealsList(newList);
+  };
 
   useEffect(() => {
     localStorage.setItem('df_social_posts', JSON.stringify(socialPosts));
@@ -368,6 +383,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.removeItem('df_cycle_data');
     localStorage.removeItem('df_active_workout');
     localStorage.removeItem('df_consent');
+    localStorage.removeItem('df_meals_list');
 
     // Reset state to default values
     setUser(null);
@@ -377,6 +393,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setWorkoutHistory([]);
     setFoodLogs({});
     setActiveWorkout(null);
+    setMealsList(['Colazione', 'Pranzo', 'Spuntino', 'Cena']);
   };
 
   const setHasConsented = (consent: boolean) => {
@@ -713,7 +730,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       likeSocialPost,
       commentSocialPost,
       triggerConfetti,
-      getPreviousPerformances
+      getPreviousPerformances,
+      mealsList,
+      updateMealsList
     }}>
       {children}
     </AppContext.Provider>
