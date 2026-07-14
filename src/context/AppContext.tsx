@@ -137,7 +137,7 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // --- MOCK CONSTANTS ---
   const defaultProfile: ProfileData = {
-    name: 'Utente DeV_Fit',
+    name: 'Utente DeV Fit',
     gender: 'female',
     weight: 60.0,
     bodyFat: 22.0,
@@ -208,8 +208,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         duration: '45m',
         volume: 1850,
         recordsCount: 2,
-        likes: ['Utente DeV_Fit'],
-        comments: [{ username: 'Utente DeV_Fit', text: 'Grande coach! 💪' }]
+        likes: ['Utente DeV Fit'],
+        comments: [{ username: 'Utente DeV Fit', text: 'Grande coach! 💪' }]
       }
     ];
   });

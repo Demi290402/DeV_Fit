@@ -56,7 +56,7 @@ export const AuthScreen: React.FC = () => {
         {/* Brand Logo */}
         <div style={{ textAlign: 'center' }}>
           <h1 style={{ fontSize: '3rem', fontWeight: 900, letterSpacing: '-1.5px', background: 'linear-gradient(135deg, white 30%, var(--color-primary) 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-            DeV_Fit<span style={{ color: 'var(--color-secondary)', WebkitTextFillColor: 'initial' }}>.</span>
+            DeV Fit<span style={{ color: 'var(--color-secondary)', WebkitTextFillColor: 'initial' }}>.</span>
           </h1>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', marginTop: '6px' }}>
             Il tuo diario intelligente di allenamento e dieta
@@ -140,7 +140,7 @@ export const AuthScreen: React.FC = () => {
                   style={{ marginTop: '3px', width: '16px', height: '16px', accentColor: 'var(--color-primary)', cursor: 'pointer' }}
                 />
                 <label htmlFor="consentCheckbox" style={{ fontSize: '0.7rem', lineHeight: '1.4', color: 'var(--text-muted)', cursor: 'pointer' }}>
-                  Acconsento al trattamento dei dati di fitness e salute (peso, misurazioni corporee, ciclo, pasti) secondo la <span style={{ color: 'var(--color-secondary)', textDecoration: 'underline' }}>Privacy Policy</span> di DeV_Fit e confermo di avere almeno 16 anni.
+                  Acconsento al trattamento dei dati di fitness e salute (peso, misurazioni corporee, ciclo, pasti) secondo la <span style={{ color: 'var(--color-secondary)', textDecoration: 'underline' }}>Privacy Policy</span> di DeV Fit e confermo di avere almeno 16 anni.
                 </label>
               </div>
             )}

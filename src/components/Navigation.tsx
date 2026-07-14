@@ -23,7 +23,7 @@ export const Navigation: React.FC<NavigationProps> = ({ currentTab, setCurrentTa
       {/* Mobile Top Header (hidden on desktop) */}
       <header className="app-header">
         <div className="brand-title">
-          DeV_Fit<span className="brand-dot">.</span>
+          DeV Fit<span className="brand-dot">.</span>
         </div>
         <div className="header-actions">
           {activeWorkout && (
@@ -52,7 +52,7 @@ export const Navigation: React.FC<NavigationProps> = ({ currentTab, setCurrentTa
       <nav className="bottom-nav">
         {/* Brand title inside sidebar - visible only on desktop */}
         <div className="brand-title desktop-only-logo" style={{ margin: '0 0 24px 20px', fontSize: '1.8rem', display: 'block' }}>
-          DeV_Fit<span className="brand-dot">.</span>
+          DeV Fit<span className="brand-dot">.</span>
         </div>
 
         {menuItems.map((item) => {

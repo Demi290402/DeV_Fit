@@ -1,21 +1,21 @@
 :root {
-  /* Color System */
-  --background-dark: #08080a;
-  --background-card: rgba(18, 18, 24, 0.75);
-  --background-card-hover: rgba(26, 26, 36, 0.85);
-  --border-color: rgba(255, 255, 255, 0.08);
-  --border-hover: rgba(255, 255, 255, 0.15);
+  /* Color System - Luxury Gold, White & Black */
+  --background-dark: #0a0a0c;
+  --background-card: rgba(22, 22, 28, 0.7);
+  --background-card-hover: rgba(32, 32, 42, 0.8);
+  --border-color: rgba(212, 175, 55, 0.12); /* Gold border hint */
+  --border-hover: rgba(212, 175, 55, 0.25);
   
-  --color-primary: #8b5cf6; /* Violet */
-  --color-primary-glow: rgba(139, 92, 246, 0.25);
-  --color-secondary: #06b6d4; /* Cyan/Teal */
-  --color-secondary-glow: rgba(6, 182, 212, 0.25);
-  --color-female: #ec4899; /* Pink / Cycle */
-  --color-female-glow: rgba(236, 72, 153, 0.2);
+  --color-primary: #d4af37; /* Metallic Gold */
+  --color-primary-glow: rgba(212, 175, 55, 0.18);
+  --color-secondary: #ffffff; /* Pure White */
+  --color-secondary-glow: rgba(255, 255, 255, 0.15);
+  --color-female: #fda4af; /* Rose Gold / Cycle */
+  --color-female-glow: rgba(253, 164, 175, 0.2);
   
-  --text-primary: #f4f4f5;
-  --text-muted: #a1a1aa;
-  --text-dark: #71717a;
+  --text-primary: #f8fafc;
+  --text-muted: #94a3b8;
+  --text-dark: #64748b;
   
   /* Status Colors */
   --color-success: #10b981;
@@ -24,9 +24,9 @@
   --color-info: #3b82f6;
 
   /* Achievement Badges */
-  --badge-1rm: #fbbf24;     /* Gold */
-  --badge-volume: #3b82f6;  /* Blue */
-  --badge-weight: #10b981;  /* Emerald */
+  --badge-1rm: #d4af37;     /* Gold */
+  --badge-volume: #ffffff;  /* White */
+  --badge-weight: #94a3b8;  /* Silver */
   
   /* Fonts & Radius */
   --font-sans: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -36,9 +36,9 @@
   --radius-full: 9999px;
   
   /* Effects */
-  --glass-blur: blur(12px);
-  --shadow-main: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
-  --shadow-glow: 0 0 20px rgba(139, 92, 246, 0.15);
+  --glass-blur: blur(14px);
+  --shadow-main: 0 10px 40px 0 rgba(0, 0, 0, 0.7);
+  --shadow-glow: 0 0 24px rgba(212, 175, 55, 0.15);
   --transition-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   --transition-normal: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }

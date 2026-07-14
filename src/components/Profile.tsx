@@ -467,7 +467,8 @@ export const Profile: React.FC = () => {
             <div style={{ fontSize: '0.78rem', lineHeight: '1.5', color: 'var(--text-primary)', display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '10px', maxHeight: '450px', overflowY: 'auto', paddingRight: '6px' }}>
               <p><strong>Ultimo aggiornamento: 14 Luglio 2026</strong></p>
               
-              <p>La presente Informativa sulla Privacy descrive come raccogliamo, utilizziamo e proteggiamo i tuoi dati sensibili all'interno dell'applicazione DeV_Fit, in conformità con il Regolamento Generale sulla Protezione dei Dati (GDPR) e i requisiti delle piattaforme Google Play e App Store.</p>
+              <p>La presente Informativa sulla Privacy descrive come raccogliamo, utilizziamo e proteggiamo i tuoi dati sensibili all'interno dell'applicazione DeV Fit, in conformità con il Regolamento Generale sulla Protezione dei Dati (GDPR) e i requisiti delle piattaforme Google Play e App Store.</p>
+
               
               <h5 style={{ color: 'var(--color-secondary)', fontWeight: 'bold' }}>1. Dati Raccolti</h5>
               <p>Raccogliamo le seguenti categorie di dati per consentire il funzionamento corretto delle funzioni dell'app:</p>

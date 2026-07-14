@@ -97,7 +97,8 @@ const AppContent: React.FC = () => {
           </div>
           
           <p style={{ fontSize: '0.82rem', lineHeight: '1.5', color: 'var(--text-primary)', marginBottom: '14px' }}>
-            DeV_Fit è un'applicazione dedicata a fitness, salute e nutrizione. Per fornirti statistiche di allenamento, andamento del peso corporeo, diario alimentare e phases del ciclo mestruale femminile, **è necessario raccogliere e memorizzare i tuoi dati corporei e sanitari**.
+            DeV Fit è un'applicazione dedicata a fitness, salute e nutrizione. Per fornirti statistiche di allenamento, andamento del peso corporeo, diario alimentare e phases del ciclo mestruale femminile, **è necessario raccogliere e memorizzare i tuoi dati corporei e sanitari**.
+
           </p>
           
           <div style={{ display: 'flex', gap: '10px', background: 'rgba(6, 182, 212, 0.05)', padding: '12px', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(6, 182, 212, 0.15)', marginBottom: '20px' }}>

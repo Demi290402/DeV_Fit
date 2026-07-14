@@ -200,7 +200,7 @@ export const DeviceSyncHub: React.FC = () => {
             {wizardStep === 'intro' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '10px' }}>
                 <p style={{ fontSize: '0.8rem', lineHeight: '1.5', color: 'var(--text-primary)' }}>
-                  DeV_Fit utilizzerà le API protette di <strong>{activeWizardDevice.brand}</strong> per estrarre in tempo reale dati su allenamenti, sonno, battito cardiaco o peso.
+                  DeV Fit utilizzerà le API protette di <strong>{activeWizardDevice.brand}</strong> per estrarre in tempo reale dati su allenamenti, sonno, battito cardiaco o peso.
                 </p>
                 <div style={{ display: 'flex', gap: '8px', background: 'rgba(6, 182, 212, 0.05)', padding: '10px', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(6, 182, 212, 0.15)', fontSize: '0.72rem', color: 'var(--text-muted)' }}>
                   <Info size={16} color="var(--color-secondary)" style={{ flexShrink: 0 }} />
@@ -228,7 +228,7 @@ export const DeviceSyncHub: React.FC = () => {
                 </div>
                 <h4 style={{ fontSize: '0.98rem', fontWeight: 800 }}>Integrazione Completata!</h4>
                 <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                  {activeWizardDevice.name} è stato connesso con successo. DeV_Fit ora sincronizzerà le tue informazioni in background.
+                  {activeWizardDevice.name} è stato connesso con successo. DeV Fit ora sincronizzerà le tue informazioni in background.
                 </p>
                 {activeWizardDevice.id === 'smartscale' && (
                   <p style={{ fontSize: '0.78rem', color: 'var(--color-secondary)', fontWeight: 600 }}>
