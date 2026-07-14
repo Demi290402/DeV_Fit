@@ -180,15 +180,26 @@ export const RoutineManager: React.FC = () => {
       </div>
 
       {/* Empty Workout Direct Start */}
-      <div className="glass-card animate-glow" style={{ background: 'linear-gradient(135deg, rgba(6, 182, 212, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%)', border: '1px solid rgba(139, 92, 246, 0.3)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div 
+        className="glass-card animate-glow" 
+        style={{ 
+          background: 'linear-gradient(135deg, rgba(212, 175, 55, 0.05) 0%, rgba(10, 10, 12, 0.95) 100%)', 
+          border: '1px solid var(--border-color)', 
+          borderLeft: '4px solid var(--color-primary)',
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center' 
+        }}
+      >
         <div>
           <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)' }}>Allenamento Vuoto</h3>
           <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '2px' }}>Inizia una sessione libera senza precompilare.</p>
         </div>
         <button className="btn-primary" onClick={() => startWorkout()} style={{ width: '42px', height: '42px', borderRadius: 'var(--radius-full)', padding: 0 }}>
-          <Play size={18} fill="white" style={{ marginLeft: '3px' }} />
+          <Play size={18} fill="black" style={{ marginLeft: '3px' }} />
         </button>
       </div>
+
 
       <div>
         <h3 className="section-title">Le mie Routine</h3>

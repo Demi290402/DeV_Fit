@@ -219,9 +219,19 @@ export const Dashboard: React.FC<DashboardProps> = ({ setCurrentTab }) => {
       </div>
 
       {/* Quick Start Gym Workout */}
-      <div className="glass-card" style={{ gridColumn: 'span 2', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div 
+        className="glass-card animate-glow" 
+        style={{ 
+          gridColumn: 'span 2', 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          borderLeft: '4px solid var(--color-primary)',
+          background: 'linear-gradient(135deg, rgba(212, 175, 55, 0.05) 0%, rgba(10, 10, 12, 0.85) 100%)'
+        }}
+      >
         <div>
-          <h3 style={{ fontSize: '1rem', fontWeight: 700 }}>Inizia la Sessione di Allenamento</h3>
+          <h3 style={{ fontSize: '1rem', fontWeight: 800 }}>Inizia Allenamento</h3>
           <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>Registra carichi, recuperi e statistiche all'istante.</p>
         </div>
         <button 
@@ -232,9 +242,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ setCurrentTab }) => {
           }}
           style={{ padding: '10px 18px', fontSize: '0.75rem' }}
         >
-          <Dumbbell size={14} /> Inizia Allenamento
+          <Dumbbell size={14} /> Inizia Ora
         </button>
       </div>
+
 
       {/* Weight Modal */}
       {showWeightModal && (
