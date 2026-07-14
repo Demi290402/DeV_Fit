@@ -9,13 +9,13 @@
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/DeVFitLogo.png",
+      "src": "/logo_no_bg.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/DeVFitLogo.png",
+      "src": "/logo_no_bg.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
