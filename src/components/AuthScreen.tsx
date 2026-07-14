@@ -30,10 +30,12 @@ export const AuthScreen: React.FC = () => {
           throw new Error('È necessario acconsentire al trattamento dei dati per registrarsi.');
         }
         await signUp(email, password, name);
+        setSuccessMsg('Registrazione completata! Controlla la tua casella di posta per confermare l\'account prima di accedere.');
       } else {
         // Forgot password mock/real trigger
         setSuccessMsg('Email di recupero password inviata con successo!');
       }
+
     } catch (err: any) {
       setErrorMsg(err.message || 'Si è verificato un errore inaspettato.');
     } finally {
