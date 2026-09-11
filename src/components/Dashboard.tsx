@@ -9,14 +9,59 @@ interface DashboardProps {
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({ setCurrentTab }) => {
+  const todayStr = new Date().toISOString().split('T')[0];
   const { profile, updateProfile, foodLogs, startWorkout, cycleData } = useApp();
   const [showWeightModal, setShowWeightModal] = useState(false);
   const [newWeight, setNewWeight] = useState(profile.weight.toString());
   const [waterCount, setWaterCount] = useState(() => {
-    const saved = localStorage.getItem(`df_water_${new Date().toISOString().split('T')[0]}`);
+    const saved = localStorage.getItem(`df_water_${todayStr}`);
     return saved ? parseInt(saved) : 0;
   });
 
+  // Dati reali Sonno (tracciati per data, nessun dato fake)
+  const [sleepData, setSleepData] = useState<{ hours: number; minutes: number } | null>(() => {
+    try {
+      const saved = localStorage.getItem(`df_sleep_${todayStr}`);
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [showSleepModal, setShowSleepModal] = useState(false);
+  const [newSleepHours, setNewSleepHours] = useState(sleepData ? sleepData.hours.toString() : '7');
+  const [newSleepMinutes, setNewSleepMinutes] = useState(sleepData ? sleepData.minutes.toString() : '30');
+
+  // Dati reali Battito Cardiaco a Riposo (nessun dato fake)
+  const [heartRateData, setHeartRateData] = useState<number | null>(() => {
+    try {
+      const saved = localStorage.getItem(`df_bpm_${todayStr}`);
+      return saved ? parseInt(saved, 10) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [showBpmModal, setShowBpmModal] = useState(false);
+  const [newBpm, setNewBpm] = useState(heartRateData ? heartRateData.toString() : '65');
+
+  const handleSaveSleep = () => {
+    const h = parseInt(newSleepHours, 10) || 0;
+    const m = Math.min(Math.max(parseInt(newSleepMinutes, 10) || 0, 0), 59);
+    if (h > 0 || m > 0) {
+      const data = { hours: h, minutes: m };
+      setSleepData(data);
+      localStorage.setItem(`df_sleep_${todayStr}`, JSON.stringify(data));
+      setShowSleepModal(false);
+    }
+  };
+
+  const handleSaveBpm = () => {
+    const val = parseInt(newBpm, 10) || 0;
+    if (val > 30 && val < 220) {
+      setHeartRateData(val);
+      localStorage.setItem(`df_bpm_${todayStr}`, val.toString());
+      setShowBpmModal(false);
+    }
+  };
 
   // PWA Install Prompt State
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
@@ -52,12 +97,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ setCurrentTab }) => {
     setDeferredPrompt(null);
   };
 
-  const todayStr = new Date().toISOString().split('T')[0];
   const todayFoods = foodLogs[todayStr] || [];
 
   // Macro Totals
   const totalCalories = todayFoods.reduce((sum, item) => sum + item.calories, 0);
   const totalProtein = todayFoods.reduce((sum, item) => sum + item.protein, 0);
+
   const totalCarbs = todayFoods.reduce((sum, item) => sum + item.carbs, 0);
   const totalFat = todayFoods.reduce((sum, item) => sum + item.fat, 0);
 
@@ -130,17 +175,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ setCurrentTab }) => {
   };
   const cycleInfo = profile.gender === 'female' ? getCycleInfo() : null;
 
-  // FIX #6: isHealthConnected ora usa useState lazy initializer — NON chiama localStorage ad ogni render
-  const [isHealthConnected] = useState<boolean>(() => {
-    try {
-      const saved = localStorage.getItem('df_sync_integrations');
-      if (!saved) return false;
-      const parsed = JSON.parse(saved);
-      return !!(parsed.apple_health || parsed.google_fit);
-    } catch {
-      return false;
-    }
-  });
+
+
 
 
 
@@ -336,73 +372,131 @@ export const Dashboard: React.FC<DashboardProps> = ({ setCurrentTab }) => {
         </p>
       </div>
 
-      {/* Sonno */}
-      <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-        <h3 style={{ fontSize: '0.95rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <Moon size={15} color="#8b5cf6" /> Qualità del Sonno
-        </h3>
-        {isHealthConnected ? (
+      {/* Sonno - Reale */}
+      <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '10px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h3 style={{ fontSize: '0.95rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Moon size={15} color="#8b5cf6" /> Sonno
+          </h3>
+          {sleepData && (
+            <button
+              className="btn-secondary"
+              onClick={() => {
+                setNewSleepHours(sleepData.hours.toString());
+                setNewSleepMinutes(sleepData.minutes.toString());
+                setShowSleepModal(true);
+              }}
+              style={{ padding: '2px 8px', fontSize: '0.65rem' }}
+            >
+              Modifica
+            </button>
+          )}
+        </div>
+
+        {sleepData ? (
           <div>
-            <span style={{ fontSize: '1.4rem', fontWeight: 800, color: 'white' }}>7h 32m</span>
-            <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px' }}>Ieri notte · Ottimo</p>
-            <div style={{ marginTop: '8px', display: 'flex', gap: '6px' }}>
-              {[
-                { label: 'Leggero', pct: 45, color: '#3b82f6' },
-                { label: 'Profondo', pct: 30, color: '#8b5cf6' },
-                { label: 'REM', pct: 25, color: '#ec4899' }
-              ].map(s => (
-                <div key={s.label} style={{ flex: 1 }}>
-                  <div style={{ height: '5px', borderRadius: '3px', background: s.color, opacity: 0.8, width: `${s.pct}%` }} />
-                  <span style={{ fontSize: '0.6rem', color: 'var(--text-dark)' }}>{s.label} {s.pct}%</span>
-                </div>
-              ))}
+            <span style={{ fontSize: '1.4rem', fontWeight: 800, color: 'white' }}>
+              {sleepData.hours}h {sleepData.minutes > 0 ? `${sleepData.minutes}m` : ''}
+            </span>
+            <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+              {sleepData.hours >= 7 && sleepData.hours <= 9
+                ? 'Durata ottimale (7–9h)'
+                : sleepData.hours < 7
+                ? 'Sotto la soglia consigliata (<7h)'
+                : 'Sonno prolungato (>9h)'}
+            </p>
+            <div style={{ marginTop: '8px', height: '5px', borderRadius: '3px', background: 'rgba(255,255,255,0.05)', overflow: 'hidden' }}>
+              <div
+                style={{
+                  height: '100%',
+                  width: `${Math.min(((sleepData.hours * 60 + sleepData.minutes) / (8 * 60)) * 100, 100)}%`,
+                  background: 'linear-gradient(90deg, #8b5cf6, #a78bfa)',
+                  borderRadius: '3px'
+                }}
+              />
             </div>
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
-            <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
-              Collega Apple Health o Google Fit per tracciare automaticamente il tuo sonno e le sue fasi.
-            </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1, justifyContent: 'space-between' }}>
+            <div>
+              <span style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--text-dark)' }}>--</span>
+              <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                Nessun dato registrato oggi.
+              </p>
+            </div>
             <button
               className="btn-secondary"
-              onClick={() => setCurrentTab('devices')}
-              style={{ padding: '8px', fontSize: '0.7rem', marginTop: 'auto' }}
+              onClick={() => setShowSleepModal(true)}
+              style={{ width: '100%', padding: '8px', fontSize: '0.7rem', marginTop: 'auto' }}
             >
-              Collega Dispositivo
+              Registra Sonno
             </button>
           </div>
         )}
       </div>
 
-      {/* Frequenza Cardiaca a Riposo (da Health Sync) */}
-      <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-        <h3 style={{ fontSize: '0.95rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <Heart size={15} color="#ef4444" /> Battito a Riposo
-        </h3>
-        {isHealthConnected ? (
-          <div>
-            <span style={{ fontSize: '1.4rem', fontWeight: 800, color: 'white' }}>62 <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'normal' }}>bpm</span></span>
-            <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px' }}>Stato: Ottimo</p>
-            <div style={{ marginTop: '8px', height: '5px', borderRadius: '3px', background: 'rgba(255,255,255,0.05)', overflow: 'hidden' }}>
-              <div style={{ height: '100%', width: '44%', background: '#10b981', borderRadius: '3px', transition: 'width 0.6s' }} />
-            </div>
-            <p style={{ fontSize: '0.6rem', color: 'var(--text-dark)', marginTop: '4px' }}>Range atleti: 40–60 bpm · Normale: 60–100 bpm</p>
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
-            <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
-              Il monitoraggio del battito cardiaco a riposo richiede la sincronizzazione con un'app salute.
-            </p>
+      {/* Frequenza Cardiaca a Riposo - Reale */}
+      <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '10px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h3 style={{ fontSize: '0.95rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Heart size={15} color="#ef4444" /> Battito a Riposo
+          </h3>
+          {heartRateData && (
             <button
               className="btn-secondary"
-              onClick={() => setCurrentTab('devices')}
-              style={{ padding: '8px', fontSize: '0.7rem', marginTop: 'auto' }}
+              onClick={() => {
+                setNewBpm(heartRateData.toString());
+                setShowBpmModal(true);
+              }}
+              style={{ padding: '2px 8px', fontSize: '0.65rem' }}
             >
-              Collega Dispositivo
+              Modifica
+            </button>
+          )}
+        </div>
+
+        {heartRateData ? (
+          <div>
+            <span style={{ fontSize: '1.4rem', fontWeight: 800, color: 'white' }}>
+              {heartRateData} <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'normal' }}>bpm</span>
+            </span>
+            <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+              {heartRateData < 60
+                ? 'Range atleta / ottimo (<60 bpm)'
+                : heartRateData <= 80
+                ? 'Frequenza a riposo ideale (60–80 bpm)'
+                : 'Frequenza elevata (>80 bpm)'}
+            </p>
+            <div style={{ marginTop: '8px', height: '5px', borderRadius: '3px', background: 'rgba(255,255,255,0.05)', overflow: 'hidden' }}>
+              <div
+                style={{
+                  height: '100%',
+                  width: `${Math.min(Math.max(((heartRateData - 40) / (100 - 40)) * 100, 10), 100)}%`,
+                  background: heartRateData <= 80 ? '#10b981' : '#ef4444',
+                  borderRadius: '3px'
+                }}
+              />
+            </div>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1, justifyContent: 'space-between' }}>
+            <div>
+              <span style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--text-dark)' }}>-- <span style={{ fontSize: '0.8rem' }}>bpm</span></span>
+              <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                Nessuna rilevazione odierna.
+              </p>
+            </div>
+            <button
+              className="btn-secondary"
+              onClick={() => setShowBpmModal(true)}
+              style={{ width: '100%', padding: '8px', fontSize: '0.7rem', marginTop: 'auto' }}
+            >
+              Registra Battito
             </button>
           </div>
         )}
       </div>
+
 
       {/* Ciclo Mestruale — solo per le donne */}
       {profile.gender === 'female' && cycleInfo && (
@@ -512,6 +606,83 @@ export const Dashboard: React.FC<DashboardProps> = ({ setCurrentTab }) => {
           </div>
         </div>
       )}
+
+      {/* Sleep Modal */}
+      {showSleepModal && (
+        <div className="drawer-backdrop" onClick={() => setShowSleepModal(false)}>
+          <div className="drawer-content animate-fade-in-up" onClick={e => e.stopPropagation()}>
+            <div className="drawer-header">
+              <h3 className="section-title">Registra Ore di Sonno</h3>
+              <button className="drawer-close" onClick={() => setShowSleepModal(false)}><Check size={20} /></button>
+            </div>
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+              Inserisci i dati rilevati dal tuo smartwatch (Galaxy Watch, Apple Watch) o stimati per oggi:
+            </p>
+            <div style={{ display: 'flex', gap: '10px', marginTop: '12px' }}>
+              <div style={{ flex: 1 }}>
+                <label style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Ore</label>
+                <input 
+                  type="number" 
+                  min="0"
+                  max="24"
+                  className="set-input" 
+                  value={newSleepHours}
+                  onChange={e => setNewSleepHours(e.target.value)}
+                  style={{ width: '100%', height: '42px' }}
+                  placeholder="es: 7"
+                />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Minuti</label>
+                <input 
+                  type="number" 
+                  min="0"
+                  max="59"
+                  className="set-input" 
+                  value={newSleepMinutes}
+                  onChange={e => setNewSleepMinutes(e.target.value)}
+                  style={{ width: '100%', height: '42px' }}
+                  placeholder="es: 30"
+                />
+              </div>
+            </div>
+            <button className="btn-primary" onClick={handleSaveSleep} style={{ width: '100%', height: '42px', marginTop: '14px' }}>
+              Salva Sonno
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* BPM Modal */}
+      {showBpmModal && (
+        <div className="drawer-backdrop" onClick={() => setShowBpmModal(false)}>
+          <div className="drawer-content animate-fade-in-up" onClick={e => e.stopPropagation()}>
+            <div className="drawer-header">
+              <h3 className="section-title">Registra Battito a Riposo</h3>
+              <button className="drawer-close" onClick={() => setShowBpmModal(false)}><Check size={20} /></button>
+            </div>
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+              Inserisci la frequenza cardiaca a riposo (BPM) misurata dal tuo orologio:
+            </p>
+            <div style={{ display: 'flex', gap: '10px', marginTop: '12px' }}>
+              <input 
+                type="number" 
+                min="35"
+                max="200"
+                className="set-input" 
+                value={newBpm}
+                onChange={e => setNewBpm(e.target.value)}
+                style={{ flex: 1, height: '42px' }}
+                placeholder="es: 62"
+              />
+              <button className="btn-primary" onClick={handleSaveBpm} style={{ height: '42px', padding: '0 20px' }}>
+                Salva
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

@@ -144,6 +144,28 @@ export const DeviceSyncHub: React.FC = () => {
         </p>
       </div>
 
+      {/* Info Box trasparenza tecnica */}
+      <div style={{
+        background: 'linear-gradient(135deg, rgba(212, 175, 55, 0.05) 0%, rgba(10, 10, 12, 0.9) 100%)',
+        borderLeft: '4px solid var(--color-primary)',
+        border: '1px solid rgba(212, 175, 55, 0.2)',
+        borderRadius: 'var(--radius-sm)',
+        padding: '12px 14px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '6px'
+      }}>
+        <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--color-primary)' }}>
+          ℹ️ Come funziona il tracciamento da smartwatch e bilance
+        </span>
+        <p style={{ fontSize: '0.68rem', color: 'var(--text-muted)', lineHeight: '1.4' }}>
+          • <strong>Samsung Galaxy Watch</strong>: i dati vengono raccolti dall'app <em>Samsung Health</em> sul telefono. Da Android puoi abilitare <em>Health Connect</em> per condividerli, oppure registrarli direttamente con un tocco dalla Dashboard.<br />
+          • <strong>Apple Watch</strong>: Apple limita <em>HealthKit</em> unicamente alle app native iOS (App Store). Su browser/PWA il tracciamento avviene registrando i valori reali nella Dashboard.<br />
+          • Nessun dato casuale o fittizio viene inventato: i valori che vedi in DeV Fit riflettono unicamente i tuoi dati reali.
+        </p>
+      </div>
+
+
       <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
         {/* System aggregators */}
         <div>
@@ -205,8 +227,9 @@ export const DeviceSyncHub: React.FC = () => {
                   {isConnected && (
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '8px', borderTop: '1px solid rgba(255,255,255,0.04)', fontSize: '0.68rem' }}>
                       <span style={{ color: 'var(--color-success)', fontWeight: 'bold' }}>
-                        ● Collegato (Sincronizzazione attiva)
+                        ● Configurato
                       </span>
+
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <span style={{ color: 'var(--text-dark)' }}>Sinc: {lastSync[item.id] || 'Mai'}</span>
                         <button 
@@ -285,7 +308,7 @@ export const DeviceSyncHub: React.FC = () => {
                 {isConnected && (
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '8px', borderTop: '1px solid rgba(255,255,255,0.04)', fontSize: '0.68rem' }}>
                     <span style={{ color: 'var(--color-success)', fontWeight: 'bold' }}>
-                      ● Collegato
+                      ● Configurato
                     </span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <span style={{ color: 'var(--text-dark)' }}>Sinc: {lastSync[item.id] || 'Mai'}</span>
@@ -377,15 +400,16 @@ export const DeviceSyncHub: React.FC = () => {
                 <div style={{ width: '48px', height: '48px', background: 'var(--color-primary)', color: 'black', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '10px auto' }}>
                   <Check size={26} strokeWidth={3} />
                 </div>
-                <h4 style={{ fontSize: '0.95rem', fontWeight: 800 }}>Integrazione Attivata!</h4>
+                <h4 style={{ fontSize: '0.95rem', fontWeight: 800 }}>Integrazione Salvata</h4>
                 <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: '1.4' }}>
-                  {activeWizard.name} è ora associato correttamente. I dati verranno importati automaticamente ogni volta che apri l'app.
+                  La preferenza per {activeWizard.name} è stata salvata. Puoi registrare e visualizzare le tue metriche reali (sonno, battiti a riposo, peso) comodamente dalla Dashboard.
                 </p>
                 <button className="btn-primary" onClick={() => setActiveWizard(null)} style={{ height: '42px', marginTop: '10px', fontWeight: 'bold' }}>
                   Fatto
                 </button>
               </div>
             )}
+
           </div>
         </div>
       )}
