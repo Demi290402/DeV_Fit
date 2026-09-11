@@ -886,3 +886,44 @@
   from { stroke-dasharray: 1000; stroke-dashoffset: 1000; }
   to { stroke-dasharray: 1000; stroke-dashoffset: 0; }
 }
+
+/* COMPETITOR REDESIGN - VITALS & WORKOUT HISTORY */
+.vitals-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+@media (max-width: 360px) {
+  .vitals-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.vital-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 14px;
+  min-height: 124px;
+  border-radius: var(--radius-lg);
+  position: relative;
+  overflow: hidden;
+}
+
+.workout-history-card {
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  background: var(--background-card);
+  transition: var(--transition-normal);
+}
+
+.workout-history-card:hover {
+  border-color: rgba(212, 175, 55, 0.4);
+  background: var(--background-card-hover);
+}

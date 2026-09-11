@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Flame, Droplet, Dumbbell, Scale, Check, Download, Moon, Heart, Info } from 'lucide-react';
+import { Flame, Droplet, Dumbbell, Scale, Check, Download, Moon, Heart, Info, Plus } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
 import { TipWidget } from './TipWidget';
@@ -147,7 +147,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ setCurrentTab }) => {
   const totalFat = todayFoods.reduce((sum, item) => sum + item.fat, 0);
 
   // Calorie Ring Calculations
-  const radius = 50;
+  const radius = 38;
   const circumference = 2 * Math.PI * radius;
 
 
@@ -225,170 +225,380 @@ export const Dashboard: React.FC<DashboardProps> = ({ setCurrentTab }) => {
   };
   const cycleInfo = profile.gender === 'female' ? getCycleInfo() : null;
 
+  const todayFormatted = new Date().toLocaleDateString('it-IT', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long'
+  });
+  const capitalizedToday = todayFormatted.charAt(0).toUpperCase() + todayFormatted.slice(1);
 
-
-
-
+  const remainingCalories = profile.targetCalories - totalCalories;
+  const proteinPercent = Math.min(Math.round((totalProtein / Math.max(profile.targetProtein || 1, 1)) * 100), 100);
+  const carbsPercent = Math.min(Math.round((totalCarbs / Math.max(profile.targetCarbs || 1, 1)) * 100), 100);
+  const fatPercent = Math.min(Math.round((totalFat / Math.max(profile.targetFat || 1, 1)) * 100), 100);
 
   return (
-
     <div className="dashboard-grid animate-fade-in-up">
-      {/* Welcome & Streak */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-        <h2 style={{ fontSize: '1.6rem', fontWeight: 800 }}>Ciao, {profile.name}!</h2>
-        <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>Continua così per raggiungere i tuoi obiettivi.</p>
-      </div>
-
-      <div className="glass-card streak-counter">
-        <div className="streak-number">{profile.streak}</div>
+      {/* 1. Competitor Header: Welcome & Compact Streak */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
         <div>
-          <h4 style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.95rem', fontWeight: 700 }}>
-            Giorni di Costanza <Flame size={16} fill="#f59e0b" color="#f59e0b" />
-          </h4>
-          <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-            Mantieni il diario alimentare o l'allenamento attivo ogni giorno!
+          <h2 style={{ fontSize: '1.45rem', fontWeight: 800, letterSpacing: '-0.3px', margin: 0 }}>
+            Ciao, {profile.name} 👋
+          </h2>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '2px', margin: 0 }}>
+            {capitalizedToday}
           </p>
         </div>
-      </div>
 
-      {/* PWA Install Banner */}
-      {showInstallBanner && (
+        {/* Compact Streak Badge */}
         <div 
-          className="glass-card animate-scale-in" 
           style={{ 
-            gridColumn: 'span 2', 
-            border: '1px solid var(--color-primary)', 
-            background: 'linear-gradient(135deg, rgba(212, 175, 55, 0.08) 0%, rgba(10, 10, 12, 0.95) 100%)', 
             display: 'flex', 
-            justifyContent: 'space-between', 
             alignItems: 'center', 
-            gap: '14px', 
-            padding: '16px' 
+            gap: '6px', 
+            background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(212, 175, 55, 0.08) 100%)',
+            border: '1px solid rgba(245, 158, 11, 0.35)',
+            padding: '6px 12px',
+            borderRadius: 'var(--radius-full)',
+            boxShadow: '0 2px 10px rgba(245, 158, 11, 0.1)'
           }}
+          title="Giorni consecutivi di costanza"
         >
-          <div style={{ flex: 1 }}>
-            <h4 style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--color-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Download size={16} /> Installa DeV Fit!
-            </h4>
-            <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '3px', lineHeight: '1.4' }}>
-              Aggiungi l'applicazione alla tua schermata Home per usarla a tutto schermo, velocizzare gli accessi e salvare i dati.
-            </p>
-          </div>
-          <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
-            <button className="btn-primary" onClick={handleInstallClick} style={{ padding: '8px 12px', fontSize: '0.72rem', height: '32px', boxShadow: 'none' }}>
-              Scarica App
-            </button>
-            <button className="btn-secondary" onClick={() => setShowInstallBanner(false)} style={{ padding: '8px 10px', fontSize: '0.72rem', height: '32px' }}>
-              Nascondi
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Tip Widget */}
-      <TipWidget />
-
-      {/* Calories Card */}
-      <div className="glass-card macro-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '20px' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', flex: 1 }}>
-          <h3 style={{ fontSize: '1rem', fontWeight: 700 }}>Bilancio Calorico</h3>
-          
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <span style={{ fontSize: '1.8rem', fontWeight: 900, color: 'white' }}>
-              {totalCalories} <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 'normal' }}>/ {profile.targetCalories} kcal</span>
-            </span>
-            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '2px' }}>Assunte oggi</span>
-          </div>
-
-          <div style={{ display: 'flex', gap: '10px', fontSize: '0.7rem' }}>
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <span style={{ color: 'white', fontWeight: 'bold' }}>{totalProtein}g / {profile.targetProtein}g</span>
-              <span style={{ color: 'var(--text-muted)', fontSize: '0.62rem' }}>Proteine</span>
-            </div>
-            <div style={{ width: '1px', height: '20px', background: 'var(--border-color)' }} />
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <span style={{ color: 'white', fontWeight: 'bold' }}>{totalCarbs}g / {profile.targetCarbs}g</span>
-              <span style={{ color: 'var(--text-muted)', fontSize: '0.62rem' }}>Carboidrati</span>
-            </div>
-            <div style={{ width: '1px', height: '20px', background: 'var(--border-color)' }} />
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <span style={{ color: 'white', fontWeight: 'bold' }}>{totalFat}g / {profile.targetFat}g</span>
-              <span style={{ color: 'var(--text-muted)', fontSize: '0.62rem' }}>Grassi</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Circular SVG Ring */}
-        <div style={{ position: 'relative', width: '110px', height: '110px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <svg width="110" height="110" style={{ transform: 'rotate(-90deg)' }}>
-            <circle cx="55" cy="55" r={radius} fill="transparent" stroke="var(--border-color)" strokeWidth="8" />
-            <circle 
-              cx="55" 
-              cy="55" 
-              r={radius} 
-              fill="transparent" 
-              stroke="var(--color-primary)" 
-              strokeWidth="8" 
-              strokeDasharray={circumference}
-              strokeDashoffset={safeStrokeDashoffset}
-
-              strokeLinecap="round"
-              style={{ transition: 'stroke-dashoffset 0.35s' }}
-            />
-          </svg>
-          <div style={{ position: 'absolute', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.98rem', fontWeight: 800, color: 'white' }}>{Math.round(safeProgressPercent)}%</span>
-
-            <span style={{ fontSize: '0.58rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Macro</span>
-          </div>
+          <Flame size={16} fill="#f59e0b" color="#f59e0b" />
+          <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#f59e0b' }}>
+            {profile.streak} <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)' }}>gg</span>
+          </span>
         </div>
       </div>
 
-      {/* Quick Action Widgets */}
-      <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '14px' }}>
-        <h3 style={{ fontSize: '0.95rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <Droplet size={16} color="var(--color-info)" /> Acqua Giornaliera
-        </h3>
-        <div>
-          <span style={{ fontSize: '1.4rem', fontWeight: 800, color: 'white' }}>{waterCount} <span style={{ fontSize: '0.8rem', fontWeight: 'normal', color: 'var(--text-muted)' }}>ml</span></span>
-          <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px' }}>Obiettivo: 2000 ml</p>
-        </div>
-        <div style={{ display: 'flex', gap: '6px' }}>
-          <button className="btn-secondary" onClick={handleAddWater} style={{ flex: 1, padding: '8px', fontSize: '0.75rem' }}>
-            +250 ml (Bicchiere)
-          </button>
-          {waterCount > 0 && (
-            <button 
-              className="btn-secondary" 
-              onClick={handleRemoveWater} 
-              style={{ width: '38px', padding: '8px', fontSize: '0.85rem', fontWeight: 'bold', color: 'var(--text-muted)' }} 
-              title="Rimuovi 250ml"
-            >
-              -
-            </button>
+      {/* 2. HERO WORKOUT CARD (Priority #1 Gym Feature - Hevy/Strong style) */}
+      <div
+        className={`glass-card ${activeWorkout ? 'animate-glow' : ''}`}
+        style={{
+          borderLeft: '4px solid var(--color-primary)',
+          background: activeWorkout
+            ? 'linear-gradient(135deg, rgba(212, 175, 55, 0.15) 0%, rgba(12, 12, 15, 0.95) 100%)'
+            : 'linear-gradient(135deg, rgba(212, 175, 55, 0.06) 0%, rgba(10, 10, 12, 0.95) 100%)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '12px',
+          padding: '16px'
+        }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{
+              width: '36px',
+              height: '36px',
+              borderRadius: 'var(--radius-full)',
+              background: 'rgba(212, 175, 55, 0.15)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'var(--color-primary)'
+            }}>
+              <Dumbbell size={18} />
+            </div>
+            <div>
+              <span style={{ fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.6px', color: 'var(--color-primary)', fontWeight: 700, display: 'block' }}>
+                {activeWorkout ? 'Sessione Attiva' : 'Allenamento del Giorno'}
+              </span>
+              <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'white', margin: 0 }}>
+                {activeWorkout ? activeWorkout.name : 'Pronto ad allenarti?'}
+              </h3>
+            </div>
+          </div>
+
+          {activeWorkout && (
+            <span style={{
+              fontSize: '0.65rem',
+              fontWeight: 800,
+              padding: '4px 10px',
+              borderRadius: 'var(--radius-full)',
+              background: 'rgba(16, 185, 129, 0.15)',
+              color: '#10b981',
+              border: '1px solid rgba(16, 185, 129, 0.3)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '5px'
+            }}>
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981' }} />
+              In Corso
+            </span>
           )}
         </div>
 
-      </div>
+        <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: 0, lineHeight: 1.4 }}>
+          {activeWorkout
+            ? `${activeWorkout.exercises.length} esercizi registrati. Tocca per inserire carichi e ripetizioni.`
+            : 'Registra carichi, serie e supera i tuoi massimali con il timer di recupero automatico.'}
+        </p>
 
-      {/* Peso + BMI compatto */}
-      <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '10px' }}>
-        <h3 style={{ fontSize: '0.95rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <Scale size={16} color="var(--color-primary)" /> Peso Corporeo
-        </h3>
-        <div>
-          <span style={{ fontSize: '1.4rem', fontWeight: 800, color: 'white' }}>{profile.weight} <span style={{ fontSize: '0.8rem', fontWeight: 'normal', color: 'var(--text-muted)' }}>kg</span></span>
-          <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px' }}>Altezza: {profile.height || 165} cm</p>
+        <div style={{ display: 'flex', gap: '8px', marginTop: '2px' }}>
+          <button
+            className="btn-primary"
+            onClick={() => {
+              if (!activeWorkout) startWorkout();
+              setCurrentTab('workout');
+            }}
+            style={{ flex: 1, padding: '10px 14px', fontSize: '0.8rem', height: '38px' }}
+          >
+            <Dumbbell size={15} /> {activeWorkout ? 'Riprendi Sessione' : 'Inizia Ora'}
+          </button>
+          {!activeWorkout && (
+            <button
+              className="btn-secondary"
+              onClick={() => setCurrentTab('workout')}
+              style={{ padding: '10px 14px', fontSize: '0.8rem', height: '38px', whiteSpace: 'nowrap' }}
+            >
+              Le mie Schede →
+            </button>
+          )}
         </div>
-        <button className="btn-secondary" onClick={() => setShowWeightModal(true)} style={{ width: '100%', padding: '8px', fontSize: '0.75rem' }}>
-          Aggiorna Peso
-        </button>
       </div>
 
-      {/* BMI Card — full width */}
-      <div className="glass-card" style={{ gridColumn: 'span 2', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+      {/* 3. Daily Energy & Macro Card (MyFitnessPal / Lifesum style) */}
+      <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '18px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h3 style={{ fontSize: '0.95rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <div>
+            <span style={{ fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.6px', color: 'var(--text-muted)', fontWeight: 700, display: 'block' }}>
+              Nutrizione & Dieta
+            </span>
+            <h3 style={{ fontSize: '1rem', fontWeight: 800, margin: 0 }}>Bilancio Energetico</h3>
+          </div>
+          <button
+            className="btn-secondary"
+            onClick={() => setCurrentTab('nutrition')}
+            style={{ padding: '6px 12px', fontSize: '0.72rem', height: '30px', display: 'flex', alignItems: 'center', gap: '4px' }}
+          >
+            <Plus size={14} /> Diario Pasti
+          </button>
+        </div>
+
+        {/* Remaining Calories Hero + Ring */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+              <span style={{
+                fontSize: '2.2rem',
+                fontWeight: 900,
+                color: remainingCalories >= 0 ? 'white' : '#f59e0b',
+                lineHeight: 1
+              }}>
+                {remainingCalories >= 0 ? remainingCalories : `+${Math.abs(remainingCalories)}`}
+              </span>
+              <span style={{ fontSize: '0.88rem', color: 'var(--text-muted)', fontWeight: 600 }}>kcal</span>
+            </div>
+            <span style={{ fontSize: '0.76rem', color: remainingCalories >= 0 ? 'var(--color-primary)' : '#f59e0b', fontWeight: 600 }}>
+              {remainingCalories >= 0 ? 'Calorie Rimanenti' : 'Surplus Calorico'}
+            </span>
+            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+              Assunte: <strong style={{ color: 'white' }}>{totalCalories}</strong> / {profile.targetCalories} kcal
+            </span>
+          </div>
+
+          {/* Circular SVG Ring */}
+          <div style={{ position: 'relative', width: '92px', height: '92px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <svg width="92" height="92" style={{ transform: 'rotate(-90deg)' }}>
+              <circle cx="46" cy="46" r={radius} fill="transparent" stroke="rgba(255,255,255,0.06)" strokeWidth="7" />
+              <circle
+                cx="46"
+                cy="46"
+                r={radius}
+                fill="transparent"
+                stroke="var(--color-primary)"
+                strokeWidth="7"
+                strokeDasharray={circumference}
+                strokeDashoffset={safeStrokeDashoffset}
+                strokeLinecap="round"
+                style={{ transition: 'stroke-dashoffset 0.4s ease' }}
+              />
+            </svg>
+            <div style={{ position: 'absolute', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <span style={{ fontSize: '0.95rem', fontWeight: 800, color: 'white' }}>{Math.round(safeProgressPercent)}%</span>
+              <span style={{ fontSize: '0.55rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Target</span>
+            </div>
+          </div>
+        </div>
+
+        {/* 3 Macro Progress Bars */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', paddingTop: '10px', borderTop: '1px solid rgba(255,255,255,0.04)' }}>
+          {/* Protein */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem' }}>
+              <span style={{ color: '#3b82f6', fontWeight: 700 }}>Proteine</span>
+              <span style={{ color: 'white', fontWeight: 600 }}>{totalProtein}g</span>
+            </div>
+            <div style={{ height: '5px', borderRadius: '3px', background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
+              <div style={{ height: '100%', width: `${proteinPercent}%`, background: '#3b82f6', borderRadius: '3px', transition: 'width 0.4s ease' }} />
+            </div>
+            <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>Ob: {profile.targetProtein}g</span>
+          </div>
+
+          {/* Carbs */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem' }}>
+              <span style={{ color: '#eab308', fontWeight: 700 }}>Carboidrati</span>
+              <span style={{ color: 'white', fontWeight: 600 }}>{totalCarbs}g</span>
+            </div>
+            <div style={{ height: '5px', borderRadius: '3px', background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
+              <div style={{ height: '100%', width: `${carbsPercent}%`, background: '#eab308', borderRadius: '3px', transition: 'width 0.4s ease' }} />
+            </div>
+            <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>Ob: {profile.targetCarbs}g</span>
+          </div>
+
+          {/* Fat */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem' }}>
+              <span style={{ color: '#ef4444', fontWeight: 700 }}>Grassi</span>
+              <span style={{ color: 'white', fontWeight: 600 }}>{totalFat}g</span>
+            </div>
+            <div style={{ height: '5px', borderRadius: '3px', background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
+              <div style={{ height: '100%', width: `${fatPercent}%`, background: '#ef4444', borderRadius: '3px', transition: 'width 0.4s ease' }} />
+            </div>
+            <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>Ob: {profile.targetFat}g</span>
+          </div>
+        </div>
+      </div>
+
+      {/* 4. 2x2 SYMMETRIC VITALS & HABITS GRID */}
+      <div>
+        <h4 style={{ fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.6px', color: 'var(--text-muted)', fontWeight: 700, marginBottom: '10px' }}>
+          Parametri Vitali & Abitudini
+        </h4>
+        <div className="vitals-grid">
+          {/* Card 1: Acqua */}
+          <div className="glass-card vital-card">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '0.78rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '5px', color: 'white' }}>
+                <Droplet size={15} color="var(--color-info)" /> Acqua
+              </span>
+              <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>2000 ml</span>
+            </div>
+
+            <div>
+              <span style={{ fontSize: '1.45rem', fontWeight: 900, color: 'white', lineHeight: 1 }}>
+                {waterCount} <span style={{ fontSize: '0.75rem', fontWeight: 'normal', color: 'var(--text-muted)' }}>ml</span>
+              </span>
+              <div style={{ marginTop: '6px', height: '4px', borderRadius: '2px', background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: `${Math.min((waterCount / 2000) * 100, 100)}%`, background: 'var(--color-info)', borderRadius: '2px', transition: 'width 0.3s' }} />
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '4px' }}>
+              <button className="btn-secondary" onClick={handleAddWater} style={{ flex: 1, padding: '5px 8px', fontSize: '0.72rem', height: '28px' }}>
+                +250ml
+              </button>
+              {waterCount > 0 && (
+                <button className="btn-secondary" onClick={handleRemoveWater} style={{ width: '28px', padding: 0, fontSize: '0.8rem', height: '28px', fontWeight: 'bold' }}>
+                  -
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Card 2: Peso Corporeo */}
+          <div className="glass-card vital-card">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '0.78rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '5px', color: 'white' }}>
+                <Scale size={15} color="var(--color-primary)" /> Peso
+              </span>
+              <span style={{ fontSize: '0.65rem', color: 'var(--color-primary)', fontWeight: 700 }}>
+                BMI {bmi > 0 ? bmi.toFixed(1) : '--'}
+              </span>
+            </div>
+
+            <div>
+              <span style={{ fontSize: '1.45rem', fontWeight: 900, color: 'white', lineHeight: 1 }}>
+                {profile.weight} <span style={{ fontSize: '0.75rem', fontWeight: 'normal', color: 'var(--text-muted)' }}>kg</span>
+              </span>
+              <p style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: '4px', margin: 0 }}>
+                Altezza: {profile.height || 165} cm
+              </p>
+            </div>
+
+            <button className="btn-secondary" onClick={() => setShowWeightModal(true)} style={{ width: '100%', padding: '5px 8px', fontSize: '0.72rem', height: '28px' }}>
+              Aggiorna Peso
+            </button>
+          </div>
+
+          {/* Card 3: Sonno */}
+          <div className="glass-card vital-card">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '0.78rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '5px', color: 'white' }}>
+                <Moon size={15} color="#8b5cf6" /> Sonno
+              </span>
+              {sleepData && (
+                <span style={{ fontSize: '0.65rem', color: '#a78bfa', fontWeight: 700 }}>
+                  {sleepData.hours >= 7 && sleepData.hours <= 9 ? 'Ottimo' : sleepData.hours < 7 ? 'Basso' : 'Lungo'}
+                </span>
+              )}
+            </div>
+
+            <div>
+              <span style={{ fontSize: '1.45rem', fontWeight: 900, color: 'white', lineHeight: 1 }}>
+                {sleepData ? `${sleepData.hours}h ${sleepData.minutes > 0 ? `${sleepData.minutes}m` : ''}` : '--'}
+              </span>
+              <p style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: '4px', margin: 0 }}>
+                {sleepData ? 'Target: 7–9 ore' : 'Nessun dato odierno'}
+              </p>
+            </div>
+
+            <button
+              className="btn-secondary"
+              onClick={() => {
+                if (sleepData) {
+                  setNewSleepHours(sleepData.hours.toString());
+                  setNewSleepMinutes(sleepData.minutes.toString());
+                }
+                setShowSleepModal(true);
+              }}
+              style={{ width: '100%', padding: '5px 8px', fontSize: '0.72rem', height: '28px' }}
+            >
+              {sleepData ? 'Modifica' : 'Registra Sonno'}
+            </button>
+          </div>
+
+          {/* Card 4: Battito a Riposo */}
+          <div className="glass-card vital-card">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '0.78rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '5px', color: 'white' }}>
+                <Heart size={15} color="#ef4444" /> Battito
+              </span>
+              {heartRateData && (
+                <span style={{ fontSize: '0.65rem', color: heartRateData <= 80 ? '#10b981' : '#ef4444', fontWeight: 700 }}>
+                  {heartRateData < 60 ? 'Atleta' : heartRateData <= 80 ? 'Ideale' : 'Elevato'}
+                </span>
+              )}
+            </div>
+
+            <div>
+              <span style={{ fontSize: '1.45rem', fontWeight: 900, color: 'white', lineHeight: 1 }}>
+                {heartRateData ? heartRateData : '--'} <span style={{ fontSize: '0.75rem', fontWeight: 'normal', color: 'var(--text-muted)' }}>bpm</span>
+              </span>
+              <p style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: '4px', margin: 0 }}>
+                {heartRateData ? 'A riposo (RHR)' : 'Nessun dato odierno'}
+              </p>
+            </div>
+
+            <button
+              className="btn-secondary"
+              onClick={() => {
+                if (heartRateData) setNewBpm(heartRateData.toString());
+                setShowBpmModal(true);
+              }}
+              style={{ width: '100%', padding: '5px 8px', fontSize: '0.72rem', height: '28px' }}
+            >
+              {heartRateData ? 'Modifica' : 'Registra BPM'}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* 5. BMI Card */}
+      <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h3 style={{ fontSize: '0.95rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px', margin: 0 }}>
             <Info size={15} color="var(--color-primary)" /> Indice di Massa Corporea (BMI)
           </h3>
           <span style={{
@@ -430,147 +640,20 @@ export const Dashboard: React.FC<DashboardProps> = ({ setCurrentTab }) => {
         </div>
 
         {/* Personalized advice */}
-        <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', lineHeight: 1.5, borderLeft: `3px solid ${bmiCat.color}`, paddingLeft: '10px' }}>
+        <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', lineHeight: 1.5, borderLeft: `3px solid ${bmiCat.color}`, paddingLeft: '10px', margin: 0 }}>
           {bmiCat.text}
         </p>
       </div>
 
-      {/* Sonno - Reale */}
-      <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '10px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h3 style={{ fontSize: '0.95rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Moon size={15} color="#8b5cf6" /> Sonno
-          </h3>
-          {sleepData && (
-            <button
-              className="btn-secondary"
-              onClick={() => {
-                setNewSleepHours(sleepData.hours.toString());
-                setNewSleepMinutes(sleepData.minutes.toString());
-                setShowSleepModal(true);
-              }}
-              style={{ padding: '2px 8px', fontSize: '0.65rem' }}
-            >
-              Modifica
-            </button>
-          )}
-        </div>
-
-        {sleepData ? (
-          <div>
-            <span style={{ fontSize: '1.4rem', fontWeight: 800, color: 'white' }}>
-              {sleepData.hours}h {sleepData.minutes > 0 ? `${sleepData.minutes}m` : ''}
-            </span>
-            <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-              {sleepData.hours >= 7 && sleepData.hours <= 9
-                ? 'Durata ottimale (7–9h)'
-                : sleepData.hours < 7
-                ? 'Sotto la soglia consigliata (<7h)'
-                : 'Sonno prolungato (>9h)'}
-            </p>
-            <div style={{ marginTop: '8px', height: '5px', borderRadius: '3px', background: 'rgba(255,255,255,0.05)', overflow: 'hidden' }}>
-              <div
-                style={{
-                  height: '100%',
-                  width: `${Math.min(((sleepData.hours * 60 + sleepData.minutes) / (8 * 60)) * 100, 100)}%`,
-                  background: 'linear-gradient(90deg, #8b5cf6, #a78bfa)',
-                  borderRadius: '3px'
-                }}
-              />
-            </div>
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1, justifyContent: 'space-between' }}>
-            <div>
-              <span style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--text-dark)' }}>--</span>
-              <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                Nessun dato registrato oggi.
-              </p>
-            </div>
-            <button
-              className="btn-secondary"
-              onClick={() => setShowSleepModal(true)}
-              style={{ width: '100%', padding: '8px', fontSize: '0.7rem', marginTop: 'auto' }}
-            >
-              Registra Sonno
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* Frequenza Cardiaca a Riposo - Reale */}
-      <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '10px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h3 style={{ fontSize: '0.95rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Heart size={15} color="#ef4444" /> Battito a Riposo
-          </h3>
-          {heartRateData && (
-            <button
-              className="btn-secondary"
-              onClick={() => {
-                setNewBpm(heartRateData.toString());
-                setShowBpmModal(true);
-              }}
-              style={{ padding: '2px 8px', fontSize: '0.65rem' }}
-            >
-              Modifica
-            </button>
-          )}
-        </div>
-
-        {heartRateData ? (
-          <div>
-            <span style={{ fontSize: '1.4rem', fontWeight: 800, color: 'white' }}>
-              {heartRateData} <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'normal' }}>bpm</span>
-            </span>
-            <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-              {heartRateData < 60
-                ? 'Range atleta / ottimo (<60 bpm)'
-                : heartRateData <= 80
-                ? 'Frequenza a riposo ideale (60–80 bpm)'
-                : 'Frequenza elevata (>80 bpm)'}
-            </p>
-            <div style={{ marginTop: '8px', height: '5px', borderRadius: '3px', background: 'rgba(255,255,255,0.05)', overflow: 'hidden' }}>
-              <div
-                style={{
-                  height: '100%',
-                  width: `${Math.min(Math.max(((heartRateData - 40) / (100 - 40)) * 100, 10), 100)}%`,
-                  background: heartRateData <= 80 ? '#10b981' : '#ef4444',
-                  borderRadius: '3px'
-                }}
-              />
-            </div>
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1, justifyContent: 'space-between' }}>
-            <div>
-              <span style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--text-dark)' }}>-- <span style={{ fontSize: '0.8rem' }}>bpm</span></span>
-              <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                Nessuna rilevazione odierna.
-              </p>
-            </div>
-            <button
-              className="btn-secondary"
-              onClick={() => setShowBpmModal(true)}
-              style={{ width: '100%', padding: '8px', fontSize: '0.7rem', marginTop: 'auto' }}
-            >
-              Registra Battito
-            </button>
-          </div>
-        )}
-      </div>
-
-
-      {/* Ciclo Mestruale — solo per le donne */}
+      {/* 6. Ciclo Mestruale — solo per le donne */}
       {profile.gender === 'female' && cycleInfo && (
         <div className="glass-card" style={{
-          gridColumn: 'span 2',
           display: 'flex', flexDirection: 'column', gap: '12px',
           borderLeft: `4px solid ${cycleInfo.color}`,
           background: `linear-gradient(135deg, ${cycleInfo.color}08 0%, rgba(10,10,12,0.9) 100%)`
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h3 style={{ fontSize: '0.95rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <h3 style={{ fontSize: '0.95rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px', margin: 0 }}>
               🌙 Ciclo Mestruale
             </h3>
             <span style={{
@@ -583,17 +666,17 @@ export const Dashboard: React.FC<DashboardProps> = ({ setCurrentTab }) => {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
             <div>
               <span style={{ fontSize: '1.8rem', fontWeight: 900, color: cycleInfo.color }}>Giorno {cycleInfo.currentDay}</span>
-              <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px' }}>di {cycleData.cycleLength} del ciclo</p>
+              <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px', margin: 0 }}>di {cycleData.cycleLength} del ciclo</p>
             </div>
             {/* Mini cycle wheel */}
-            <div style={{ position: 'relative', width: '56px', height: '56px', flexShrink: 0 }}>
-              <svg width="56" height="56" style={{ transform: 'rotate(-90deg)' }}>
-                <circle cx="28" cy="28" r="22" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="6" />
+            <div style={{ position: 'relative', width: '52px', height: '52px', flexShrink: 0 }}>
+              <svg width="52" height="52" style={{ transform: 'rotate(-90deg)' }}>
+                <circle cx="26" cy="26" r="20" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="5" />
                 <circle
-                  cx="28" cy="28" r="22" fill="none"
-                  stroke={cycleInfo.color} strokeWidth="6" strokeLinecap="round"
-                  strokeDasharray={`${2 * Math.PI * 22}`}
-                  strokeDashoffset={`${2 * Math.PI * 22 * (1 - cycleInfo.currentDay / cycleData.cycleLength)}`}
+                  cx="26" cy="26" r="20" fill="none"
+                  stroke={cycleInfo.color} strokeWidth="5" strokeLinecap="round"
+                  strokeDasharray={`${2 * Math.PI * 20}`}
+                  strokeDashoffset={`${2 * Math.PI * 20 * (1 - cycleInfo.currentDay / cycleData.cycleLength)}`}
                   style={{ transition: 'stroke-dashoffset 0.6s ease' }}
                 />
               </svg>
@@ -602,54 +685,54 @@ export const Dashboard: React.FC<DashboardProps> = ({ setCurrentTab }) => {
               </span>
             </div>
           </div>
-          <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', lineHeight: 1.5, borderLeft: `3px solid ${cycleInfo.color}`, paddingLeft: '10px' }}>
+          <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', lineHeight: 1.5, borderLeft: `3px solid ${cycleInfo.color}`, paddingLeft: '10px', margin: 0 }}>
             💡 {cycleInfo.tips}
           </p>
           <button
             className="btn-secondary"
             onClick={() => setCurrentTab('cycle')}
-            style={{ padding: '7px', fontSize: '0.7rem', alignSelf: 'flex-start' }}
+            style={{ padding: '6px 12px', fontSize: '0.7rem', alignSelf: 'flex-start' }}
           >
-            Vai al Ciclo →
+            Dettagli Ciclo →
           </button>
         </div>
       )}
 
-      {/* Quick Start / Resume Gym Workout */}
-      <div
-        className="glass-card animate-glow"
-        style={{
-          gridColumn: 'span 2',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          borderLeft: '4px solid var(--color-primary)',
-          background: 'linear-gradient(135deg, rgba(212, 175, 55, 0.08) 0%, rgba(10, 10, 12, 0.95) 100%)'
-        }}
-      >
-        <div style={{ flex: 1, paddingRight: '10px' }}>
-          <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--color-primary)' }}>
-            {activeWorkout ? `In Corso: ${activeWorkout.name}` : 'Inizia Allenamento'}
-          </h3>
-          <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-            {activeWorkout
-              ? 'Hai una sessione aperta. Tocca per registrare serie e carichi.'
-              : 'Registra carichi, serie e statistiche all\'istante.'}
-          </p>
-        </div>
-        <button
-          className="btn-primary"
-          onClick={() => {
-            if (!activeWorkout) {
-              startWorkout();
-            }
-            setCurrentTab('workout');
+      {/* 7. Tip Widget */}
+      <TipWidget />
+
+      {/* 8. PWA Install Banner */}
+      {showInstallBanner && (
+        <div 
+          className="glass-card animate-scale-in" 
+          style={{ 
+            border: '1px solid var(--color-primary)', 
+            background: 'linear-gradient(135deg, rgba(212, 175, 55, 0.08) 0%, rgba(10, 10, 12, 0.95) 100%)', 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center', 
+            gap: '14px', 
+            padding: '16px' 
           }}
-          style={{ padding: '10px 18px', fontSize: '0.75rem', flexShrink: 0 }}
         >
-          <Dumbbell size={14} /> {activeWorkout ? 'Riprendi' : 'Inizia Ora'}
-        </button>
-      </div>
+          <div style={{ flex: 1 }}>
+            <h4 style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--color-primary)', display: 'flex', alignItems: 'center', gap: '6px', margin: 0 }}>
+              <Download size={16} /> Installa DeV Fit
+            </h4>
+            <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '3px', lineHeight: '1.4', margin: 0 }}>
+              Aggiungi l'app alla schermata Home per usarla a schermo intero senza barra del browser.
+            </p>
+          </div>
+          <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
+            <button className="btn-primary" onClick={handleInstallClick} style={{ padding: '8px 12px', fontSize: '0.72rem', height: '32px', boxShadow: 'none' }}>
+              Scarica
+            </button>
+            <button className="btn-secondary" onClick={() => setShowInstallBanner(false)} style={{ padding: '8px 10px', fontSize: '0.72rem', height: '32px' }}>
+              Nascondi
+            </button>
+          </div>
+        </div>
+      )}
 
 
 

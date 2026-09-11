@@ -120,7 +120,7 @@ interface AppContextType {
     startTime: number | null;
     exercises: ExerciseLog[];
   } | null;
-  startWorkout: (routineId?: string) => void;
+  startWorkout: (routineId?: string, repeatWorkout?: WorkoutLog) => void;
   updateActiveWorkoutSet: (exerciseId: string, setIndex: number, field: 'weight' | 'reps', value: number) => void;
   updateActiveWorkoutExercises: (updater: (prev: ExerciseLog[]) => ExerciseLog[]) => void;
 
@@ -466,7 +466,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setRoutines(prev => prev.filter(r => r.id !== id));
   };
 
-  const startWorkout = (routineId?: string) => {
+  const startWorkout = (routineId?: string, repeatWorkout?: WorkoutLog) => {
+    if (repeatWorkout) {
+      const exercises: ExerciseLog[] = repeatWorkout.exercises.map(ex => ({
+        exerciseId: ex.exerciseId,
+        sets: ex.sets.map((s, idx) => ({
+          id: `s-${Date.now()}-${idx}-${Math.random().toString(36).substr(2, 4)}`,
+          weight: s.weight,
+          reps: s.reps,
+          completed: false
+        }))
+      }));
+      setActiveWorkout({
+        name: repeatWorkout.name,
+        startTime: Date.now(),
+        exercises
+      });
+      return;
+    }
     if (routineId) {
       const routine = routines.find(r => r.id === routineId);
       if (routine) {
