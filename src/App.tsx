@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AppProvider, useApp } from './context/AppContext';
 import { Navigation } from './components/Navigation';
 import { Dashboard } from './components/Dashboard';
@@ -12,11 +12,19 @@ import { CycleTracker } from './components/CycleTracker';
 import { DeviceSyncHub } from './components/DeviceSyncHub';
 import { AuthScreen } from './components/AuthScreen';
 import { ShieldCheck, Info, ChevronLeft } from 'lucide-react';
+import { initAutoUpdater } from './utils/autoUpdater';
 
 const AppContent: React.FC = () => {
   const [currentTab, setCurrentTab] = useState('dashboard');
   const [dietSubTab, setDietSubTab] = useState<'diary' | 'recipes'>('diary');
   const { activeWorkout, user, signOut, hasConsented, setHasConsented } = useApp();
+
+  // Avvio controllo automatico aggiornamenti live (service worker & buildTime)
+  useEffect(() => {
+    const cleanup = initAutoUpdater(() => activeWorkout);
+    return cleanup;
+  }, [activeWorkout]);
+
 
   const renderTabContent = () => {
     switch (currentTab) {

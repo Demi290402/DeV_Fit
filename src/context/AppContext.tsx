@@ -268,6 +268,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.setItem('df_social_posts', JSON.stringify(socialPosts));
   }, [socialPosts]);
 
+  // Sincronizzazione automatica in tempo reale tra schede o modifiche esterne
+  useEffect(() => {
+    const handleStorage = (e: StorageEvent) => {
+      if (!e.key || !e.newValue) return;
+      try {
+        if (e.key === 'df_profile') setProfile(JSON.parse(e.newValue));
+        if (e.key === 'df_food_logs') setFoodLogs(JSON.parse(e.newValue));
+        if (e.key === 'df_history') setWorkoutHistory(JSON.parse(e.newValue));
+        if (e.key === 'df_routines') setRoutines(JSON.parse(e.newValue));
+        if (e.key === 'df_cycle_data') setCycleData(JSON.parse(e.newValue));
+        if (e.key === 'df_meals_list') setMealsList(JSON.parse(e.newValue));
+      } catch {
+        // Ignora errori di parsing su payload parziali
+      }
+    };
+
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, []);
+
+
   // --- SUPABASE SESSION WATCH ---
   useEffect(() => {
     if (!supabase) return;

@@ -9,20 +9,19 @@ interface DashboardProps {
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({ setCurrentTab }) => {
-  const todayStr = new Date().toISOString().split('T')[0];
+  const [todayStr, setTodayStr] = useState(() => new Date().toISOString().split('T')[0]);
   const { profile, updateProfile, foodLogs, startWorkout, cycleData, activeWorkout } = useApp();
   const [showWeightModal, setShowWeightModal] = useState(false);
   const [newWeight, setNewWeight] = useState(profile.weight.toString());
   const [waterCount, setWaterCount] = useState(() => {
-    const saved = localStorage.getItem(`df_water_${todayStr}`);
-    return saved ? parseInt(saved) : 0;
+    const saved = localStorage.getItem(`df_water_${new Date().toISOString().split('T')[0]}`);
+    return saved ? parseInt(saved, 10) : 0;
   });
-
 
   // Dati reali Sonno (tracciati per data, nessun dato fake)
   const [sleepData, setSleepData] = useState<{ hours: number; minutes: number } | null>(() => {
     try {
-      const saved = localStorage.getItem(`df_sleep_${todayStr}`);
+      const saved = localStorage.getItem(`df_sleep_${new Date().toISOString().split('T')[0]}`);
       return saved ? JSON.parse(saved) : null;
     } catch {
       return null;
@@ -35,7 +34,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ setCurrentTab }) => {
   // Dati reali Battito Cardiaco a Riposo (nessun dato fake)
   const [heartRateData, setHeartRateData] = useState<number | null>(() => {
     try {
-      const saved = localStorage.getItem(`df_bpm_${todayStr}`);
+      const saved = localStorage.getItem(`df_bpm_${new Date().toISOString().split('T')[0]}`);
       return saved ? parseInt(saved, 10) : null;
     } catch {
       return null;
@@ -44,6 +43,43 @@ export const Dashboard: React.FC<DashboardProps> = ({ setCurrentTab }) => {
   const [showBpmModal, setShowBpmModal] = useState(false);
   const [newBpm, setNewBpm] = useState(heartRateData ? heartRateData.toString() : '65');
 
+  // Auto-Sync: Aggiornamento automatico istantaneo senza refresh manuale
+  useEffect(() => {
+    const syncData = () => {
+      const currentDay = new Date().toISOString().split('T')[0];
+      if (currentDay !== todayStr) {
+        setTodayStr(currentDay);
+      }
+      const savedW = localStorage.getItem(`df_water_${currentDay}`);
+      setWaterCount(savedW ? parseInt(savedW, 10) : 0);
+
+      const savedS = localStorage.getItem(`df_sleep_${currentDay}`);
+      setSleepData(savedS ? JSON.parse(savedS) : null);
+
+      const savedB = localStorage.getItem(`df_bpm_${currentDay}`);
+      setHeartRateData(savedB ? parseInt(savedB, 10) : null);
+    };
+
+    window.addEventListener('storage', syncData);
+    window.addEventListener('df_data_updated', syncData);
+    window.addEventListener('focus', syncData);
+
+    const onVis = () => {
+      if (document.visibilityState === 'visible') syncData();
+    };
+    document.addEventListener('visibilitychange', onVis);
+
+    const timer = setInterval(syncData, 10000);
+
+    return () => {
+      window.removeEventListener('storage', syncData);
+      window.removeEventListener('df_data_updated', syncData);
+      window.removeEventListener('focus', syncData);
+      document.removeEventListener('visibilitychange', onVis);
+      clearInterval(timer);
+    };
+  }, [todayStr]);
+
   const handleSaveSleep = () => {
     const h = parseInt(newSleepHours, 10) || 0;
     const m = Math.min(Math.max(parseInt(newSleepMinutes, 10) || 0, 0), 59);
@@ -51,6 +87,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ setCurrentTab }) => {
       const data = { hours: h, minutes: m };
       setSleepData(data);
       localStorage.setItem(`df_sleep_${todayStr}`, JSON.stringify(data));
+      window.dispatchEvent(new CustomEvent('df_data_updated'));
       setShowSleepModal(false);
     }
   };
@@ -60,9 +97,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ setCurrentTab }) => {
     if (val > 30 && val < 220) {
       setHeartRateData(val);
       localStorage.setItem(`df_bpm_${todayStr}`, val.toString());
+      window.dispatchEvent(new CustomEvent('df_data_updated'));
       setShowBpmModal(false);
     }
   };
+
 
   // PWA Install Prompt State
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
@@ -116,22 +155,25 @@ export const Dashboard: React.FC<DashboardProps> = ({ setCurrentTab }) => {
     const newVal = waterCount + 250;
     setWaterCount(newVal);
     localStorage.setItem(`df_water_${todayStr}`, newVal.toString());
+    window.dispatchEvent(new CustomEvent('df_data_updated'));
   };
 
   const handleRemoveWater = () => {
     const newVal = Math.max(0, waterCount - 250);
     setWaterCount(newVal);
     localStorage.setItem(`df_water_${todayStr}`, newVal.toString());
+    window.dispatchEvent(new CustomEvent('df_data_updated'));
   };
-
 
   const handleUpdateWeight = () => {
     const w = parseFloat(newWeight);
     if (!isNaN(w) && w > 0) {
       updateProfile({ weight: w });
+      window.dispatchEvent(new CustomEvent('df_data_updated'));
       setShowWeightModal(false);
     }
   };
+
 
   // BMI Calculations
 
