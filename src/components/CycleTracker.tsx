@@ -46,12 +46,14 @@ export const CycleTracker: React.FC = () => {
 
   // Determine cycle status for a specific day in the grid
   const getDayStatus = (day: number) => {
+    // FIX #4: azzera le ore per evitare sfasamenti timezone/ora legale
     const checkDate = new Date(currentYear, currentMonth, day);
+    checkDate.setHours(0, 0, 0, 0);
     const startDate = new Date(cycleData.lastPeriodStart);
+    startDate.setHours(0, 0, 0, 0);
     
-    // Total days difference
-    const diffTime = checkDate.getTime() - startDate.getTime();
-    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    // Total days difference — ora timezone-safe
+    const diffDays = Math.round((checkDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
 
     if (diffDays < 0) return 'normal';
 
@@ -67,6 +69,8 @@ export const CycleTracker: React.FC = () => {
     }
     return 'normal';
   };
+
+
 
   // Calculate current phase today
   const getTodayCyclePhase = () => {

@@ -8,10 +8,12 @@ import { ExerciseBrowserModal } from './ExerciseBrowserModal';
 
 
 
+
 export const ActiveWorkout: React.FC = () => {
   const {
     activeWorkout,
     updateActiveWorkoutSet,
+    updateActiveWorkoutExercises,
     toggleCompleteSet,
     addExerciseToActiveWorkout,
     saveActiveWorkout,
@@ -42,7 +44,7 @@ export const ActiveWorkout: React.FC = () => {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [activeWorkout]);
+  }, [activeWorkout?.startTime]); // ← dipende solo da startTime, non da tutto l'oggetto
 
   // Rest timer interval logic
   useEffect(() => {
@@ -98,49 +100,33 @@ export const ActiveWorkout: React.FC = () => {
     });
   };
 
+  // FIX CRITICO: usa updateActiveWorkoutExercises (immutabile) invece di mutare lo stato direttamente
   const handleAddSet = (exId: string) => {
-    // Generate unique ID and add a set log
     const currentEx = activeWorkout.exercises.find(e => e.exerciseId === exId);
-    if (currentEx) {
-      const lastSet = currentEx.sets[currentEx.sets.length - 1];
-      const weight = lastSet ? lastSet.weight : 0;
-      const reps = lastSet ? lastSet.reps : 10;
-      const newSet: SetLog = {
-        id: `s-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
-        weight,
-        reps,
-        completed: false
-      };
-      
-      // We directly mutate activeWorkout state using custom setter or update
-      // Since context doesn't expose addSet, we update activeWorkout state through field edit on a dummy index or extend activeWorkout exercises
-      // Wait, we can implement it by adding a set to the activeWorkout exercises array
-      const updatedExercises = activeWorkout.exercises.map(e => {
-        if (e.exerciseId === exId) {
-          return { ...e, sets: [...e.sets, newSet] };
-        }
-        return e;
-      });
-      activeWorkout.exercises = updatedExercises;
-      // Triggers re-render by updating dummy values
-      updateActiveWorkoutSet(exId, 0, 'weight', activeWorkout.exercises.find(e => e.exerciseId === exId)!.sets[0].weight);
-    }
+    if (!currentEx) return;
+    const lastSet = currentEx.sets[currentEx.sets.length - 1];
+    const newSet: SetLog = {
+      id: `s-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+      weight: lastSet ? lastSet.weight : 0,
+      reps: lastSet ? lastSet.reps : 10,
+      completed: false
+    };
+    updateActiveWorkoutExercises(prev =>
+      prev.map(e => e.exerciseId === exId ? { ...e, sets: [...e.sets, newSet] } : e)
+    );
   };
 
   const handleRemoveSet = (exId: string, setIdx: number) => {
     const currentEx = activeWorkout.exercises.find(e => e.exerciseId === exId);
-    if (currentEx && currentEx.sets.length > 1) {
-      const updatedExercises = activeWorkout.exercises.map(e => {
-        if (e.exerciseId === exId) {
-          return { ...e, sets: e.sets.filter((_, idx) => idx !== setIdx) };
-        }
-        return e;
-      });
-      activeWorkout.exercises = updatedExercises;
-      // Triggers re-render
-      updateActiveWorkoutSet(exId, 0, 'weight', activeWorkout.exercises.find(e => e.exerciseId === exId)!.sets[0].weight);
-    }
+    if (!currentEx || currentEx.sets.length <= 1) return;
+    updateActiveWorkoutExercises(prev =>
+      prev.map(e => e.exerciseId === exId
+        ? { ...e, sets: e.sets.filter((_, idx) => idx !== setIdx) }
+        : e
+      )
+    );
   };
+
 
   // Calculate live volume
   const getLiveVolume = () => {

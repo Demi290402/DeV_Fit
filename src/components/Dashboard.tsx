@@ -64,8 +64,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ setCurrentTab }) => {
   // Calorie Ring Calculations
   const radius = 50;
   const circumference = 2 * Math.PI * radius;
-  const progressPercent = Math.min((totalCalories / profile.targetCalories) * 100, 100);
-  const strokeDashoffset = circumference - (progressPercent / 100) * circumference;
+
 
   const handleAddWater = () => {
     const newVal = waterCount + 250;
@@ -83,17 +82,25 @@ export const Dashboard: React.FC<DashboardProps> = ({ setCurrentTab }) => {
 
   // BMI Calculations
 
-  const heightM = (profile.height || 165) / 100;
-  const bmi = profile.weight / (heightM * heightM);
+  // BMI Calculations — FIX #8: guard contro altezza = 0 (evita Infinity/NaN)
+  const heightM = Math.max((profile.height || 0) / 100, 0.01); // minimo 1cm per evitare div/0
+  const bmi = profile.weight > 0 && profile.height > 0 ? profile.weight / (heightM * heightM) : 0;
   
+  // FIX #9: guard contro targetCalories = 0 nella calorie ring
+  const safeTargetCalories = Math.max(profile.targetCalories || 0, 1);
+  // Sovrascrive progressPercent calcolato sopra con versione safe
+  const safeProgressPercent = Math.min((totalCalories / safeTargetCalories) * 100, 100);
+  const safeStrokeDashoffset = circumference - (safeProgressPercent / 100) * circumference;
+
   const getBmiCategory = (value: number) => {
+    if (value <= 0) return { label: '–', color: 'var(--text-dark)', text: 'Inserisci peso e altezza nel tuo profilo per calcolare il BMI.' };
     if (value < 18.5) return { label: 'Sottopeso', color: '#3b82f6', text: 'Il tuo peso è inferiore alla norma per la tua altezza. Considera un surplus calorico sano per aumentare la massa muscolare.' };
     if (value < 25) return { label: 'Normopeso', color: '#10b981', text: 'Il tuo peso è ottimale ed ideale per la tua altezza! Mantieni uno stile di vita attivo.' };
     if (value < 30) return { label: 'Sovrappeso', color: '#eab308', text: 'Il tuo peso è leggermente superiore alla norma. Associa una dieta controllata ad attività cardio e allenamenti di forza.' };
     return { label: 'Obesità', color: '#ef4444', text: 'Il tuo peso è superiore alla norma. Si raccomanda di associare attività fisica regolare a una dieta controllata.' };
   };
   const bmiCat = getBmiCategory(bmi);
-  const bmiPercentage = Math.min(Math.max(((bmi - 15) / (35 - 15)) * 100, 0), 100);
+  const bmiPercentage = bmi > 0 ? Math.min(Math.max(((bmi - 15) / (35 - 15)) * 100, 0), 100) : 0;
 
   // Menstrual Cycle Calculations
   const getCycleInfo = () => {
@@ -123,13 +130,19 @@ export const Dashboard: React.FC<DashboardProps> = ({ setCurrentTab }) => {
   };
   const cycleInfo = profile.gender === 'female' ? getCycleInfo() : null;
 
-  // Active Health Sync check
-  const isHealthConnected = (() => {
-    const saved = localStorage.getItem('df_sync_integrations');
-    if (!saved) return false;
-    const parsed = JSON.parse(saved);
-    return parsed.apple_health || parsed.google_fit;
-  })();
+  // FIX #6: isHealthConnected ora usa useState lazy initializer — NON chiama localStorage ad ogni render
+  const [isHealthConnected] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('df_sync_integrations');
+      if (!saved) return false;
+      const parsed = JSON.parse(saved);
+      return !!(parsed.apple_health || parsed.google_fit);
+    } catch {
+      return false;
+    }
+  });
+
+
 
   return (
 
@@ -231,13 +244,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ setCurrentTab }) => {
               stroke="var(--color-primary)" 
               strokeWidth="8" 
               strokeDasharray={circumference}
-              strokeDashoffset={strokeDashoffset}
+              strokeDashoffset={safeStrokeDashoffset}
+
               strokeLinecap="round"
               style={{ transition: 'stroke-dashoffset 0.35s' }}
             />
           </svg>
           <div style={{ position: 'absolute', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.98rem', fontWeight: 800, color: 'white' }}>{Math.round(progressPercent)}%</span>
+            <span style={{ fontSize: '0.98rem', fontWeight: 800, color: 'white' }}>{Math.round(safeProgressPercent)}%</span>
+
             <span style={{ fontSize: '0.58rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Macro</span>
           </div>
         </div>

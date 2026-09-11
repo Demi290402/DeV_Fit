@@ -4,10 +4,16 @@ body {
   background-color: var(--background-dark);
   color: var(--text-primary);
   font-family: var(--font-sans);
-  overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
+/* FIX #10: overflow-x su #root invece di body — evita che Safari iOS tagli sticky/fixed elements */
+#root {
+  overflow-x: hidden;
+}
+
+
 
 /* Custom Scrollbar */
 ::-webkit-scrollbar {

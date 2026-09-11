@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+
 import { Plus, Trash2, Camera, Search, X, ChevronLeft, ChevronRight, Barcode, Sliders } from 'lucide-react';
 
 import { useApp } from '../context/AppContext';
@@ -85,24 +86,41 @@ export const FoodScanner: React.FC = () => {
     setActiveMealType(null);
   };
 
+  // FIX MEMORY LEAK: refs per i timer dello scanner — cleared in useEffect cleanup
+  const scanTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  useEffect(() => {
+    return () => {
+      // Cleanup tutti i timer pendenti quando il componente viene smontato
+      scanTimersRef.current.forEach(t => clearTimeout(t));
+    };
+  }, []);
+
   const triggerSimulatedScan = () => {
+    // Cancella timer precedenti
+    scanTimersRef.current.forEach(t => clearTimeout(t));
+    scanTimersRef.current = [];
+
     setIsScanning(true);
     setScanResult(null);
     setScanStatusMessage('Inizializzazione fotocamera...');
     
-    setTimeout(() => {
+    const t1 = setTimeout(() => {
       setScanStatusMessage('Rilevamento codice a barre in corso...');
     }, 1000);
 
-    setTimeout(() => {
-      // Pick a random mock food item
+    const t2 = setTimeout(() => {
       const randomIndex = Math.floor(Math.random() * mockFoodDb.length);
       const matchedFood = mockFoodDb[randomIndex];
       setScanResult(matchedFood);
-      setScanStatusMessage('Codice a Barre Rilevato con successo!');
+      setScanStatusMessage('Demo — nessuna fotocamera reale collegata.');
       if (navigator.vibrate) navigator.vibrate(100);
     }, 2800);
+
+    scanTimersRef.current = [t1, t2];
   };
+
+
 
   const handleSaveScanResult = () => {
     if (scanResult && activeMealType) {
@@ -285,7 +303,8 @@ export const FoodScanner: React.FC = () => {
           <div style={{ height: '6px', borderRadius: '99px', background: 'rgba(255,255,255,0.05)', overflow: 'hidden' }}>
             <div style={{
               height: '100%',
-              width: `${Math.min((totalKcal / profile.targetCalories) * 100, 100)}%`,
+              width: `${Math.min((totalKcal / Math.max(profile.targetCalories, 1)) * 100, 100)}%`,
+
               background: totalKcal > profile.targetCalories
                 ? 'var(--color-error)'
                 : 'linear-gradient(to right, var(--color-primary), var(--color-secondary))',

@@ -122,6 +122,8 @@ interface AppContextType {
   } | null;
   startWorkout: (routineId?: string) => void;
   updateActiveWorkoutSet: (exerciseId: string, setIndex: number, field: 'weight' | 'reps', value: number) => void;
+  updateActiveWorkoutExercises: (updater: (prev: ExerciseLog[]) => ExerciseLog[]) => void;
+
   toggleCompleteSet: (exerciseId: string, setIndex: number) => void;
   addExerciseToActiveWorkout: (exerciseId: string) => void;
   saveActiveWorkout: (customName?: string) => void;
@@ -488,6 +490,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setActiveWorkout({ ...activeWorkout, exercises: updatedExercises });
   };
 
+  // Immutable updater for exercises array — avoids direct state mutation in child components
+  const updateActiveWorkoutExercises = (updater: (prev: ExerciseLog[]) => ExerciseLog[]) => {
+    if (!activeWorkout) return;
+    setActiveWorkout(prev => prev ? { ...prev, exercises: updater(prev.exercises) } : null);
+  };
+
+
+
   const triggerConfetti = () => {
     confetti({
       particleCount: 120,
@@ -587,7 +597,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const duration = Math.round((Date.now() - activeWorkout.startTime) / 1000);
     let totalVolume = 0;
     let recordsCount = 0;
-    const exercisesToSave = activeWorkout.exercises.filter(ex => ex.sets.some(s => s.completed));
+    const exercisesToSave = activeWorkout.exercises
+      .map(ex => ({ ...ex, sets: ex.sets.filter(s => s.completed) }))
+      .filter(ex => ex.sets.length > 0);
+
 
     exercisesToSave.forEach(ex => {
       ex.sets.forEach(s => {
@@ -719,6 +732,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       activeWorkout,
       startWorkout,
       updateActiveWorkoutSet,
+      updateActiveWorkoutExercises,
+
       toggleCompleteSet,
       addExerciseToActiveWorkout,
       saveActiveWorkout,

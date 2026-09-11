@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Check, RefreshCw, X, Link, Link2Off, Shield, Smartphone } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
@@ -12,7 +12,8 @@ interface IntegrationItem {
 }
 
 export const DeviceSyncHub: React.FC = () => {
-  const { profile, updateProfile } = useApp();
+  const {} = useApp(); // nessun dato del profilo necessario — il sync reale sarà gestito dalle API
+
   
   // Connection states (saved in localStorage)
   const [connections, setConnections] = useState<{ [key: string]: boolean }>(() => {
@@ -37,9 +38,19 @@ export const DeviceSyncHub: React.FC = () => {
     weight: true
   });
 
+  // FIX MEMORY LEAK: ref per il timer di sync
+  const syncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useEffect(() => {
     localStorage.setItem('df_sync_integrations', JSON.stringify(connections));
   }, [connections]);
+
+  // Cleanup timer alla distruzione del componente
+  useEffect(() => {
+    return () => {
+      if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
+    };
+  }, []);
 
   const handleToggleConnection = (item: IntegrationItem) => {
     if (connections[item.id]) {
@@ -74,34 +85,26 @@ export const DeviceSyncHub: React.FC = () => {
 
     setConnections(newConnections);
     setLastSync(prev => ({ ...prev, [activeWizard.id]: 'Appena adesso' }));
-    
-    // If weight permission is checked, let's update profile weight from simulated health data
-    if (permissions.weight) {
-      const currentWeight = profile.weight;
-      // Slightly alter the weight to simulate actual sync import
-      const syncedWeight = parseFloat((currentWeight > 0 ? currentWeight - 0.3 : 62.5).toFixed(1));
-      updateProfile({ weight: syncedWeight });
-    }
+
+    // FIX #11: RIMOSSA logica peso casuale (era: Math.random() ±0.1 kg)
+    // Il peso dell'utente NON viene modificato da un collegamento finto.
+    // Verrà aggiornato solo tramite input manuale dell'utente.
 
     setPermissionStep('success');
   };
 
   const triggerSync = (id: 'apple_health' | 'google_fit' | 'strava') => {
+    if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
     setIsSyncing(id);
-    setTimeout(() => {
+    syncTimerRef.current = setTimeout(() => {
       setIsSyncing(null);
-      setLastSync(prev => ({ ...prev, [id]: 'Appena adesso' }));
-      
-      // Update weight randomly to simulate a new weigh-in from scale via Apple Health / Google Fit
-      if (id !== 'strava') {
-        const currentWeight = profile.weight;
-        const newWeight = parseFloat((currentWeight + (Math.random() > 0.5 ? 0.1 : -0.1)).toFixed(1));
-        updateProfile({ weight: newWeight });
-      }
-      
-      alert('Sincronizzazione completata con successo!');
+      setLastSync(prev => ({ ...prev, [id]: new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }) }));
+      // FIX #11: RIMOSSA modifica peso casuale e alert finto
+      // In produzione qui si chiamerebbe l'API reale (Google Fit, ecc.)
     }, 1500);
   };
+
+
 
   const integrations: IntegrationItem[] = [
     {
