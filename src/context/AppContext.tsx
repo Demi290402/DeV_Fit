@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import confetti from 'canvas-confetti';
 import { createClient } from '@supabase/supabase-js';
 
@@ -427,17 +427,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.setItem('df_consent', consent ? 'true' : 'false');
   };
 
-  // --- PREVIOUS EXERCISE VALUES ---
-  const getPreviousPerformances = (exerciseId: string): { weight: number; reps: number }[] => {
+  // --- PREVIOUS EXERCISE VALUES (Memoized O(1) lookup) ---
+  const previousPerformancesMap = useMemo(() => {
+    const map: Record<string, { weight: number; reps: number }[]> = {};
     const sortedHistory = [...workoutHistory].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     for (const log of sortedHistory) {
-      const match = log.exercises.find(e => e.exerciseId === exerciseId);
-      if (match && match.sets.length > 0) {
-        return match.sets.map(s => ({ weight: s.weight, reps: s.reps }));
+      for (const ex of log.exercises) {
+        if (!map[ex.exerciseId] && ex.sets.length > 0) {
+          map[ex.exerciseId] = ex.sets.map(s => ({ weight: s.weight, reps: s.reps }));
+        }
       }
     }
-    return [];
-  };
+    return map;
+  }, [workoutHistory]);
+
+  const getPreviousPerformances = useCallback((exerciseId: string): { weight: number; reps: number }[] => {
+    return previousPerformancesMap[exerciseId] || [];
+  }, [previousPerformancesMap]);
 
   // --- PROFILE ACTIONS ---
   const updateProfile = (data: Partial<ProfileData>) => {
@@ -665,7 +671,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const durationMin = `${Math.floor(duration / 60)}m`;
     addSocialPost({
       username: profile.name,
-      userAvatar: profile.name.split(' ').map(n => n[0]).join('').toUpperCase() || 'U',
+      userAvatar: profile.avatarUrl || profile.name.split(' ').map(n => n[0]).join('').toUpperCase() || 'U',
       date: 'Giusto ora',
       workoutName: newLog.name,
       duration: durationMin,

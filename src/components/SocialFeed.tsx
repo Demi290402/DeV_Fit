@@ -35,7 +35,13 @@ export const SocialFeed: React.FC = () => {
             <div key={post.id} className="glass-card social-post">
               {/* Profile Header */}
               <div className="post-header">
-                <div className="post-avatar">{post.userAvatar}</div>
+                <div className="post-avatar" style={{ overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {post.userAvatar && (post.userAvatar.startsWith('data:') || post.userAvatar.startsWith('http')) ? (
+                    <img src={post.userAvatar} alt={post.username} style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+                  ) : (
+                    post.userAvatar
+                  )}
+                </div>
                 <div className="post-user-info">
                   <span className="post-username">{post.username}</span>
                   <span className="post-time">{post.date}</span>
@@ -102,7 +108,27 @@ export const SocialFeed: React.FC = () => {
               )}
 
               {/* Comment write-in */}
-              <div className="comment-input-row">
+              <div className="comment-input-row" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{
+                  width: '28px',
+                  height: '28px',
+                  borderRadius: '50%',
+                  overflow: 'hidden',
+                  border: '1px solid var(--color-primary)',
+                  flexShrink: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: 'rgba(212, 175, 55, 0.1)'
+                }}>
+                  {profile.avatarUrl ? (
+                    <img src={profile.avatarUrl} alt={profile.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    <span style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--color-primary)' }}>
+                      {profile.name.split(' ').map(n => n[0]).join('').toUpperCase() || 'U'}
+                    </span>
+                  )}
+                </div>
                 <input 
                   type="text" 
                   className="comment-input" 

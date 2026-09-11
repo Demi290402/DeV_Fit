@@ -241,13 +241,41 @@ export const Dashboard: React.FC<DashboardProps> = ({ setCurrentTab }) => {
     <div className="dashboard-grid animate-fade-in-up">
       {/* 1. Competitor Header: Welcome & Compact Streak */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
-        <div>
-          <h2 style={{ fontSize: '1.45rem', fontWeight: 800, letterSpacing: '-0.3px', margin: 0 }}>
-            Ciao, {profile.name} 👋
-          </h2>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '2px', margin: 0 }}>
-            {capitalizedToday}
-          </p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div 
+            onClick={() => setCurrentTab('profile')}
+            style={{
+              width: '46px',
+              height: '46px',
+              borderRadius: '50%',
+              overflow: 'hidden',
+              border: '2px solid var(--color-primary)',
+              boxShadow: '0 2px 10px rgba(212, 175, 55, 0.25)',
+              cursor: 'pointer',
+              flexShrink: 0,
+              background: 'rgba(212, 175, 55, 0.1)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+            title="Visualizza Profilo"
+          >
+            {profile.avatarUrl ? (
+              <img src={profile.avatarUrl} alt={profile.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ) : (
+              <span style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--color-primary)' }}>
+                {profile.name.split(' ').map(n => n[0]).join('').toUpperCase() || 'U'}
+              </span>
+            )}
+          </div>
+          <div>
+            <h2 style={{ fontSize: '1.45rem', fontWeight: 800, letterSpacing: '-0.3px', margin: 0 }}>
+              Ciao, {profile.name} 👋
+            </h2>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '2px', margin: 0 }}>
+              {capitalizedToday}
+            </p>
+          </div>
         </div>
 
         {/* Compact Streak Badge */}

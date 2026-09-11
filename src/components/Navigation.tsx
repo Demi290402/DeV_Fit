@@ -8,7 +8,7 @@ interface NavigationProps {
 }
 
 export const Navigation: React.FC<NavigationProps> = ({ currentTab, setCurrentTab }) => {
-  const { activeWorkout } = useApp();
+  const { activeWorkout, profile } = useApp();
 
   const menuItems = [
     { id: 'dashboard', label: 'Home', icon: Home },
@@ -53,8 +53,23 @@ export const Navigation: React.FC<NavigationProps> = ({ currentTab, setCurrentTa
             </div>
           )}
 
-          <div className="icon-btn">
-            <User size={18} onClick={() => setCurrentTab('profile')} />
+          <div 
+            className="icon-btn"
+            onClick={() => setCurrentTab('profile')}
+            style={{ 
+              overflow: 'hidden', 
+              padding: 0,
+              border: profile.avatarUrl ? '1.5px solid var(--color-primary)' : '1px solid transparent',
+              cursor: 'pointer',
+              background: profile.avatarUrl ? 'transparent' : undefined
+            }}
+            title="Profilo"
+          >
+            {profile.avatarUrl ? (
+              <img src={profile.avatarUrl} alt={profile.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ) : (
+              <User size={18} />
+            )}
           </div>
         </div>
       </header>
@@ -72,13 +87,31 @@ export const Navigation: React.FC<NavigationProps> = ({ currentTab, setCurrentTa
 
         {menuItems.map((item) => {
           const Icon = item.icon;
+          const isProfile = item.id === 'profile';
           return (
             <div
               key={item.id}
               className={`nav-item ${currentTab === item.id ? 'active' : ''}`}
               onClick={() => setCurrentTab(item.id)}
             >
-              <Icon size={20} />
+              {isProfile && profile.avatarUrl ? (
+                <div style={{
+                  width: '22px',
+                  height: '22px',
+                  borderRadius: '50%',
+                  overflow: 'hidden',
+                  border: currentTab === 'profile' ? '2px solid var(--color-primary)' : '1px solid rgba(255,255,255,0.3)',
+                  boxShadow: currentTab === 'profile' ? '0 0 8px rgba(212, 175, 55, 0.4)' : 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'all 0.2s ease'
+                }}>
+                  <img src={profile.avatarUrl} alt="Profilo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                </div>
+              ) : (
+                <Icon size={20} />
+              )}
               <span>{item.label}</span>
             </div>
           );
@@ -111,6 +144,52 @@ export const Navigation: React.FC<NavigationProps> = ({ currentTab, setCurrentTa
             </div>
           </div>
         )}
+
+        {/* User mini profile card inside sidebar - visible only on desktop */}
+        <div 
+          className="desktop-only-logo"
+          onClick={() => setCurrentTab('profile')}
+          style={{
+            marginTop: activeWorkout ? '12px' : 'auto',
+            width: '100%',
+            padding: '12px',
+            borderRadius: 'var(--radius-md)',
+            background: 'rgba(255, 255, 255, 0.03)',
+            border: '1px solid var(--border-color)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            cursor: 'pointer',
+            transition: 'background 0.2s ease'
+          }}
+        >
+          <div style={{
+            width: '36px',
+            height: '36px',
+            borderRadius: '50%',
+            overflow: 'hidden',
+            border: '2px solid var(--color-primary)',
+            background: 'var(--background-card)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0
+          }}>
+            {profile.avatarUrl ? (
+              <img src={profile.avatarUrl} alt={profile.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ) : (
+              <User size={18} color="var(--color-primary)" />
+            )}
+          </div>
+          <div style={{ overflow: 'hidden' }}>
+            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'white', display: 'block', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
+              {profile.name}
+            </span>
+            <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
+              Visualizza Profilo
+            </span>
+          </div>
+        </div>
       </nav>
 
       {/* CSS injection for responsive sidebar logo toggle */}

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { User, Scale, Activity, Calendar as CalendarIcon, Check, Settings, LogOut, Trash2, ShieldAlert, Download } from 'lucide-react';
+import { User, Scale, Activity, Calendar as CalendarIcon, Check, Settings, LogOut, Trash2, ShieldAlert, Download, Camera } from 'lucide-react';
 
 import { useApp } from '../context/AppContext';
 import type { WorkoutLog } from '../context/AppContext';
@@ -135,8 +135,12 @@ export const Profile: React.FC = () => {
       const compressed = await compressImage(file, maxWidth, maxHeight);
       if (type === 'avatar') {
         setAvatarUrl(compressed);
+        updateProfile({ avatarUrl: compressed });
+        window.dispatchEvent(new CustomEvent('df_data_updated'));
       } else {
         setBannerUrl(compressed);
+        updateProfile({ bannerUrl: compressed });
+        window.dispatchEvent(new CustomEvent('df_data_updated'));
       }
     } catch (err) {
       console.error(err);
@@ -451,11 +455,29 @@ export const Profile: React.FC = () => {
             </div>
           </div>
 
-          {/* Immagini del Profilo */}
+          {/* Immagini del Profilo con Live Preview */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
               <label style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Foto Profilo</label>
-              <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <div style={{
+                  width: '38px',
+                  height: '38px',
+                  borderRadius: '50%',
+                  overflow: 'hidden',
+                  border: '2px solid var(--color-primary)',
+                  background: '#050506',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0
+                }}>
+                  {avatarUrl ? (
+                    <img src={avatarUrl} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    <User size={16} color="var(--text-dark)" />
+                  )}
+                </div>
                 <input 
                   type="file" 
                   accept="image/*" 
@@ -478,12 +500,16 @@ export const Profile: React.FC = () => {
                     margin: 0
                   }}
                 >
-                  Carica Foto
+                  {avatarUrl ? 'Cambia' : 'Carica Foto'}
                 </label>
                 {avatarUrl && (
                   <button 
                     className="icon-btn" 
-                    onClick={() => setAvatarUrl('')} 
+                    onClick={() => {
+                      setAvatarUrl('');
+                      updateProfile({ avatarUrl: '' });
+                      window.dispatchEvent(new CustomEvent('df_data_updated'));
+                    }} 
                     style={{ width: '34px', height: '34px', color: 'var(--color-error)', flexShrink: 0 }}
                     title="Rimuovi Foto Profilo"
                   >
@@ -493,9 +519,20 @@ export const Profile: React.FC = () => {
               </div>
             </div>
             
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <label style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Foto Sfondo</label>
-              <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <label style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Foto Copertina</label>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <div style={{
+                  width: '48px',
+                  height: '34px',
+                  borderRadius: 'var(--radius-sm)',
+                  overflow: 'hidden',
+                  border: '1px solid var(--border-color)',
+                  backgroundImage: bannerUrl ? `url(${bannerUrl})` : 'linear-gradient(135deg, var(--color-primary) 0%, #1a1505 100%)',
+                  backgroundPosition: 'center',
+                  backgroundSize: 'cover',
+                  flexShrink: 0
+                }} />
                 <input 
                   type="file" 
                   accept="image/*" 
@@ -518,12 +555,16 @@ export const Profile: React.FC = () => {
                     margin: 0
                   }}
                 >
-                  Carica Copertina
+                  {bannerUrl ? 'Cambia' : 'Carica Sfondo'}
                 </label>
                 {bannerUrl && (
                   <button 
                     className="icon-btn" 
-                    onClick={() => setBannerUrl('')} 
+                    onClick={() => {
+                      setBannerUrl('');
+                      updateProfile({ bannerUrl: '' });
+                      window.dispatchEvent(new CustomEvent('df_data_updated'));
+                    }} 
                     style={{ width: '34px', height: '34px', color: 'var(--color-error)', flexShrink: 0 }}
                     title="Rimuovi Sfondo"
                   >
@@ -541,7 +582,7 @@ export const Profile: React.FC = () => {
       ) : (
         /* Account Info Display (Redesigned with Banner, Avatar & Dynamic BMI - No overlaps) */
         <div className="glass-card" style={{ padding: '0', overflow: 'hidden', display: 'flex', flexDirection: 'column', border: '1px solid var(--border-color)' }}>
-          {/* Banner container */}
+          {/* Banner container with direct edit button */}
           <div style={{ 
             height: '110px', 
             width: '100%', 
@@ -550,33 +591,96 @@ export const Profile: React.FC = () => {
             backgroundSize: 'cover',
             backgroundRepeat: 'no-repeat',
             position: 'relative'
-          }} />
+          }}>
+            <label
+              htmlFor="direct-banner-upload"
+              style={{
+                position: 'absolute',
+                top: '10px',
+                right: '10px',
+                background: 'rgba(8, 8, 10, 0.75)',
+                backdropFilter: 'blur(8px)',
+                border: '1px solid rgba(212, 175, 55, 0.4)',
+                color: 'var(--color-primary)',
+                width: '32px',
+                height: '32px',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.5)'
+              }}
+              title="Cambia immagine di copertina"
+            >
+              <input 
+                type="file" 
+                accept="image/*" 
+                id="direct-banner-upload" 
+                onChange={e => handleUploadImage(e, 'banner')}
+                style={{ display: 'none' }} 
+              />
+              <Camera size={14} />
+            </label>
+          </div>
           
           {/* Avatar and User details area */}
           <div style={{ padding: '16px', position: 'relative', marginTop: '-36px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
             <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '12px' }}>
-              {/* Avatar circle */}
-              <div style={{ 
-                width: '72px', 
-                height: '72px', 
-                borderRadius: '50%', 
-                border: '3px solid var(--color-primary)', 
-                background: '#050506', 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center', 
-                overflow: 'hidden',
-                boxShadow: '0 4px 15px rgba(0,0,0,0.6)',
-                flexShrink: 0
-              }}>
-                {profile.avatarUrl ? (
-                  <img src={profile.avatarUrl} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                ) : (
-                  <span style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--color-primary)' }}>
-                    {profile.name.split(' ').map(n => n[0]).join('').toUpperCase()}
-                  </span>
-                )}
-              </div>
+              {/* Avatar circle with direct camera upload */}
+              <label 
+                htmlFor="direct-avatar-upload"
+                style={{ 
+                  position: 'relative',
+                  cursor: 'pointer'
+                }}
+                title="Tocca per cambiare foto profilo"
+              >
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  id="direct-avatar-upload" 
+                  onChange={e => handleUploadImage(e, 'avatar')}
+                  style={{ display: 'none' }} 
+                />
+                <div style={{ 
+                  width: '74px', 
+                  height: '74px', 
+                  borderRadius: '50%', 
+                  border: '3px solid var(--color-primary)', 
+                  background: '#050506', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center', 
+                  overflow: 'hidden',
+                  boxShadow: '0 4px 15px rgba(0,0,0,0.6)',
+                  flexShrink: 0,
+                  position: 'relative'
+                }}>
+                  {profile.avatarUrl ? (
+                    <img src={profile.avatarUrl} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    <span style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--color-primary)' }}>
+                      {profile.name.split(' ').map(n => n[0]).join('').toUpperCase() || 'U'}
+                    </span>
+                  )}
+                  {/* Camera overlay badge */}
+                  <div style={{
+                    position: 'absolute',
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    height: '24px',
+                    background: 'rgba(0, 0, 0, 0.7)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'var(--color-primary)'
+                  }}>
+                    <Camera size={12} />
+                  </div>
+                </div>
+              </label>
               
               {/* Logout button */}
               <button 
