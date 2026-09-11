@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { Plus, Play, Trash2, ArrowLeft, Check, BookOpen, Clock, Calendar, Trophy, Repeat, Dumbbell } from 'lucide-react';
+import { Plus, Play, Trash2, ArrowLeft, Check, BookOpen, Clock, Calendar, Trophy, Repeat, Dumbbell, Share2 } from 'lucide-react';
 
 import { useApp } from '../context/AppContext';
 import type { Routine, WorkoutLog } from '../context/AppContext';
 import { mockExercises, renderMuscleIcon } from '../data/mockExercises';
 import { ExerciseBrowserModal } from './ExerciseBrowserModal';
+import { StoryCardModal } from './StoryCardModal';
+import type { StoryCardData } from './StoryCardModal';
 
 export const RoutineManager: React.FC = () => {
   const { routines, addRoutine, deleteRoutine, startWorkout, workoutHistory } = useApp();
@@ -14,6 +16,8 @@ export const RoutineManager: React.FC = () => {
   const [selectedExercises, setSelectedExercises] = useState<{ exerciseId: string; setsCount: number }[]>([]);
   const [isBrowserOpen, setIsBrowserOpen] = useState(false);
   const [isCatalogOpen, setIsCatalogOpen] = useState(false);
+  const [storyData, setStoryData] = useState<StoryCardData | null>(null);
+  const [isStoryModalOpen, setIsStoryModalOpen] = useState(false);
 
   const formatDuration = (seconds: number) => {
     const h = Math.floor(seconds / 3600);
@@ -425,24 +429,54 @@ export const RoutineManager: React.FC = () => {
                       })}
                     </div>
 
-                    {/* Repeat Workout button */}
-                    <button
-                      className="btn-secondary"
-                      onClick={() => startWorkout(undefined, log)}
-                      style={{
-                        padding: '6px 12px',
-                        fontSize: '0.72rem',
-                        height: '30px',
-                        alignSelf: 'flex-start',
-                        marginTop: '4px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '5px'
-                      }}
-                      title="Avvia una nuova sessione con gli stessi esercizi"
-                    >
-                      <Repeat size={13} /> Ripeti Allenamento
-                    </button>
+                    {/* Action buttons row */}
+                    <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+                      <button
+                        type="button"
+                        className="btn-secondary"
+                        onClick={() => startWorkout(undefined, log)}
+                        style={{
+                          padding: '6px 12px',
+                          fontSize: '0.72rem',
+                          height: '30px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '5px'
+                        }}
+                        title="Avvia una nuova sessione con gli stessi esercizi"
+                      >
+                        <Repeat size={13} /> Ripeti Allenamento
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-secondary"
+                        onClick={() => {
+                          setStoryData({
+                            workoutName: log.name,
+                            duration: formatDuration(log.duration),
+                            totalVolume: log.volume,
+                            totalSets: totalCompletedSets,
+                            exercisesCount: log.exercises.length,
+                            recordsCount: isPr ? 1 : 0,
+                            date: new Date(log.date).toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' })
+                          });
+                          setIsStoryModalOpen(true);
+                        }}
+                        style={{
+                          padding: '6px 12px',
+                          fontSize: '0.72rem',
+                          height: '30px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '5px',
+                          borderColor: 'rgba(212, 175, 55, 0.4)',
+                          color: 'var(--color-primary)'
+                        }}
+                        title="Crea card verticale per Instagram Stories"
+                      >
+                        <Share2 size={13} /> Condividi Story
+                      </button>
+                    </div>
                   </div>
                 );
               })}
@@ -457,6 +491,13 @@ export const RoutineManager: React.FC = () => {
         onSelectExercise={() => {}}
         selectedIds={[]}
         isMultiSelect={false}
+      />
+
+      {/* Luxury Story Card Modal */}
+      <StoryCardModal
+        isOpen={isStoryModalOpen}
+        onClose={() => setIsStoryModalOpen(false)}
+        data={storyData}
       />
     </div>
   );

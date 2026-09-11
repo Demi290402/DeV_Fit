@@ -1,20 +1,21 @@
 import React, { useState, useRef, useEffect } from 'react';
-
-import { Plus, Trash2, Camera, Search, X, ChevronLeft, ChevronRight, Barcode, Sliders } from 'lucide-react';
-
+import { Plus, Trash2, Camera, Search, X, ChevronLeft, ChevronRight, Barcode, Sliders, Globe, Loader2 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { fetchProductByBarcode, searchProductsByName } from '../services/openFoodFacts';
 
-
-
-interface FoodDbItem {
+export interface FoodDbItem {
   name: string;
   calories: number; // per 100g
   protein: number;
   carbs: number;
   fat: number;
+  brand?: string;
+  barcode?: string;
+  imageUrl?: string;
 }
 
-const mockFoodDb: FoodDbItem[] = [
+// Alimenti base comuni salvati in memoria rapida
+const stapleFoods: FoodDbItem[] = [
   { name: 'Petto di Pollo alla Piastra', calories: 165, protein: 31, carbs: 0, fat: 3.6 },
   { name: 'Riso Basmati Bollito', calories: 130, protein: 2.7, carbs: 28, fat: 0.3 },
   { name: 'Uovo Intero Sodo', calories: 155, protein: 13, carbs: 1.1, fat: 11 },
@@ -24,7 +25,7 @@ const mockFoodDb: FoodDbItem[] = [
   { name: 'Pane Integrale di Segale', calories: 250, protein: 9, carbs: 48, fat: 2 },
   { name: 'Mandorle Sgusciate', calories: 579, protein: 21, carbs: 22, fat: 49 },
   { name: 'Mela Rossa', calories: 52, protein: 0.3, carbs: 14, fat: 0.2 },
-  { name: 'Barretta Proteica Choco-Fit', calories: 375, protein: 32, carbs: 38, fat: 9 },
+  { name: 'Barretta Proteica', calories: 375, protein: 32, carbs: 38, fat: 9 },
 ];
 
 export const FoodScanner: React.FC = () => {
@@ -41,10 +42,21 @@ export const FoodScanner: React.FC = () => {
   const [editingMealIndex, setEditingMealIndex] = useState<number | null>(null);
   const [editingMealName, setEditingMealName] = useState('');
 
-  // Scanner state
+  // Real Camera & Open Food Facts Scanner state
   const [isScanning, setIsScanning] = useState(false);
   const [scanResult, setScanResult] = useState<FoodDbItem | null>(null);
   const [scanStatusMessage, setScanStatusMessage] = useState('');
+  const [manualBarcode, setManualBarcode] = useState('');
+  const [isSearchingBarcode, setIsSearchingBarcode] = useState(false);
+
+  // Live remote search state (Open Food Facts Database)
+  const [remoteSearchResults, setRemoteSearchResults] = useState<FoodDbItem[]>([]);
+  const [isSearchingRemote, setIsSearchingRemote] = useState(false);
+
+  // Camera stream refs
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const cameraStreamRef = useRef<MediaStream | null>(null);
+  const scanIntervalRef = useRef<any>(null);
 
   const dayLogs = foodLogs[selectedDate] || [];
 
@@ -60,10 +72,37 @@ export const FoodScanner: React.FC = () => {
     setSelectedDate(d.toISOString().split('T')[0]);
   };
 
-  // Search filter
-  const filteredFoods = searchQuery
-    ? mockFoodDb.filter(f => f.name.toLowerCase().includes(searchQuery.toLowerCase()))
-    : mockFoodDb;
+  // Live search in Open Food Facts with debounce
+  useEffect(() => {
+    if (!searchQuery || searchQuery.trim().length < 2) {
+      setRemoteSearchResults([]);
+      setIsSearchingRemote(false);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      setIsSearchingRemote(true);
+      const results = await searchProductsByName(searchQuery);
+      setRemoteSearchResults(results.map(r => ({
+        name: r.name,
+        calories: r.calories,
+        protein: r.protein,
+        carbs: r.carbs,
+        fat: r.fat,
+        brand: r.brand,
+        barcode: r.barcode,
+        imageUrl: r.imageUrl
+      })));
+      setIsSearchingRemote(false);
+    }, 450);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Filter local staple foods
+  const filteredStaples = searchQuery
+    ? stapleFoods.filter(f => f.name.toLowerCase().includes(searchQuery.toLowerCase()))
+    : stapleFoods;
 
   const handleAddFood = (food: FoodDbItem) => {
     if (!activeMealType) return;
@@ -86,38 +125,107 @@ export const FoodScanner: React.FC = () => {
     setActiveMealType(null);
   };
 
-  // FIX MEMORY LEAK: refs per i timer dello scanner — cleared in useEffect cleanup
-  const scanTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  // Stop camera helper
+  const stopCamera = () => {
+    if (scanIntervalRef.current) {
+      clearInterval(scanIntervalRef.current);
+      scanIntervalRef.current = null;
+    }
+    if (cameraStreamRef.current) {
+      cameraStreamRef.current.getTracks().forEach(track => track.stop());
+      cameraStreamRef.current = null;
+    }
+  };
 
   useEffect(() => {
     return () => {
-      // Cleanup tutti i timer pendenti quando il componente viene smontato
-      scanTimersRef.current.forEach(t => clearTimeout(t));
+      stopCamera();
     };
   }, []);
 
-  const triggerSimulatedScan = () => {
-    // Cancella timer precedenti
-    scanTimersRef.current.forEach(t => clearTimeout(t));
-    scanTimersRef.current = [];
-
+  // Launch Real Camera Barcode Scanner
+  const startCameraScanner = async () => {
     setIsScanning(true);
     setScanResult(null);
-    setScanStatusMessage('Inizializzazione fotocamera...');
+    setManualBarcode('');
+    setScanStatusMessage('Attivazione fotocamera in corso...');
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
+      });
+      cameraStreamRef.current = stream;
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+      }
+
+      setScanStatusMessage('Inquadra il codice a barre del cibo...');
+
+      // Native BarcodeDetector if supported by mobile browser
+      if ('BarcodeDetector' in window) {
+        const barcodeDetector = new (window as any).BarcodeDetector({
+          formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'qr_code']
+        });
+
+        scanIntervalRef.current = setInterval(async () => {
+          if (!videoRef.current || videoRef.current.readyState < 2) return;
+          try {
+            const barcodes = await barcodeDetector.detect(videoRef.current);
+            if (barcodes && barcodes.length > 0) {
+              const rawValue = barcodes[0].rawValue;
+              if (rawValue) {
+                stopCamera();
+                handleLookupBarcode(rawValue);
+              }
+            }
+          } catch {
+            // Detection frame skipped
+          }
+        }, 300);
+      } else {
+        setScanStatusMessage('Inquadra il codice a barre o inserisci il codice numerico qui sotto.');
+      }
+    } catch (err) {
+      console.warn('Camera access unavailable:', err);
+      setScanStatusMessage('Fotocamera non disponibile. Puoi digitare il codice a barre manualmente.');
+    }
+  };
+
+  // Real lookup on Open Food Facts database
+  const handleLookupBarcode = async (code: string) => {
+    const cleanCode = code.trim();
+    if (!cleanCode) return;
     
-    const t1 = setTimeout(() => {
-      setScanStatusMessage('Rilevamento codice a barre in corso...');
-    }, 1000);
+    setIsSearchingBarcode(true);
+    setScanStatusMessage(`Ricerca codice ${cleanCode} su Open Food Facts...`);
 
-    const t2 = setTimeout(() => {
-      const randomIndex = Math.floor(Math.random() * mockFoodDb.length);
-      const matchedFood = mockFoodDb[randomIndex];
-      setScanResult(matchedFood);
-      setScanStatusMessage('Demo — nessuna fotocamera reale collegata.');
-      if (navigator.vibrate) navigator.vibrate(100);
-    }, 2800);
+    const item = await fetchProductByBarcode(cleanCode);
+    setIsSearchingBarcode(false);
 
-    scanTimersRef.current = [t1, t2];
+    if (item) {
+      setScanResult({
+        name: item.name,
+        calories: item.calories,
+        protein: item.protein,
+        carbs: item.carbs,
+        fat: item.fat,
+        brand: item.brand,
+        barcode: item.barcode,
+        imageUrl: item.imageUrl
+      });
+      setScanStatusMessage('✦ Alimento verificato identificato!');
+      if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+    } else {
+      setScanStatusMessage(`Nessun alimento trovato su Open Food Facts per "${cleanCode}".`);
+    }
+  };
+
+  const handleCloseScanner = () => {
+    stopCamera();
+    setIsScanning(false);
+    setScanResult(null);
   };
 
 
@@ -454,16 +562,17 @@ export const FoodScanner: React.FC = () => {
                 <input
                   type="text" className="set-input"
                   style={{ width: '100%', paddingLeft: '36px', textAlign: 'left', height: '44px' }}
-                  placeholder="Cerca un alimento..."
+                  placeholder="Cerca un alimento (es. Barilla, Fage, Pollo)..."
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
                 />
               </div>
               <button
+                type="button"
                 className="btn-secondary"
-                onClick={triggerSimulatedScan}
-                title="Avvia scanner barcode"
-                style={{ width: '44px', height: '44px', padding: 0, flexShrink: 0 }}
+                onClick={startCameraScanner}
+                title="Avvia fotocamera scanner barcode"
+                style={{ width: '44px', height: '44px', padding: 0, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               >
                 <Camera size={18} color="var(--color-primary)" />
               </button>
@@ -479,96 +588,214 @@ export const FoodScanner: React.FC = () => {
             }}>
               <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Quantità (grammi):</span>
               <input
-                type="number" className="set-input" value={customWeight}
+                type="number" 
+                inputMode="decimal"
+                className="set-input" 
+                value={customWeight}
                 onChange={e => setCustomWeight(e.target.value)}
                 style={{ width: '80px', height: '34px' }}
               />
             </div>
 
-            {/* Results */}
-            <h4 style={{ fontSize: '0.68rem', color: 'var(--color-primary)', fontWeight: 800, letterSpacing: '1.5px', textTransform: 'uppercase', marginBottom: '10px' }}>
-              ✦ Risultati Ricerca
-            </h4>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '220px', overflowY: 'auto', paddingRight: '4px' }}>
-              {filteredFoods.map(food => (
-                <div
-                  key={food.name}
-                  onClick={() => handleAddFood(food)}
-                  style={{
-                    padding: '12px 14px', cursor: 'pointer',
-                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                    background: 'rgba(255,255,255,0.02)',
-                    border: '1px solid var(--border-color)',
-                    borderRadius: 'var(--radius-md)',
-                    transition: 'background 0.15s, border-color 0.15s'
-                  }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = 'rgba(212,175,55,0.06)'; (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--color-primary)'; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = 'rgba(255,255,255,0.02)'; (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--border-color)'; }}
-                >
-                  <div>
-                    <h5 style={{ fontSize: '0.85rem', fontWeight: 700 }}>{food.name}</h5>
-                    <span style={{ fontSize: '0.65rem', color: 'var(--text-dark)' }}>
-                      P:{food.protein}g · C:{food.carbs}g · G:{food.fat}g (100g)
-                    </span>
+            {/* Loading Open Food Facts Indicator */}
+            {isSearchingRemote && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.72rem', color: 'var(--color-primary)', padding: '4px 0 8px 0' }}>
+                <Loader2 size={13} className="animate-spin" />
+                <span>Ricerca nel database ufficiale Open Food Facts...</span>
+              </div>
+            )}
+
+            {/* Results Container */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', maxHeight: '300px', overflowY: 'auto', paddingRight: '4px' }}>
+              {/* Remote Open Food Facts Results */}
+              {remoteSearchResults.length > 0 && (
+                <div>
+                  <h4 style={{ fontSize: '0.68rem', color: 'var(--color-primary)', fontWeight: 800, letterSpacing: '1.2px', textTransform: 'uppercase', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                    <Globe size={12} /> Open Food Facts (Verificati)
+                  </h4>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {remoteSearchResults.map((food, i) => (
+                      <div
+                        key={`${food.name}-${i}`}
+                        onClick={() => handleAddFood(food)}
+                        style={{
+                          padding: '12px 14px', cursor: 'pointer',
+                          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                          background: 'rgba(212,175,55,0.03)',
+                          border: '1px solid rgba(212,175,55,0.2)',
+                          borderRadius: 'var(--radius-md)',
+                          transition: 'background 0.15s, border-color 0.15s'
+                        }}
+                        onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = 'rgba(212,175,55,0.08)'; (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--color-primary)'; }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = 'rgba(212,175,55,0.03)'; (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(212,175,55,0.2)'; }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          {food.imageUrl ? (
+                            <img src={food.imageUrl} alt={food.name} style={{ width: '36px', height: '36px', objectFit: 'cover', borderRadius: '4px', border: '1px solid var(--border-color)' }} />
+                          ) : (
+                            <div style={{ width: '36px', height: '36px', borderRadius: '4px', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <Barcode size={16} color="var(--color-primary)" />
+                            </div>
+                          )}
+                          <div>
+                            <h5 style={{ fontSize: '0.84rem', fontWeight: 700, margin: 0 }}>{food.name}</h5>
+                            <span style={{ fontSize: '0.65rem', color: 'var(--text-dark)' }}>
+                              P:{food.protein}g · C:{food.carbs}g · G:{food.fat}g (100g)
+                            </span>
+                          </div>
+                        </div>
+                        <span style={{ fontSize: '0.9rem', fontWeight: 900, color: 'var(--color-secondary)', flexShrink: 0, marginLeft: '10px' }}>
+                          {food.calories} kcal
+                        </span>
+                      </div>
+                    ))}
                   </div>
-                  <span style={{ fontSize: '0.9rem', fontWeight: 900, color: 'var(--color-secondary)', flexShrink: 0, marginLeft: '10px' }}>
-                    {food.calories} kcal
-                  </span>
                 </div>
-              ))}
+              )}
+
+              {/* Local Staples / Favorites */}
+              <div>
+                <h4 style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontWeight: 800, letterSpacing: '1.2px', textTransform: 'uppercase', marginBottom: '8px' }}>
+                  ✦ Alimenti Base & Preferiti
+                </h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {filteredStaples.map(food => (
+                    <div
+                      key={food.name}
+                      onClick={() => handleAddFood(food)}
+                      style={{
+                        padding: '12px 14px', cursor: 'pointer',
+                        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                        background: 'rgba(255,255,255,0.02)',
+                        border: '1px solid var(--border-color)',
+                        borderRadius: 'var(--radius-md)',
+                        transition: 'background 0.15s, border-color 0.15s'
+                      }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = 'rgba(212,175,55,0.06)'; (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--color-primary)'; }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = 'rgba(255,255,255,0.02)'; (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--border-color)'; }}
+                    >
+                      <div>
+                        <h5 style={{ fontSize: '0.85rem', fontWeight: 700 }}>{food.name}</h5>
+                        <span style={{ fontSize: '0.65rem', color: 'var(--text-dark)' }}>
+                          P:{food.protein}g · C:{food.carbs}g · G:{food.fat}g (100g)
+                        </span>
+                      </div>
+                      <span style={{ fontSize: '0.9rem', fontWeight: 900, color: 'var(--color-secondary)', flexShrink: 0, marginLeft: '10px' }}>
+                        {food.calories} kcal
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* ── Scanner Modal ── */}
+      {/* ── Real Camera Barcode Scanner Modal ── */}
       {isScanning && (
-        <div className="scanner-modal-overlay">
-          <div className="flex-between" style={{ width: '100%' }}>
+        <div className="scanner-modal-overlay animate-fade-in" style={{ zIndex: 1100 }}>
+          <div className="flex-between" style={{ width: '100%', maxWidth: '420px' }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.9rem', fontWeight: 800, color: 'var(--color-primary)' }}>
-              <Barcode size={18} /> Scanner Barcode
+              <Barcode size={18} /> Scanner Barcode Reale
             </span>
-            <button className="icon-btn" onClick={() => setIsScanning(false)} style={{ color: 'white' }}><X size={20} /></button>
+            <button className="icon-btn" onClick={handleCloseScanner} style={{ color: 'white' }}><X size={20} /></button>
           </div>
 
-          <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
-            <div className="scanner-viewport" style={{ border: '2px solid var(--color-primary)', boxShadow: '0 0 20px rgba(212,175,55,0.25)' }}>
+          <div style={{ width: '100%', maxWidth: '420px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '14px' }}>
+            {/* Live Camera Viewport */}
+            <div 
+              className="scanner-viewport" 
+              style={{ 
+                border: '2px solid var(--color-primary)', 
+                boxShadow: '0 0 25px rgba(212,175,55,0.3)',
+                position: 'relative',
+                overflow: 'hidden',
+                borderRadius: 'var(--radius-md)',
+                height: '240px',
+                width: '100%',
+                background: '#000'
+              }}
+            >
+              <video 
+                ref={videoRef} 
+                autoPlay 
+                playsInline 
+                muted 
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+              />
               <div className="scanner-scan-line" style={{ background: 'var(--color-primary)', boxShadow: '0 0 12px var(--color-primary)' }} />
-              <div className="scanner-mock-view">
-                <Camera size={42} className="animate-glow" color="var(--color-primary)" />
-                <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>Scannerizzatore Attivo...</span>
-                <span style={{ fontSize: '0.65rem', color: 'var(--color-secondary)' }}>Punta il codice a barre del cibo</span>
-              </div>
             </div>
-            <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', textAlign: 'center' }}>{scanStatusMessage}</p>
+
+            <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', textAlign: 'center', minHeight: '20px' }}>
+              {scanStatusMessage}
+            </p>
+
+            {/* Manual Barcode Input Fallback */}
+            <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
+              <input
+                type="text"
+                inputMode="numeric"
+                className="set-input"
+                placeholder="Digita codice a barre (es. 8000500...)"
+                value={manualBarcode}
+                onChange={e => setManualBarcode(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') handleLookupBarcode(manualBarcode); }}
+                style={{ flex: 1, textAlign: 'left', paddingLeft: '12px', height: '40px', fontSize: '0.85rem' }}
+              />
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={() => handleLookupBarcode(manualBarcode)}
+                disabled={isSearchingBarcode || !manualBarcode.trim()}
+                style={{ padding: '8px 16px', fontSize: '0.8rem', whiteSpace: 'nowrap', height: '40px' }}
+              >
+                {isSearchingBarcode ? <Loader2 size={16} className="animate-spin" /> : 'Cerca'}
+              </button>
+            </div>
           </div>
 
-          <div style={{ width: '100%' }}>
-            {scanResult ? (
+          <div style={{ width: '100%', maxWidth: '420px' }}>
+            {scanResult && (
               <div className="glass-card animate-scale-in" style={{
                 border: '1px solid var(--color-primary)',
-                background: 'rgba(212,175,55,0.06)',
-                display: 'flex', flexDirection: 'column', gap: '12px'
+                background: 'rgba(212,175,55,0.08)',
+                display: 'flex', flexDirection: 'column', gap: '12px',
+                padding: '16px'
               }}>
                 <div className="flex-between">
                   <div>
-                    <span style={{ fontSize: '0.6rem', color: 'var(--color-primary)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px' }}>✦ Alimento Identificato</span>
-                    <h4 style={{ fontSize: '0.95rem', fontWeight: 800 }}>{scanResult.name}</h4>
+                    <span style={{ fontSize: '0.62rem', color: 'var(--color-primary)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px' }}>
+                      ✦ Open Food Facts Verificato
+                    </span>
+                    <h4 style={{ fontSize: '0.95rem', fontWeight: 800, marginTop: '2px' }}>{scanResult.name}</h4>
                   </div>
-                  <span style={{ fontSize: '1rem', fontWeight: 900, color: 'var(--color-secondary)' }}>{scanResult.calories} kcal</span>
+                  <span style={{ fontSize: '1.1rem', fontWeight: 900, color: 'var(--color-secondary)' }}>
+                    {scanResult.calories} kcal
+                  </span>
                 </div>
                 <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                  Valori (100g): Proteine {scanResult.protein}g | Carbi {scanResult.carbs}g | Grassi {scanResult.fat}g
+                  Valori per 100g: Proteine <strong>{scanResult.protein}g</strong> | Carbi <strong>{scanResult.carbs}g</strong> | Grassi <strong>{scanResult.fat}g</strong>
                 </p>
                 <div style={{ display: 'flex', gap: '8px' }}>
-                  <button className="btn-primary" onClick={handleSaveScanResult} style={{ flex: 1, padding: '10px' }}>Aggiungi a Pasto</button>
-                  <button className="btn-secondary" onClick={triggerSimulatedScan} style={{ padding: '10px' }}>Riprova</button>
+                  <button 
+                    type="button"
+                    className="btn-primary" 
+                    onClick={handleSaveScanResult} 
+                    style={{ flex: 1, padding: '10px' }}
+                  >
+                    Aggiungi a {activeMealType || 'Pasto'}
+                  </button>
+                  <button 
+                    type="button"
+                    className="btn-secondary" 
+                    onClick={startCameraScanner} 
+                    style={{ padding: '10px' }}
+                  >
+                    Scansiona Altro
+                  </button>
                 </div>
               </div>
-            ) : (
-              <p style={{ fontSize: '0.72rem', color: 'var(--text-dark)', textAlign: 'center' }}>
-                Simulazione fotocamera in corso...
-              </p>
             )}
           </div>
         </div>

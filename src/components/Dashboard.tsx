@@ -3,6 +3,7 @@ import { Flame, Droplet, Dumbbell, Scale, Check, Download, Moon, Heart, Info, Pl
 import { useApp } from '../context/AppContext';
 
 import { TipWidget } from './TipWidget';
+import { MuscleHeatmap } from './MuscleHeatmap';
 
 interface DashboardProps {
   setCurrentTab: (tab: string) => void;
@@ -384,6 +385,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ setCurrentTab }) => {
           )}
         </div>
       </div>
+
+      {/* 2.5. Muscle Fatigue & Recovery Heatmap (Hevy/Fitbod Pro feature) */}
+      <MuscleHeatmap />
 
       {/* 3. Daily Energy & Macro Card (MyFitnessPal / Lifesum style) */}
       <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '18px' }}>

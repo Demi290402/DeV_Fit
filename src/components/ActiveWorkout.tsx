@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Trash, Check, Clock, X, ChevronDown } from 'lucide-react';
+import { Plus, Trash, Check, Clock, X, ChevronDown, Disc } from 'lucide-react';
 
 import { useApp } from '../context/AppContext';
 import type { SetLog } from '../context/AppContext';
 import { mockExercises, renderMuscleIcon } from '../data/mockExercises';
 import { ExerciseBrowserModal } from './ExerciseBrowserModal';
+import { PlateAndOneRepModal } from './PlateAndOneRepModal';
 
 
 
@@ -31,6 +32,37 @@ export const ActiveWorkout: React.FC = () => {
   const [restTimeTotal, setRestTimeTotal] = useState<number>(90); // default 90s
   const restTimerRef = useRef<any>(null);
 
+  // Plate / 1RM Modal State
+  const [showPlateModal, setShowPlateModal] = useState(false);
+  const [plateModalInitialWeight, setPlateModalInitialWeight] = useState(60);
+  const [plateModalInitialReps, setPlateModalInitialReps] = useState(8);
+  const [activeTargetSet, setActiveTargetSet] = useState<{ exId: string; setIdx: number } | null>(null);
+
+  // Web Audio synthetic beeper
+  const playAudioTone = (freq: number, duration: number, type: OscillatorType = 'sine') => {
+    try {
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContextClass) return;
+      const ctx = new AudioContextClass();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, ctx.currentTime);
+      gain.gain.setValueAtTime(0.18, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + duration);
+    } catch {
+      // Audio context blocked by browser autoplay policy
+    }
+  };
+
+  const playCompletionSound = () => {
+    playAudioTone(587.33, 0.12); // D5
+    setTimeout(() => playAudioTone(880, 0.3), 120); // A5
+  };
 
   // Active workout duration timer
   useEffect(() => {
@@ -44,20 +76,26 @@ export const ActiveWorkout: React.FC = () => {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [activeWorkout?.startTime]); // ← dipende solo da startTime, non da tutto l'oggetto
+  }, [activeWorkout?.startTime]);
 
-  // Rest timer interval logic
+  // Rest timer interval logic with Audio & Haptic Feedback
   useEffect(() => {
     if (restTimeLeft !== null) {
       if (restTimeLeft > 0) {
+        // Countdown beeps in last 3 seconds
+        if (restTimeLeft <= 3 && restTimeLeft >= 1) {
+          playAudioTone(440 + (3 - restTimeLeft) * 110, 0.08);
+          if (navigator.vibrate) navigator.vibrate(60);
+        }
+
         restTimerRef.current = setTimeout(() => {
           setRestTimeLeft(prev => (prev !== null ? prev - 1 : null));
         }, 1000);
       } else {
         // Timer completed!
         setRestTimeLeft(null);
-        // HTML5 Vibrate if supported
-        if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+        playCompletionSound();
+        if (navigator.vibrate) navigator.vibrate([250, 100, 250, 100, 400]);
       }
     }
     return () => {
@@ -218,9 +256,36 @@ export const ActiveWorkout: React.FC = () => {
           <h2 style={{ fontSize: '1.25rem', fontWeight: 800 }}>{activeWorkout.name}</h2>
           <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Volume: {getLiveVolume()} kg</span>
         </div>
-        <div className="timer-box">
-          <Clock size={16} />
-          <span>{formatTime(elapsedTime)}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <button
+            type="button"
+            onClick={() => {
+              setPlateModalInitialWeight(60);
+              setActiveTargetSet(null);
+              setShowPlateModal(true);
+            }}
+            style={{
+              background: 'rgba(212, 175, 55, 0.12)',
+              border: '1px solid var(--color-primary)',
+              color: 'var(--color-primary)',
+              padding: '6px 10px',
+              borderRadius: 'var(--radius-sm)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '5px',
+              fontSize: '0.72rem',
+              fontWeight: 800,
+              cursor: 'pointer'
+            }}
+            title="Calcolatore Dischi & Massimale 1RM"
+          >
+            <Disc size={13} />
+            <span>Dischi / 1RM</span>
+          </button>
+          <div className="timer-box">
+            <Clock size={16} />
+            <span>{formatTime(elapsedTime)}</span>
+          </div>
         </div>
       </div>
 
@@ -269,17 +334,49 @@ export const ActiveWorkout: React.FC = () => {
                           {prevSet ? `${prevSet.weight}kg x ${prevSet.reps}` : 'Nessuno'}
                         </td>
                         <td>
-                          <input
-                            type="number"
-                            className="set-input"
-                            value={set.weight || ''}
-                            onChange={(e) => updateActiveWorkoutSet(exLog.exerciseId, idx, 'weight', parseFloat(e.target.value) || 0)}
-                            disabled={set.completed}
-                          />
+                          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                            <input
+                              type="number"
+                              inputMode="decimal"
+                              step="any"
+                              className="set-input"
+                              value={set.weight || ''}
+                              onChange={(e) => updateActiveWorkoutSet(exLog.exerciseId, idx, 'weight', parseFloat(e.target.value) || 0)}
+                              disabled={set.completed}
+                              style={{ paddingRight: set.completed ? '8px' : '22px' }}
+                            />
+                            {!set.completed && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setPlateModalInitialWeight(set.weight || 60);
+                                  setPlateModalInitialReps(set.reps || 8);
+                                  setActiveTargetSet({ exId: exLog.exerciseId, setIdx: idx });
+                                  setShowPlateModal(true);
+                                }}
+                                style={{
+                                  position: 'absolute',
+                                  right: '4px',
+                                  background: 'none',
+                                  border: 'none',
+                                  color: 'var(--color-primary)',
+                                  cursor: 'pointer',
+                                  padding: '2px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  opacity: 0.8
+                                }}
+                                title="Calcola dischi per questo peso"
+                              >
+                                <Disc size={11} />
+                              </button>
+                            )}
+                          </div>
                         </td>
                         <td>
                           <input
                             type="number"
+                            inputMode="numeric"
                             className="set-input"
                             value={set.reps || ''}
                             onChange={(e) => updateActiveWorkoutSet(exLog.exerciseId, idx, 'reps', parseInt(e.target.value) || 0)}
@@ -382,6 +479,7 @@ export const ActiveWorkout: React.FC = () => {
             <div className="rest-controls">
               <button className="rest-adjust-btn" onClick={() => adjustRestTime(-10)}>-10s</button>
               <button className="rest-adjust-btn" onClick={() => adjustRestTime(10)}>+10s</button>
+              <button className="rest-adjust-btn" onClick={() => adjustRestTime(30)}>+30s</button>
               <button 
                 style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px' }} 
                 onClick={() => setRestTimeLeft(null)}
@@ -392,6 +490,22 @@ export const ActiveWorkout: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Plate Calculator and 1RM Modal */}
+      <PlateAndOneRepModal
+        isOpen={showPlateModal}
+        onClose={() => {
+          setShowPlateModal(false);
+          setActiveTargetSet(null);
+        }}
+        initialWeight={plateModalInitialWeight}
+        initialReps={plateModalInitialReps}
+        onApplyWeight={(w) => {
+          if (activeTargetSet) {
+            updateActiveWorkoutSet(activeTargetSet.exId, activeTargetSet.setIdx, 'weight', w);
+          }
+        }}
+      />
 
       {/* Add Exercise Modal */}
       <ExerciseBrowserModal 
