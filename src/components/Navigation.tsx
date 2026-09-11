@@ -11,7 +11,7 @@ export const Navigation: React.FC<NavigationProps> = ({ currentTab, setCurrentTa
   const { activeWorkout } = useApp();
 
   const menuItems = [
-    { id: 'dashboard', label: 'Casa', icon: Home },
+    { id: 'dashboard', label: 'Home', icon: Home },
     { id: 'workout', label: 'Allenamento', icon: Dumbbell },
     { id: 'diet', label: 'Dieta', icon: Apple },
     { id: 'social', label: 'Social', icon: Users },
@@ -34,18 +34,25 @@ export const Navigation: React.FC<NavigationProps> = ({ currentTab, setCurrentTa
             <div 
               className="timer-box animate-glow" 
               style={{ 
-                background: 'var(--color-secondary-glow)', 
+                background: 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%)', 
+                color: '#050506',
+                fontWeight: 700,
                 padding: '6px 12px', 
-                borderRadius: 'var(--radius-sm)',
-                fontSize: '0.8rem',
-                cursor: 'pointer'
+                borderRadius: 'var(--radius-full)',
+                fontSize: '0.75rem',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                boxShadow: '0 2px 10px rgba(212, 175, 55, 0.3)'
               }}
               onClick={() => setCurrentTab('workout')}
             >
-              <Dumbbell size={14} className="animate-pulse" />
-              Allenamento Attivo
+              <Dumbbell size={13} className="animate-pulse" />
+              <span>In corso</span>
             </div>
           )}
+
           <div className="icon-btn">
             <User size={18} onClick={() => setCurrentTab('profile')} />
           </div>
@@ -82,21 +89,22 @@ export const Navigation: React.FC<NavigationProps> = ({ currentTab, setCurrentTa
           <div 
             className="timer-box animate-glow desktop-only-logo" 
             style={{ 
-              background: 'var(--color-secondary-glow)', 
+              background: 'linear-gradient(135deg, rgba(212, 175, 55, 0.1) 0%, rgba(10, 10, 12, 0.95) 100%)', 
               padding: '12px 16px', 
               borderRadius: 'var(--radius-md)',
               fontSize: '0.8rem',
               cursor: 'pointer',
               marginTop: 'auto',
-              border: '1px solid rgba(6, 182, 212, 0.2)',
+              border: '1px solid rgba(212, 175, 55, 0.3)',
               width: '100%',
               display: 'flex',
               alignItems: 'center',
-              gap: '8px'
+              gap: '10px'
             }}
             onClick={() => setCurrentTab('workout')}
           >
-            <Dumbbell size={16} className="animate-pulse" color="var(--color-secondary)" />
+            <Dumbbell size={18} className="animate-pulse" color="var(--color-primary)" />
+
             <div>
               <span style={{ fontWeight: 'bold', display: 'block' }}>Allenamento in corso</span>
               <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>Fai clic per riprendere</span>

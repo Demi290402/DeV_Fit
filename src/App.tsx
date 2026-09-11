@@ -8,8 +8,10 @@ import { FoodScanner } from './components/FoodScanner';
 import { RecipeBook } from './components/RecipeBook';
 import { SocialFeed } from './components/SocialFeed';
 import { Profile } from './components/Profile';
+import { CycleTracker } from './components/CycleTracker';
+import { DeviceSyncHub } from './components/DeviceSyncHub';
 import { AuthScreen } from './components/AuthScreen';
-import { ShieldCheck, Info } from 'lucide-react';
+import { ShieldCheck, Info, ChevronLeft } from 'lucide-react';
 
 const AppContent: React.FC = () => {
   const [currentTab, setCurrentTab] = useState('dashboard');
@@ -28,33 +30,50 @@ const AppContent: React.FC = () => {
       case 'diet':
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div style={{ display: 'flex', background: 'rgba(255, 255, 255, 0.03)', borderRadius: 'var(--radius-md)', padding: '4px' }}>
+            {/* Segmented Control - Luxury Gold */}
+            <div style={{ 
+              display: 'flex', 
+              background: 'rgba(255, 255, 255, 0.03)', 
+              borderRadius: 'var(--radius-full)', 
+              padding: '4px',
+              border: '1px solid var(--border-color)'
+            }}>
               <button 
-                className="btn-secondary" 
                 onClick={() => setDietSubTab('diary')}
                 style={{ 
                   flex: 1, 
-                  background: dietSubTab === 'diary' ? 'var(--color-secondary)' : 'transparent',
-                  color: dietSubTab === 'diary' ? 'black' : 'white',
+                  background: dietSubTab === 'diary' 
+                    ? 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%)' 
+                    : 'transparent',
+                  color: dietSubTab === 'diary' ? '#050506' : 'var(--text-muted)',
+                  fontWeight: dietSubTab === 'diary' ? 800 : 500,
                   border: 'none',
-                  padding: '8px 12px',
+                  padding: '9px 14px',
                   fontSize: '0.8rem',
-                  borderRadius: 'var(--radius-sm)'
+                  borderRadius: 'var(--radius-full)',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  boxShadow: dietSubTab === 'diary' ? '0 2px 8px rgba(212, 175, 55, 0.25)' : 'none'
                 }}
               >
                 Diario Pasti
               </button>
               <button 
-                className="btn-secondary" 
                 onClick={() => setDietSubTab('recipes')}
                 style={{ 
                   flex: 1, 
-                  background: dietSubTab === 'recipes' ? 'var(--color-secondary)' : 'transparent',
-                  color: dietSubTab === 'recipes' ? 'black' : 'white',
+                  background: dietSubTab === 'recipes' 
+                    ? 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%)' 
+                    : 'transparent',
+                  color: dietSubTab === 'recipes' ? '#050506' : 'var(--text-muted)',
+                  fontWeight: dietSubTab === 'recipes' ? 800 : 500,
                   border: 'none',
-                  padding: '8px 12px',
+                  padding: '9px 14px',
                   fontSize: '0.8rem',
-                  borderRadius: 'var(--radius-sm)'
+                  borderRadius: 'var(--radius-full)',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  boxShadow: dietSubTab === 'recipes' ? '0 2px 8px rgba(212, 175, 55, 0.25)' : 'none'
                 }}
               >
                 Ricettario
@@ -68,10 +87,53 @@ const AppContent: React.FC = () => {
         return <SocialFeed />;
       case 'profile':
         return <Profile />;
+      case 'cycle':
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <button
+              className="btn-secondary"
+              onClick={() => setCurrentTab('dashboard')}
+              style={{ 
+                display: 'inline-flex', 
+                alignItems: 'center', 
+                gap: '6px', 
+                alignSelf: 'flex-start', 
+                padding: '6px 14px', 
+                fontSize: '0.75rem',
+                borderRadius: 'var(--radius-full)'
+              }}
+            >
+              <ChevronLeft size={16} /> Torna alla Home
+            </button>
+            <CycleTracker />
+          </div>
+        );
+      case 'devices':
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <button
+              className="btn-secondary"
+              onClick={() => setCurrentTab('dashboard')}
+              style={{ 
+                display: 'inline-flex', 
+                alignItems: 'center', 
+                gap: '6px', 
+                alignSelf: 'flex-start', 
+                padding: '6px 14px', 
+                fontSize: '0.75rem',
+                borderRadius: 'var(--radius-full)'
+              }}
+            >
+              <ChevronLeft size={16} /> Torna alla Home
+            </button>
+            <DeviceSyncHub />
+          </div>
+        );
       default:
         return <Dashboard setCurrentTab={setCurrentTab} />;
     }
   };
+
 
   // 1. If user is not authenticated, show AuthScreen
   if (!user) {

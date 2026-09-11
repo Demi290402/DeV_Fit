@@ -185,8 +185,27 @@ export const FoodScanner: React.FC = () => {
               ? '✦ Oggi'
               : new Date(selectedDate).toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'short' })}
           </span>
-          <p style={{ fontSize: '0.68rem', color: 'var(--text-dark)', marginTop: '2px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Diario Alimentare</p>
+          {selectedDate !== new Date().toISOString().split('T')[0] ? (
+            <button
+              onClick={() => setSelectedDate(new Date().toISOString().split('T')[0])}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'var(--color-secondary)',
+                fontSize: '0.68rem',
+                cursor: 'pointer',
+                display: 'block',
+                margin: '2px auto 0',
+                textDecoration: 'underline'
+              }}
+            >
+              Torna a oggi
+            </button>
+          ) : (
+            <p style={{ fontSize: '0.68rem', color: 'var(--text-dark)', marginTop: '2px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Diario Alimentare</p>
+          )}
         </div>
+
         <button className="icon-btn" onClick={handleNextDay} style={{ color: 'var(--color-primary)' }}><ChevronRight size={20} /></button>
       </div>
 

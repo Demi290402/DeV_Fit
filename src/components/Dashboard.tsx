@@ -10,13 +10,14 @@ interface DashboardProps {
 
 export const Dashboard: React.FC<DashboardProps> = ({ setCurrentTab }) => {
   const todayStr = new Date().toISOString().split('T')[0];
-  const { profile, updateProfile, foodLogs, startWorkout, cycleData } = useApp();
+  const { profile, updateProfile, foodLogs, startWorkout, cycleData, activeWorkout } = useApp();
   const [showWeightModal, setShowWeightModal] = useState(false);
   const [newWeight, setNewWeight] = useState(profile.weight.toString());
   const [waterCount, setWaterCount] = useState(() => {
     const saved = localStorage.getItem(`df_water_${todayStr}`);
     return saved ? parseInt(saved) : 0;
   });
+
 
   // Dati reali Sonno (tracciati per data, nessun dato fake)
   const [sleepData, setSleepData] = useState<{ hours: number; minutes: number } | null>(() => {
@@ -116,6 +117,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ setCurrentTab }) => {
     setWaterCount(newVal);
     localStorage.setItem(`df_water_${todayStr}`, newVal.toString());
   };
+
+  const handleRemoveWater = () => {
+    const newVal = Math.max(0, waterCount - 250);
+    setWaterCount(newVal);
+    localStorage.setItem(`df_water_${todayStr}`, newVal.toString());
+  };
+
 
   const handleUpdateWeight = () => {
     const w = parseFloat(newWeight);
@@ -303,9 +311,22 @@ export const Dashboard: React.FC<DashboardProps> = ({ setCurrentTab }) => {
           <span style={{ fontSize: '1.4rem', fontWeight: 800, color: 'white' }}>{waterCount} <span style={{ fontSize: '0.8rem', fontWeight: 'normal', color: 'var(--text-muted)' }}>ml</span></span>
           <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px' }}>Obiettivo: 2000 ml</p>
         </div>
-        <button className="btn-secondary" onClick={handleAddWater} style={{ width: '100%', padding: '8px', fontSize: '0.75rem' }}>
-          + Bicchier d'Acqua (250ml)
-        </button>
+        <div style={{ display: 'flex', gap: '6px' }}>
+          <button className="btn-secondary" onClick={handleAddWater} style={{ flex: 1, padding: '8px', fontSize: '0.75rem' }}>
+            +250 ml (Bicchiere)
+          </button>
+          {waterCount > 0 && (
+            <button 
+              className="btn-secondary" 
+              onClick={handleRemoveWater} 
+              style={{ width: '38px', padding: '8px', fontSize: '0.85rem', fontWeight: 'bold', color: 'var(--text-muted)' }} 
+              title="Rimuovi 250ml"
+            >
+              -
+            </button>
+          )}
+        </div>
+
       </div>
 
       {/* Peso + BMI compatto */}
@@ -552,7 +573,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ setCurrentTab }) => {
         </div>
       )}
 
-      {/* Quick Start Gym Workout */}
+      {/* Quick Start / Resume Gym Workout */}
       <div
         className="glass-card animate-glow"
         style={{
@@ -561,24 +582,33 @@ export const Dashboard: React.FC<DashboardProps> = ({ setCurrentTab }) => {
           justifyContent: 'space-between',
           alignItems: 'center',
           borderLeft: '4px solid var(--color-primary)',
-          background: 'linear-gradient(135deg, rgba(212, 175, 55, 0.05) 0%, rgba(10, 10, 12, 0.85) 100%)'
+          background: 'linear-gradient(135deg, rgba(212, 175, 55, 0.08) 0%, rgba(10, 10, 12, 0.95) 100%)'
         }}
       >
-        <div>
-          <h3 style={{ fontSize: '1rem', fontWeight: 800 }}>Inizia Allenamento</h3>
-          <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>Registra carichi, recuperi e statistiche all'istante.</p>
+        <div style={{ flex: 1, paddingRight: '10px' }}>
+          <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--color-primary)' }}>
+            {activeWorkout ? `In Corso: ${activeWorkout.name}` : 'Inizia Allenamento'}
+          </h3>
+          <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+            {activeWorkout
+              ? 'Hai una sessione aperta. Tocca per registrare serie e carichi.'
+              : 'Registra carichi, serie e statistiche all\'istante.'}
+          </p>
         </div>
         <button
           className="btn-primary"
           onClick={() => {
-            startWorkout();
+            if (!activeWorkout) {
+              startWorkout();
+            }
             setCurrentTab('workout');
           }}
-          style={{ padding: '10px 18px', fontSize: '0.75rem' }}
+          style={{ padding: '10px 18px', fontSize: '0.75rem', flexShrink: 0 }}
         >
-          <Dumbbell size={14} /> Inizia Ora
+          <Dumbbell size={14} /> {activeWorkout ? 'Riprendi' : 'Inizia Ora'}
         </button>
       </div>
+
 
 
 
