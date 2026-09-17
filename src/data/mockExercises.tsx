@@ -4,6 +4,9 @@ export type MuscleGroup =
   | 'Pettorali' 
   | 'Dorsali' 
   | 'Quadricipiti' 
+  | 'Femorali'
+  | 'Glutei'
+  | 'Polpacci'
   | 'Spalle' 
   | 'Bicipiti' 
   | 'Tricipiti' 
@@ -123,6 +126,78 @@ export const mockExercises: Exercise[] = [
     equipment: 'Macchina',
     instructions: 'Cammina o corri a ritmo costante per stimolare l\'attività cardiovascolare e bruciare calorie.',
     videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-man-doing-bench-press-with-barbell-close-up-40321-large.mp4'
+  },
+  {
+    id: 'ex-hip-thrust',
+    name: 'Hip Thrust con Bilanciere',
+    category: 'Gambe',
+    muscleGroup: 'Glutei',
+    equipment: 'Bilanciere',
+    instructions: 'Poggia le scapole sulla panca, posiziona il bilanciere sul bacino ed estendi le anche spingendo sui talloni e contraendo al massimo i glutei al vertice.',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-woman-doing-squats-with-a-barbell-40324-large.mp4'
+  },
+  {
+    id: 'ex-slanci-cavi',
+    name: 'Slanci ai Cavi per Glutei',
+    category: 'Gambe',
+    muscleGroup: 'Glutei',
+    equipment: 'Cavi',
+    instructions: 'Aggancia la cavigliera al cavo basso. Mantieni il busto leggermente flesso ed estendi la gamba all\'indietro contraendo il gluteo.',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-woman-doing-squats-with-a-barbell-40324-large.mp4'
+  },
+  {
+    id: 'ex-leg-curl',
+    name: 'Leg Curl Seduto / Sdraiato',
+    category: 'Gambe',
+    muscleGroup: 'Femorali',
+    equipment: 'Macchina',
+    instructions: 'Fletti le ginocchia tirando il cuscinetto verso i glutei. Mantieni la contrazione per un secondo e controlla la fase eccentrica.',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-woman-doing-squats-with-a-barbell-40324-large.mp4'
+  },
+  {
+    id: 'ex-stacco-rumeno',
+    name: 'Stacco Rumeno con Bilanciere',
+    category: 'Gambe',
+    muscleGroup: 'Femorali',
+    equipment: 'Bilanciere',
+    instructions: 'Spingi il bacino indietro mantenendo la schiena lombare solida e le ginocchia semirigide. Sentirai un forte allungamento sui femorali.',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-woman-doing-squats-with-a-barbell-40324-large.mp4'
+  },
+  {
+    id: 'ex-calf-raise-piedi',
+    name: 'Calf Raise in Piedi',
+    category: 'Gambe',
+    muscleGroup: 'Polpacci',
+    equipment: 'Macchina',
+    instructions: 'Sali sulla punta dei piedi con massima estensione della caviglia. Pausa di 1 secondo in alto e discesa controllata allungando il polpaccio.',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-woman-doing-squats-with-a-barbell-40324-large.mp4'
+  },
+  {
+    id: 'ex-calf-raise-seduto',
+    name: 'Calf Raise da Seduto',
+    category: 'Gambe',
+    muscleGroup: 'Polpacci',
+    equipment: 'Macchina',
+    instructions: 'Siediti con le cosce bloccate dal cuscinetto. Solleva i talloni focalizzando lo stimolo sul soleo.',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-woman-doing-squats-with-a-barbell-40324-large.mp4'
+  },
+  {
+    id: 'ex-military-press',
+    name: 'Military Press con Bilanciere',
+    category: 'Spalle',
+    muscleGroup: 'Spalle',
+    equipment: 'Bilanciere',
+    instructions: 'Spingi il bilanciere dal petto fin sopra la testa a braccia distese, bloccando il core ed evitando di inarcare la schiena.',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-man-doing-dumbbell-lateral-raises-40333-large.mp4'
+  },
+  {
+    id: 'ex-alzate-posteriori',
+    name: 'Alzate Posteriori a 90° (Deltoidi Post.)',
+    category: 'Spalle',
+    muscleGroup: 'Spalle',
+    equipment: 'Manubri',
+    instructions: 'Fletti il busto a 90° con la schiena neutra. Apri le braccia verso l\'esterno contraendo i deltoidi posteriori e la parte alta della schiena.',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-man-doing-dumbbell-lateral-raises-40333-large.mp4'
   }
 ];
 
@@ -133,10 +208,13 @@ export const renderMuscleIcon = (muscle: MuscleGroup) => {
       case 'Pettorali': return '#ef4444'; // Red
       case 'Dorsali': return '#3b82f6'; // Blue
       case 'Quadricipiti': return '#10b981'; // Emerald
+      case 'Femorali': return '#ec4899'; // Pink
+      case 'Glutei': return '#f43f5e'; // Rose
+      case 'Polpacci': return '#06b6d4'; // Cyan
       case 'Spalle': return '#a855f7'; // Purple
       case 'Bicipiti': return '#f59e0b'; // Yellow
-      case 'Tricipiti': return '#ec4899'; // Pink
-      case 'Addominali': return '#06b6d4'; // Cyan
+      case 'Tricipiti': return '#f97316'; // Orange
+      case 'Addominali': return '#14b8a6'; // Teal
       case 'Cardio': return '#f43f5e'; // Rose
       default: return '#e2e8f0';
     }
@@ -190,8 +268,26 @@ export const renderMuscleIcon = (muscle: MuscleGroup) => {
       )}
       {muscle === 'Quadricipiti' && (
         <>
-          <rect x="24.5" y="52" width="4" height="7" rx="1" fill={color} />
-          <rect x="35.5" y="52" width="4" height="7" rx="1" fill={color} />
+          <rect x="24.5" y="52" width="4" height="6" rx="1" fill={color} />
+          <rect x="35.5" y="52" width="4" height="6" rx="1" fill={color} />
+        </>
+      )}
+      {muscle === 'Femorali' && (
+        <>
+          <rect x="24.5" y="53" width="4" height="6" rx="1" fill={color} />
+          <rect x="35.5" y="53" width="4" height="6" rx="1" fill={color} />
+        </>
+      )}
+      {muscle === 'Glutei' && (
+        <>
+          <ellipse cx="27" cy="49" rx="3" ry="2.5" fill={color} />
+          <ellipse cx="37" cy="49" rx="3" ry="2.5" fill={color} />
+        </>
+      )}
+      {muscle === 'Polpacci' && (
+        <>
+          <rect x="25" y="59" width="3.5" height="5" rx="1" fill={color} />
+          <rect x="35.5" y="59" width="3.5" height="5" rx="1" fill={color} />
         </>
       )}
       {muscle === 'Cardio' && (

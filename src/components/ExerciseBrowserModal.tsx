@@ -38,7 +38,7 @@ export const ExerciseBrowserModal: React.FC<ExerciseBrowserModalProps> = ({
   });
 
   const muscleGroups: (MuscleGroup | 'All')[] = [
-    'All', 'Pettorali', 'Dorsali', 'Quadricipiti', 'Spalle', 
+    'All', 'Pettorali', 'Dorsali', 'Quadricipiti', 'Femorali', 'Glutei', 'Polpacci', 'Spalle', 
     'Bicipiti', 'Tricipiti', 'Addominali', 'Cardio', 
     'Adduttori', 'Abduttori', 'Avambracci'
   ];

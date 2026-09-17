@@ -1,21 +1,22 @@
 :root {
-  /* Color System - Luxury Gold, Champagne & Black */
-  --background-dark: #050506; /* Pitch Black Obsidian */
-  --background-card: rgba(14, 14, 17, 0.85); /* Black card with subtle gold gloss overlay */
-  --background-card-hover: rgba(22, 22, 26, 0.92);
-  --border-color: rgba(212, 175, 55, 0.16); /* Warm gold border hint */
-  --border-hover: rgba(212, 175, 55, 0.38); /* Bright gold border highlight */
+  /* Color System - Luxury Matte Obsidian & Surgical Gold */
+  --background-dark: #000000; /* Pitch Black */
+  --background-card: #121215; /* Clean matte graphite surface */
+  --background-card-hover: #18181c;
+  --border-color: rgba(255, 255, 255, 0.08); /* Clean subtle native border */
+  --border-hover: rgba(255, 255, 255, 0.16);
+  --border-gold: rgba(212, 175, 55, 0.45);
   
   --color-primary: #d4af37; /* Pure Metallic Gold */
-  --color-primary-glow: rgba(212, 175, 55, 0.22);
+  --color-primary-glow: rgba(212, 175, 55, 0.18);
   --color-secondary: #f6e09a; /* Elegant Champagne Gold */
-  --color-secondary-glow: rgba(246, 224, 154, 0.18);
+  --color-secondary-glow: rgba(246, 224, 154, 0.15);
   --color-female: #fda4af; /* Rose Gold / Cycle */
   --color-female-glow: rgba(253, 164, 175, 0.2);
   
   --text-primary: #ffffff; /* Sharp Pure White */
-  --text-muted: #e2e8f0; /* Light Silver/White */
-  --text-dark: #8a8a93; /* Slate grey */
+  --text-muted: #a1a1aa; /* Crisp Neutral Grey for secondary labels */
+  --text-dark: #71717a; /* Slate grey */
   
   /* Status Colors */
   --color-success: #10b981;

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Flame } from 'lucide-react';
+import { Activity } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { mockExercises } from '../data/mockExercises';
 import type { MuscleGroup } from '../data/mockExercises';
@@ -9,8 +9,9 @@ interface MuscleState {
   lastTrainedHoursAgo: number | null;
   volume7Days: number;
   setsCount7Days: number;
-  recoveryPercentage: number; // 0 (just trained) to 100 (fully rested)
+  recoveryPercentage: number; // 0 (appena allenato) a 100 (completamente fresco)
   status: 'fatigued' | 'recovering' | 'ready';
+  recentExercises: string[];
 }
 
 export const MuscleHeatmap: React.FC = () => {
@@ -18,7 +19,7 @@ export const MuscleHeatmap: React.FC = () => {
   const [selectedMuscle, setSelectedMuscle] = useState<MuscleGroup>('Pettorali');
   const [viewSide, setViewSide] = useState<'front' | 'back'>('front');
 
-  // Compute 7-day muscle fatigue & recovery from actual workoutHistory
+  // Calcolo fatica e recupero muscolare negli ultimi 7 giorni basato su workoutHistory reale
   const now = Date.now();
   const sevenDaysAgo = now - 7 * 24 * 60 * 60 * 1000;
 
@@ -33,30 +34,43 @@ export const MuscleHeatmap: React.FC = () => {
     'Spalle',
     'Bicipiti',
     'Tricipiti',
-    'Quadricipiti',
     'Addominali',
-    'Adduttori',
-    'Abduttori',
-    'Avambracci'
+    'Quadricipiti',
+    'Femorali',
+    'Glutei',
+    'Polpacci'
   ];
 
   const muscleStatsMap: Record<MuscleGroup, MuscleState> = allMuscleGroups.reduce((acc, mg) => {
     let lastTrainedTime: number | null = null;
     let volume = 0;
     let sets = 0;
+    const exerciseNamesSet = new Set<string>();
 
     relevantWorkouts.forEach(w => {
       const wTime = new Date(w.date).getTime();
       w.exercises.forEach(exLog => {
         const detail = mockExercises.find(e => e.id === exLog.exerciseId);
-        if (detail && (detail.muscleGroup === mg || detail.category === mg)) {
+        const matchesMuscle = detail && (
+          detail.muscleGroup === mg || 
+          detail.category === mg ||
+          (mg === 'Spalle' && detail.category === 'Spalle') ||
+          (mg === 'Glutei' && (detail.muscleGroup === 'Glutei' || detail.name.toLowerCase().includes('glutei') || detail.name.toLowerCase().includes('hip thrust'))) ||
+          (mg === 'Femorali' && (detail.muscleGroup === 'Femorali' || detail.name.toLowerCase().includes('curl') || detail.name.toLowerCase().includes('stacco rumeno'))) ||
+          (mg === 'Polpacci' && (detail.muscleGroup === 'Polpacci' || detail.name.toLowerCase().includes('calf')))
+        );
+
+        if (matchesMuscle) {
           if (!lastTrainedTime || wTime > lastTrainedTime) {
             lastTrainedTime = wTime;
+          }
+          if (detail) {
+            exerciseNamesSet.add(detail.name);
           }
           exLog.sets.forEach(s => {
             if (s.completed) {
               sets++;
-              volume += s.weight * s.reps;
+              volume += (s.weight || 0) * (s.reps || 0);
             }
           });
         }
@@ -87,7 +101,8 @@ export const MuscleHeatmap: React.FC = () => {
       volume7Days: volume,
       setsCount7Days: sets,
       recoveryPercentage: recovery,
-      status
+      status,
+      recentExercises: Array.from(exerciseNamesSet)
     };
     return acc;
   }, {} as Record<MuscleGroup, MuscleState>);
@@ -98,38 +113,50 @@ export const MuscleHeatmap: React.FC = () => {
     volume7Days: 0,
     setsCount7Days: 0,
     recoveryPercentage: 100,
-    status: 'ready'
+    status: 'ready',
+    recentExercises: []
   };
 
   const getStatusColor = (st: MuscleState) => {
-    if (st.status === 'fatigued') return '#ef4444'; // Red-orange
-    if (st.status === 'recovering') return '#f59e0b'; // Amber / gold
-    return '#10b981'; // Emerald ready
+    if (st.status === 'fatigued') return '#ef4444'; // Rosso affaticato
+    if (st.status === 'recovering') return '#f59e0b'; // Ambra in recupero
+    return '#10b981'; // Smeraldo pronto
   };
 
   const getFillColor = (mg: MuscleGroup) => {
     const st = muscleStatsMap[mg];
-    if (!st) return '#27272a';
+    if (!st || st.lastTrainedHoursAgo === null) return '#242429'; // Non allenato recentemente: grigio riposato
     if (st.status === 'fatigued') return 'rgba(239, 68, 68, 0.85)';
     if (st.status === 'recovering') return 'rgba(245, 158, 11, 0.85)';
-    return 'rgba(16, 185, 129, 0.45)'; // Ready to train
+    return 'rgba(16, 185, 129, 0.65)';
   };
 
+  const isSelected = (mg: MuscleGroup) => selectedMuscle === mg;
+
   return (
-    <div className="glass-card animate-fade-in" style={{ padding: '18px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-      {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+    <div className="glass-card animate-fade-in" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      {/* Header & View Switcher */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
         <div>
-          <h3 style={{ fontSize: '1rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Flame size={18} color="var(--color-primary)" /> Mappa Termica Muscolare & Recupero
-          </h3>
-          <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-            Analisi scientifica della fatica e sintesi proteica negli ultimi 7 giorni
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Activity size={18} color="var(--color-primary)" />
+            <h3 style={{ fontSize: '1.05rem', fontWeight: 800, margin: 0 }}>
+              Mappa Muscolare & Recupero
+            </h3>
+          </div>
+          <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '2px', margin: 0 }}>
+            Stato scientifico di sintesi proteica e fatica (ultimi 7 giorni)
           </p>
         </div>
 
         {/* View Toggle */}
-        <div style={{ display: 'flex', background: 'rgba(255, 255, 255, 0.05)', borderRadius: 'var(--radius-sm)', padding: '2px', border: '1px solid var(--border-color)' }}>
+        <div style={{
+          display: 'flex',
+          background: 'rgba(255, 255, 255, 0.05)',
+          borderRadius: 'var(--radius-sm)',
+          padding: '2px',
+          border: '1px solid rgba(255, 255, 255, 0.08)'
+        }}>
           <button
             type="button"
             onClick={() => setViewSide('front')}
@@ -137,14 +164,15 @@ export const MuscleHeatmap: React.FC = () => {
               background: viewSide === 'front' ? 'var(--color-primary)' : 'transparent',
               color: viewSide === 'front' ? '#050506' : 'var(--text-muted)',
               border: 'none',
-              borderRadius: '4px',
-              padding: '4px 10px',
+              borderRadius: '5px',
+              padding: '5px 12px',
               fontSize: '0.72rem',
               fontWeight: 800,
-              cursor: 'pointer'
+              cursor: 'pointer',
+              transition: 'all 0.2s'
             }}
           >
-            Frontale
+            Vista Frontale
           </button>
           <button
             type="button"
@@ -153,241 +181,364 @@ export const MuscleHeatmap: React.FC = () => {
               background: viewSide === 'back' ? 'var(--color-primary)' : 'transparent',
               color: viewSide === 'back' ? '#050506' : 'var(--text-muted)',
               border: 'none',
-              borderRadius: '4px',
-              padding: '4px 10px',
+              borderRadius: '5px',
+              padding: '5px 12px',
               fontSize: '0.72rem',
               fontWeight: 800,
-              cursor: 'pointer'
+              cursor: 'pointer',
+              transition: 'all 0.2s'
             }}
           >
-            Posteriore
+            Vista Posteriore
           </button>
         </div>
       </div>
 
-      {/* Legend Bar */}
-      <div style={{ display: 'flex', gap: '14px', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', padding: '6px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-        <span style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#ef4444' }}>
-          <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#ef4444' }} />
-          Affaticato (&lt;36h)
-        </span>
-        <span style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#f59e0b' }}>
-          <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#f59e0b' }} />
-          In Recupero (36-72h)
-        </span>
-        <span style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#10b981' }}>
-          <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981' }} />
-          Pronto (100%)
-        </span>
+      {/* Muscle Quick Filter Pills */}
+      <div style={{
+        display: 'flex',
+        gap: '6px',
+        overflowX: 'auto',
+        paddingBottom: '4px',
+        scrollbarWidth: 'none',
+        msOverflowStyle: 'none'
+      }}>
+        {allMuscleGroups.map(mg => {
+          const active = selectedMuscle === mg;
+          const st = muscleStatsMap[mg];
+          const hasTrained = st && st.lastTrainedHoursAgo !== null;
+
+          return (
+            <button
+              key={mg}
+              type="button"
+              onClick={() => {
+                setSelectedMuscle(mg);
+                // Switch perspective automatically for back-only muscles
+                if (['Glutei', 'Femorali', 'Dorsali'].includes(mg)) {
+                  setViewSide('back');
+                } else if (['Pettorali', 'Addominali', 'Quadricipiti', 'Bicipiti'].includes(mg)) {
+                  setViewSide('front');
+                }
+              }}
+              style={{
+                padding: '5px 10px',
+                borderRadius: 'var(--radius-full)',
+                fontSize: '0.68rem',
+                fontWeight: active ? 800 : 600,
+                background: active ? 'var(--color-primary)' : 'rgba(255, 255, 255, 0.04)',
+                color: active ? '#050506' : hasTrained ? '#ffffff' : 'var(--text-muted)',
+                border: active ? '1px solid var(--color-primary)' : '1px solid rgba(255, 255, 255, 0.06)',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                transition: 'all 0.15s'
+              }}
+            >
+              {hasTrained && (
+                <span style={{
+                  width: '6px',
+                  height: '6px',
+                  borderRadius: '50%',
+                  background: getStatusColor(st)
+                }} />
+              )}
+              {mg}
+            </button>
+          );
+        })}
       </div>
 
       {/* Interactive Anatomy Graphic and Details Panel */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.3fr', gap: '16px', alignItems: 'center' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(140px, 1fr) 1.4fr', gap: '16px', alignItems: 'center' }}>
         {/* Anatomical Silhouette (SVG) */}
         <div style={{
-          background: 'radial-gradient(circle at 50% 50%, rgba(212, 175, 55, 0.05) 0%, rgba(5, 5, 6, 0.9) 100%)',
+          background: 'linear-gradient(180deg, #111114 0%, #09090b 100%)',
           borderRadius: 'var(--radius-md)',
-          border: '1px solid var(--border-color)',
-          padding: '12px',
+          border: '1px solid rgba(255, 255, 255, 0.08)',
+          padding: '12px 8px',
           display: 'flex',
-          justifyContent: 'center',
+          flexDirection: 'column',
           alignItems: 'center',
-          minHeight: '260px'
+          justifyContent: 'center',
+          minHeight: '280px',
+          position: 'relative'
         }}>
           {viewSide === 'front' ? (
             /* FRONT VIEW SVG */
-            <svg viewBox="0 0 200 320" style={{ width: '100%', maxHeight: '250px', filter: 'drop-shadow(0 4px 10px rgba(0,0,0,0.5))' }}>
-              {/* Head / Neck outline */}
-              <circle cx="100" cy="30" r="18" fill="#18181b" stroke="#3f3f46" strokeWidth="1.5" />
-              <path d="M92 48 L108 48 L110 60 L90 60 Z" fill="#18181b" stroke="#3f3f46" strokeWidth="1" />
+            <svg viewBox="0 0 200 320" style={{ width: '100%', maxHeight: '270px' }}>
+              {/* Head / Neck */}
+              <circle cx="100" cy="28" r="16" fill="#18181b" stroke="#3f3f46" strokeWidth="1.5" />
+              <path d="M94 44 L106 44 L108 58 L92 58 Z" fill="#18181b" stroke="#3f3f46" strokeWidth="1" />
 
-              {/* Spalle (Front Delts) */}
+              {/* Spalle - Deltoidi Anteriori & Laterali */}
               <path
-                d="M62 64 C52 70 48 85 54 96 C58 92 68 84 72 74 Z"
+                d="M62 60 C50 66 46 82 52 94 C57 90 67 82 72 72 Z"
                 fill={getFillColor('Spalle')}
-                stroke={selectedMuscle === 'Spalle' ? 'var(--color-primary)' : '#27272a'}
-                strokeWidth={selectedMuscle === 'Spalle' ? 2 : 1}
+                stroke={isSelected('Spalle') ? 'var(--color-primary)' : '#27272a'}
+                strokeWidth={isSelected('Spalle') ? 2.5 : 1}
                 cursor="pointer"
                 onClick={() => setSelectedMuscle('Spalle')}
-              />
+              >
+                <title>Spalle (Deltoidi Anteriori/Laterali)</title>
+              </path>
               <path
-                d="M138 64 C148 70 152 85 146 96 C142 92 132 84 128 74 Z"
+                d="M138 60 C150 66 154 82 148 94 C143 90 133 82 128 72 Z"
                 fill={getFillColor('Spalle')}
-                stroke={selectedMuscle === 'Spalle' ? 'var(--color-primary)' : '#27272a'}
-                strokeWidth={selectedMuscle === 'Spalle' ? 2 : 1}
+                stroke={isSelected('Spalle') ? 'var(--color-primary)' : '#27272a'}
+                strokeWidth={isSelected('Spalle') ? 2.5 : 1}
                 cursor="pointer"
                 onClick={() => setSelectedMuscle('Spalle')}
-              />
+              >
+                <title>Spalle (Deltoidi Anteriori/Laterali)</title>
+              </path>
 
-              {/* Pettorali (Chest) */}
+              {/* Pettorali */}
               <path
-                d="M72 65 C85 64 98 68 98 94 C85 96 70 94 65 82 Z"
+                d="M72 63 C85 62 98 66 98 92 C85 94 70 92 65 80 Z"
                 fill={getFillColor('Pettorali')}
-                stroke={selectedMuscle === 'Pettorali' ? 'var(--color-primary)' : '#27272a'}
-                strokeWidth={selectedMuscle === 'Pettorali' ? 2.5 : 1}
+                stroke={isSelected('Pettorali') ? 'var(--color-primary)' : '#27272a'}
+                strokeWidth={isSelected('Pettorali') ? 2.5 : 1}
                 cursor="pointer"
                 onClick={() => setSelectedMuscle('Pettorali')}
-              />
+              >
+                <title>Pettorali</title>
+              </path>
               <path
-                d="M128 65 C115 64 102 68 102 94 C115 96 130 94 135 82 Z"
+                d="M128 63 C115 62 102 66 102 92 C115 94 130 92 135 80 Z"
                 fill={getFillColor('Pettorali')}
-                stroke={selectedMuscle === 'Pettorali' ? 'var(--color-primary)' : '#27272a'}
-                strokeWidth={selectedMuscle === 'Pettorali' ? 2.5 : 1}
+                stroke={isSelected('Pettorali') ? 'var(--color-primary)' : '#27272a'}
+                strokeWidth={isSelected('Pettorali') ? 2.5 : 1}
                 cursor="pointer"
                 onClick={() => setSelectedMuscle('Pettorali')}
-              />
+              >
+                <title>Pettorali</title>
+              </path>
 
               {/* Bicipiti */}
               <path
-                d="M48 98 C42 110 44 128 52 136 C56 128 60 114 56 100 Z"
+                d="M47 96 C41 108 43 126 51 134 C55 126 59 112 55 98 Z"
                 fill={getFillColor('Bicipiti')}
-                stroke={selectedMuscle === 'Bicipiti' ? 'var(--color-primary)' : '#27272a'}
-                strokeWidth={selectedMuscle === 'Bicipiti' ? 2 : 1}
+                stroke={isSelected('Bicipiti') ? 'var(--color-primary)' : '#27272a'}
+                strokeWidth={isSelected('Bicipiti') ? 2.5 : 1}
                 cursor="pointer"
                 onClick={() => setSelectedMuscle('Bicipiti')}
-              />
+              >
+                <title>Bicipiti</title>
+              </path>
               <path
-                d="M152 98 C158 110 156 128 148 136 C144 128 140 114 144 100 Z"
+                d="M153 96 C159 108 157 126 149 134 C145 126 141 112 145 98 Z"
                 fill={getFillColor('Bicipiti')}
-                stroke={selectedMuscle === 'Bicipiti' ? 'var(--color-primary)' : '#27272a'}
-                strokeWidth={selectedMuscle === 'Bicipiti' ? 2 : 1}
+                stroke={isSelected('Bicipiti') ? 'var(--color-primary)' : '#27272a'}
+                strokeWidth={isSelected('Bicipiti') ? 2.5 : 1}
                 cursor="pointer"
                 onClick={() => setSelectedMuscle('Bicipiti')}
-              />
+              >
+                <title>Bicipiti</title>
+              </path>
 
-              {/* Addominali (Abs / Core) */}
+              {/* Addominali */}
               <path
-                d="M80 98 C93 98 107 98 120 98 C116 142 84 142 80 98 Z"
+                d="M79 96 C93 96 107 96 121 96 C117 142 83 142 79 96 Z"
                 fill={getFillColor('Addominali')}
-                stroke={selectedMuscle === 'Addominali' ? 'var(--color-primary)' : '#27272a'}
-                strokeWidth={selectedMuscle === 'Addominali' ? 2 : 1}
+                stroke={isSelected('Addominali') ? 'var(--color-primary)' : '#27272a'}
+                strokeWidth={isSelected('Addominali') ? 2.5 : 1}
                 cursor="pointer"
                 onClick={() => setSelectedMuscle('Addominali')}
-              />
+              >
+                <title>Addominali (Core)</title>
+              </path>
 
-              {/* Quadricipiti (Quads) */}
+              {/* Quadricipiti */}
               <path
-                d="M74 150 C66 185 68 225 82 245 C94 240 98 200 96 150 Z"
+                d="M74 148 C66 182 68 220 82 240 C94 235 98 196 96 148 Z"
                 fill={getFillColor('Quadricipiti')}
-                stroke={selectedMuscle === 'Quadricipiti' ? 'var(--color-primary)' : '#27272a'}
-                strokeWidth={selectedMuscle === 'Quadricipiti' ? 2 : 1}
+                stroke={isSelected('Quadricipiti') ? 'var(--color-primary)' : '#27272a'}
+                strokeWidth={isSelected('Quadricipiti') ? 2.5 : 1}
                 cursor="pointer"
                 onClick={() => setSelectedMuscle('Quadricipiti')}
-              />
+              >
+                <title>Quadricipiti</title>
+              </path>
               <path
-                d="M126 150 C134 185 132 225 118 245 C106 240 102 200 104 150 Z"
+                d="M126 148 C134 182 132 220 118 240 C106 235 102 196 104 148 Z"
                 fill={getFillColor('Quadricipiti')}
-                stroke={selectedMuscle === 'Quadricipiti' ? 'var(--color-primary)' : '#27272a'}
-                strokeWidth={selectedMuscle === 'Quadricipiti' ? 2 : 1}
+                stroke={isSelected('Quadricipiti') ? 'var(--color-primary)' : '#27272a'}
+                strokeWidth={isSelected('Quadricipiti') ? 2.5 : 1}
                 cursor="pointer"
                 onClick={() => setSelectedMuscle('Quadricipiti')}
-              />
+              >
+                <title>Quadricipiti</title>
+              </path>
 
-              {/* Polpacci Frontali */}
+              {/* Polpacci Frontali (Tibiali & Polpacci) */}
               <path
-                d="M74 256 C70 280 72 305 78 312 C86 312 90 285 88 256 Z"
-                fill={getFillColor('Quadricipiti')}
-                stroke="#27272a"
-                strokeWidth="1"
-              />
+                d="M74 250 C69 274 71 298 77 310 C86 310 90 282 88 250 Z"
+                fill={getFillColor('Polpacci')}
+                stroke={isSelected('Polpacci') ? 'var(--color-primary)' : '#27272a'}
+                strokeWidth={isSelected('Polpacci') ? 2.5 : 1}
+                cursor="pointer"
+                onClick={() => setSelectedMuscle('Polpacci')}
+              >
+                <title>Polpacci (Frontali)</title>
+              </path>
               <path
-                d="M126 256 C130 280 128 305 122 312 C114 312 110 285 112 256 Z"
-                fill={getFillColor('Quadricipiti')}
-                stroke="#27272a"
-                strokeWidth="1"
-              />
+                d="M126 250 C131 274 129 298 123 310 C114 310 110 282 112 250 Z"
+                fill={getFillColor('Polpacci')}
+                stroke={isSelected('Polpacci') ? 'var(--color-primary)' : '#27272a'}
+                strokeWidth={isSelected('Polpacci') ? 2.5 : 1}
+                cursor="pointer"
+                onClick={() => setSelectedMuscle('Polpacci')}
+              >
+                <title>Polpacci (Frontali)</title>
+              </path>
             </svg>
           ) : (
             /* BACK VIEW SVG */
-            <svg viewBox="0 0 200 320" style={{ width: '100%', maxHeight: '250px', filter: 'drop-shadow(0 4px 10px rgba(0,0,0,0.5))' }}>
+            <svg viewBox="0 0 200 320" style={{ width: '100%', maxHeight: '270px' }}>
               {/* Head Back */}
-              <circle cx="100" cy="30" r="18" fill="#18181b" stroke="#3f3f46" strokeWidth="1.5" />
-              
-              {/* Trapezio & Dorsali (Lats) */}
+              <circle cx="100" cy="28" r="16" fill="#18181b" stroke="#3f3f46" strokeWidth="1.5" />
+
+              {/* Trapezi & Dorsali */}
               <path
-                d="M72 64 C90 56 110 56 128 64 C140 85 132 120 120 140 C100 135 100 135 80 140 C68 120 60 85 72 64 Z"
+                d="M72 60 C90 52 110 52 128 60 C140 82 132 116 120 138 C100 133 100 133 80 138 C68 116 60 82 72 60 Z"
                 fill={getFillColor('Dorsali')}
-                stroke={selectedMuscle === 'Dorsali' ? 'var(--color-primary)' : '#27272a'}
-                strokeWidth={selectedMuscle === 'Dorsali' ? 2.5 : 1}
+                stroke={isSelected('Dorsali') ? 'var(--color-primary)' : '#27272a'}
+                strokeWidth={isSelected('Dorsali') ? 2.5 : 1}
                 cursor="pointer"
                 onClick={() => setSelectedMuscle('Dorsali')}
-              />
+              >
+                <title>Dorsali & Trapezi</title>
+              </path>
 
-              {/* Spalle Posteriori */}
+              {/* Spalle - Deltoidi Posteriori */}
               <path
-                d="M58 66 C48 76 52 92 58 98 C64 90 70 80 70 70 Z"
+                d="M58 62 C48 72 52 88 58 94 C64 86 70 76 70 66 Z"
                 fill={getFillColor('Spalle')}
-                stroke={selectedMuscle === 'Spalle' ? 'var(--color-primary)' : '#27272a'}
-                strokeWidth={selectedMuscle === 'Spalle' ? 2 : 1}
+                stroke={isSelected('Spalle') ? 'var(--color-primary)' : '#27272a'}
+                strokeWidth={isSelected('Spalle') ? 2.5 : 1}
                 cursor="pointer"
                 onClick={() => setSelectedMuscle('Spalle')}
-              />
+              >
+                <title>Spalle (Deltoidi Posteriori)</title>
+              </path>
               <path
-                d="M142 66 C152 76 148 92 142 98 C136 90 130 80 130 70 Z"
+                d="M142 62 C152 72 148 88 142 94 C136 86 130 76 130 66 Z"
                 fill={getFillColor('Spalle')}
-                stroke={selectedMuscle === 'Spalle' ? 'var(--color-primary)' : '#27272a'}
-                strokeWidth={selectedMuscle === 'Spalle' ? 2 : 1}
+                stroke={isSelected('Spalle') ? 'var(--color-primary)' : '#27272a'}
+                strokeWidth={isSelected('Spalle') ? 2.5 : 1}
                 cursor="pointer"
                 onClick={() => setSelectedMuscle('Spalle')}
-              />
+              >
+                <title>Spalle (Deltoidi Posteriori)</title>
+              </path>
 
               {/* Tricipiti */}
               <path
-                d="M48 100 C42 115 44 132 50 138 C54 130 58 116 54 102 Z"
+                d="M47 96 C41 110 43 128 49 135 C53 127 57 114 53 99 Z"
                 fill={getFillColor('Tricipiti')}
-                stroke={selectedMuscle === 'Tricipiti' ? 'var(--color-primary)' : '#27272a'}
-                strokeWidth={selectedMuscle === 'Tricipiti' ? 2 : 1}
+                stroke={isSelected('Tricipiti') ? 'var(--color-primary)' : '#27272a'}
+                strokeWidth={isSelected('Tricipiti') ? 2.5 : 1}
                 cursor="pointer"
                 onClick={() => setSelectedMuscle('Tricipiti')}
-              />
+              >
+                <title>Tricipiti</title>
+              </path>
               <path
-                d="M152 100 C158 115 156 132 150 138 C146 130 142 116 146 102 Z"
+                d="M153 96 C159 110 157 128 151 135 C147 127 143 114 147 99 Z"
                 fill={getFillColor('Tricipiti')}
-                stroke={selectedMuscle === 'Tricipiti' ? 'var(--color-primary)' : '#27272a'}
-                strokeWidth={selectedMuscle === 'Tricipiti' ? 2 : 1}
+                stroke={isSelected('Tricipiti') ? 'var(--color-primary)' : '#27272a'}
+                strokeWidth={isSelected('Tricipiti') ? 2.5 : 1}
                 cursor="pointer"
                 onClick={() => setSelectedMuscle('Tricipiti')}
-              />
+              >
+                <title>Tricipiti</title>
+              </path>
 
-              {/* Glutei & Femorali */}
+              {/* GLUTEI (Nuovo fascio separato) */}
               <path
-                d="M74 148 C66 195 72 235 84 246 C94 240 98 190 96 148 Z"
-                fill={getFillColor('Dorsali')}
-                stroke="#27272a"
-                strokeWidth="1"
-              />
+                d="M74 140 C63 148 64 178 76 188 C88 188 97 172 97 144 Z"
+                fill={getFillColor('Glutei')}
+                stroke={isSelected('Glutei') ? 'var(--color-primary)' : '#27272a'}
+                strokeWidth={isSelected('Glutei') ? 2.5 : 1}
+                cursor="pointer"
+                onClick={() => setSelectedMuscle('Glutei')}
+              >
+                <title>Glutei</title>
+              </path>
               <path
-                d="M126 148 C134 195 128 235 116 246 C106 240 102 190 104 148 Z"
-                fill={getFillColor('Dorsali')}
-                stroke="#27272a"
-                strokeWidth="1"
-              />
+                d="M126 140 C137 148 136 178 124 188 C112 188 103 172 103 144 Z"
+                fill={getFillColor('Glutei')}
+                stroke={isSelected('Glutei') ? 'var(--color-primary)' : '#27272a'}
+                strokeWidth={isSelected('Glutei') ? 2.5 : 1}
+                cursor="pointer"
+                onClick={() => setSelectedMuscle('Glutei')}
+              >
+                <title>Glutei</title>
+              </path>
 
-              {/* Polpacci Posteriori */}
+              {/* FEMORALI (Nuovo fascio separato) */}
               <path
-                d="M74 256 C68 280 72 305 78 312 C88 312 92 285 88 256 Z"
-                fill={getFillColor('Quadricipiti')}
-                stroke="#27272a"
-                strokeWidth="1"
-              />
+                d="M75 192 C67 212 70 232 82 245 C92 242 96 222 96 192 Z"
+                fill={getFillColor('Femorali')}
+                stroke={isSelected('Femorali') ? 'var(--color-primary)' : '#27272a'}
+                strokeWidth={isSelected('Femorali') ? 2.5 : 1}
+                cursor="pointer"
+                onClick={() => setSelectedMuscle('Femorali')}
+              >
+                <title>Femorali (Bicipite Femorale)</title>
+              </path>
               <path
-                d="M126 256 C132 280 128 305 122 312 C112 312 108 285 112 256 Z"
-                fill={getFillColor('Quadricipiti')}
-                stroke="#27272a"
-                strokeWidth="1"
-              />
+                d="M125 192 C133 212 130 232 118 245 C108 242 104 222 104 192 Z"
+                fill={getFillColor('Femorali')}
+                stroke={isSelected('Femorali') ? 'var(--color-primary)' : '#27272a'}
+                strokeWidth={isSelected('Femorali') ? 2.5 : 1}
+                cursor="pointer"
+                onClick={() => setSelectedMuscle('Femorali')}
+              >
+                <title>Femorali (Bicipite Femorale)</title>
+              </path>
+
+              {/* POLPACCI POSTERIORI (Gastrocnemio e Soleo) */}
+              <path
+                d="M74 250 C68 274 72 300 78 308 C88 308 92 282 88 250 Z"
+                fill={getFillColor('Polpacci')}
+                stroke={isSelected('Polpacci') ? 'var(--color-primary)' : '#27272a'}
+                strokeWidth={isSelected('Polpacci') ? 2.5 : 1}
+                cursor="pointer"
+                onClick={() => setSelectedMuscle('Polpacci')}
+              >
+                <title>Polpacci Posteriori</title>
+              </path>
+              <path
+                d="M126 250 C132 274 128 300 122 308 C112 308 108 282 112 250 Z"
+                fill={getFillColor('Polpacci')}
+                stroke={isSelected('Polpacci') ? 'var(--color-primary)' : '#27272a'}
+                strokeWidth={isSelected('Polpacci') ? 2.5 : 1}
+                cursor="pointer"
+                onClick={() => setSelectedMuscle('Polpacci')}
+              >
+                <title>Polpacci Posteriori</title>
+              </path>
             </svg>
           )}
+
+          {/* Micro Helper */}
+          <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+            Tocca un muscolo per i dettagli
+          </span>
         </div>
 
         {/* Selected Muscle Detail Card */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div>
-              <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>
+              <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.8px', fontWeight: 700 }}>
                 Gruppo Muscolare
               </span>
-              <h4 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--color-primary)', margin: '2px 0 0 0' }}>
+              <h4 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--color-primary)', margin: '2px 0 0 0' }}>
                 {activeStat.group}
               </h4>
             </div>
@@ -409,7 +560,7 @@ export const MuscleHeatmap: React.FC = () => {
           {/* Recovery Progress Bar */}
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem', color: 'var(--text-muted)', marginBottom: '4px' }}>
-              <span>Livello Recupero</span>
+              <span>Recupero Fibre</span>
               <span style={{ color: getStatusColor(activeStat), fontWeight: 700 }}>
                 {activeStat.status === 'fatigued' ? 'Fase Ricostruzione' : activeStat.status === 'recovering' ? 'Quasi Pronto' : 'Recuperato al 100%'}
               </span>
@@ -428,29 +579,60 @@ export const MuscleHeatmap: React.FC = () => {
           </div>
 
           {/* 7-Day Stats */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '4px' }}>
-            <div style={{ background: 'rgba(255, 255, 255, 0.02)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)', padding: '8px 10px' }}>
-              <span style={{ fontSize: '0.62rem', color: 'var(--text-dark)', display: 'block' }}>Volume Ultimi 7g</span>
-              <span style={{ fontSize: '0.9rem', fontWeight: 800, color: 'white' }}>{activeStat.volume7Days} kg</span>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+            <div style={{ background: '#121215', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 'var(--radius-sm)', padding: '8px 10px' }}>
+              <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)', display: 'block' }}>Volume 7g</span>
+              <span style={{ fontSize: '0.92rem', fontWeight: 800, color: 'white' }}>{activeStat.volume7Days} kg</span>
             </div>
-            <div style={{ background: 'rgba(255, 255, 255, 0.02)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)', padding: '8px 10px' }}>
-              <span style={{ fontSize: '0.62rem', color: 'var(--text-dark)', display: 'block' }}>Serie Eseguite</span>
-              <span style={{ fontSize: '0.9rem', fontWeight: 800, color: 'white' }}>{activeStat.setsCount7Days} set</span>
+            <div style={{ background: '#121215', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 'var(--radius-sm)', padding: '8px 10px' }}>
+              <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)', display: 'block' }}>Serie Eseguite</span>
+              <span style={{ fontSize: '0.92rem', fontWeight: 800, color: 'white' }}>{activeStat.setsCount7Days} set</span>
             </div>
           </div>
 
-          {/* Advice */}
-          <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', lineHeight: '1.4', margin: 0 }}>
+          {/* Recent Exercises (if any) */}
+          {activeStat.recentExercises.length > 0 && (
+            <div>
+              <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)', display: 'block', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                Esercizi Recenti (ultimi 7g)
+              </span>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                {activeStat.recentExercises.map(name => (
+                  <span key={name} style={{
+                    fontSize: '0.66rem',
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                    borderRadius: '4px',
+                    padding: '2px 7px',
+                    color: 'var(--text-primary)'
+                  }}>
+                    {name}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Scientific Advice */}
+          <div style={{
+            fontSize: '0.72rem',
+            color: 'var(--text-muted)',
+            lineHeight: '1.4',
+            background: 'rgba(255,255,255,0.02)',
+            borderLeft: `3px solid ${getStatusColor(activeStat)}`,
+            padding: '6px 10px',
+            borderRadius: '0 var(--radius-sm) var(--radius-sm) 0'
+          }}>
             {activeStat.lastTrainedHoursAgo === null ? (
-              'Nessun allenamento recente su questo gruppo. È fresco e pronto per essere stimolato al massimo!'
+              'Nessun allenamento recente su questo gruppo. È completamente fresco e pronto per essere stimolato con la massima intensità!'
             ) : activeStat.status === 'fatigued' ? (
-              `Allenato circa ${activeStat.lastTrainedHoursAgo} ore fa. Le fibre sono in sintesi proteica: consigliato riposo oggi.`
+              `Allenato ${activeStat.lastTrainedHoursAgo}h fa. Le fibre muscolari sono in piena sintesi proteica e riparazione. Consigliato riposo oggi.`
             ) : activeStat.status === 'recovering' ? (
-              `Allenato ${activeStat.lastTrainedHoursAgo} ore fa. Il muscolo è quasi pronto, ideale per sessioni moderate o domani.`
+              `Allenato ${activeStat.lastTrainedHoursAgo}h fa. Il recupero è a buon punto. Ottimo per una sessione leggera o per attendere domani.`
             ) : (
-              `Completamente recuperato (${activeStat.lastTrainedHoursAgo} ore fa). Momento perfetto per una sessione pesante con sovraccarico progressivo!`
+              `Completamente recuperato (${activeStat.lastTrainedHoursAgo}h fa). Momento ideale per programmare un workout pesante e puntare a un sovraccarico progressivo!`
             )}
-          </p>
+          </div>
         </div>
       </div>
     </div>
