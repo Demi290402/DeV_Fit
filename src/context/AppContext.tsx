@@ -126,6 +126,7 @@ interface AppContextType {
 
   toggleCompleteSet: (exerciseId: string, setIndex: number) => void;
   addExerciseToActiveWorkout: (exerciseId: string) => void;
+  addExercisesToActiveWorkout: (exerciseIds: string[]) => void;
   saveActiveWorkout: (customName?: string) => void;
   cancelActiveWorkout: () => void;
   foodLogs: FoodLogs;
@@ -635,6 +636,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   };
 
+  const addExercisesToActiveWorkout = (exerciseIds: string[]) => {
+    if (!activeWorkout) return;
+    
+    const newExercises = [...activeWorkout.exercises];
+    let addedCount = 0;
+
+    exerciseIds.forEach((exId, exIdx) => {
+      if (!newExercises.some(e => e.exerciseId === exId)) {
+        const prevSets = getPreviousPerformances(exId);
+        const defaultSets = prevSets.length > 0
+          ? prevSets.map((ps, idx) => ({ id: `s-${Date.now()}-${exIdx}-${idx}`, weight: ps.weight, reps: ps.reps, completed: false }))
+          : [{ id: `s-${Date.now()}-${exIdx}-0`, weight: 0, reps: 0, completed: false }];
+        newExercises.push({ exerciseId: exId, sets: defaultSets });
+        addedCount++;
+      }
+    });
+
+    if (addedCount > 0) {
+      setActiveWorkout({
+        ...activeWorkout,
+        exercises: newExercises
+      });
+    }
+  };
+
   const saveActiveWorkout = (customName?: string) => {
     if (!activeWorkout || !activeWorkout.startTime) return;
 
@@ -780,6 +806,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       toggleCompleteSet,
       addExerciseToActiveWorkout,
+      addExercisesToActiveWorkout,
       saveActiveWorkout,
       cancelActiveWorkout,
       foodLogs,

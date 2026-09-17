@@ -1,20 +1,24 @@
-
+import { AnatomicalIcon } from '../components/AnatomicalIcon';
+import { EquipmentIcon } from '../components/EquipmentIcon';
 
 export type MuscleGroup = 
   | 'Pettorali' 
   | 'Dorsali' 
+  | 'Spalle'
+  | 'Trapezi'
+  | 'Lombari'
+  | 'Bicipiti' 
+  | 'Tricipiti' 
+  | 'Avambracci'
+  | 'Addominali' 
   | 'Quadricipiti' 
   | 'Femorali'
   | 'Glutei'
   | 'Polpacci'
-  | 'Spalle' 
-  | 'Bicipiti' 
-  | 'Tricipiti' 
-  | 'Addominali' 
-  | 'Cardio' 
   | 'Adduttori' 
   | 'Abduttori' 
-  | 'Avambracci';
+  | 'Collo'
+  | 'Cardio';
 
 export type EquipmentType = 
   | 'Bilanciere' 
@@ -22,14 +26,16 @@ export type EquipmentType =
   | 'Macchina' 
   | 'Cavi' 
   | 'Niente' 
-  | 'Fascia di resistenza'
+  | 'Disco'
   | 'Fasce di sospensione'
-  | 'Kettlebell';
+  | 'Fascia di resistenza'
+  | 'Kettlebell'
+  | 'Altro';
 
 export interface Exercise {
   id: string;
   name: string;
-  category: 'Petto' | 'Dorso' | 'Gambe' | 'Spalle' | 'Braccia' | 'Core';
+  category: 'Petto' | 'Dorso' | 'Gambe' | 'Spalle' | 'Braccia' | 'Core' | 'Cardio';
   muscleGroup: MuscleGroup;
   equipment: EquipmentType;
   instructions: string;
@@ -37,50 +43,271 @@ export interface Exercise {
 }
 
 export const mockExercises: Exercise[] = [
+  // ====================== PETTO ======================
+  {
+    id: 'ex-panca-piana',
+    name: 'Panca Piana con Bilanciere',
+    category: 'Petto',
+    muscleGroup: 'Pettorali',
+    equipment: 'Bilanciere',
+    instructions: 'Sdraiati sulla panca, afferra il bilanciere con presa leggermente più larga delle spalle. Abbassa la sbarra allo sterno con scapole addotte e spingi verso l\'alto.',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-man-doing-bench-press-with-barbell-close-up-40321-large.mp4'
+  },
+  {
+    id: 'ex-panca-inclinata-bil',
+    name: 'Panca Inclinata con Bilanciere',
+    category: 'Petto',
+    muscleGroup: 'Pettorali',
+    equipment: 'Bilanciere',
+    instructions: 'Panca inclinata a 30°-45°. Abbassa il bilanciere sulla parte alta del torace (clavicolare) e spingi verso l\'alto contraendo il petto alto.',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-man-doing-bench-press-with-barbell-close-up-40321-large.mp4'
+  },
+  {
+    id: 'ex-panca-declinata-bil',
+    name: 'Panca Declinata con Bilanciere',
+    category: 'Petto',
+    muscleGroup: 'Pettorali',
+    equipment: 'Bilanciere',
+    instructions: 'Panca inclinata verso il basso a -15°/-30°. Abbassa il bilanciere alla parte inferiore del petto per enfatizzare il fascio sternocostale.',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-man-doing-bench-press-with-barbell-close-up-40321-large.mp4'
+  },
+  {
+    id: 'ex-spinte-manubri-piana',
+    name: 'Spinte con Manubri su Panca Piana',
+    category: 'Petto',
+    muscleGroup: 'Pettorali',
+    equipment: 'Manubri',
+    instructions: 'Scendi con i manubri ai lati del petto fino a sentire un buon allungamento, poi spingi convergendo leggermente verso l\'alto senza toccarli.',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-man-doing-bench-press-with-barbell-close-up-40321-large.mp4'
+  },
+  {
+    id: 'ex-spinte-manubri-inclinata',
+    name: 'Panca Inclinata con Manubri',
+    category: 'Petto',
+    muscleGroup: 'Pettorali',
+    equipment: 'Manubri',
+    instructions: 'Panca a 30°. Mantieni il petto alto e i gomiti a circa 60° rispetto al busto. Spingi verso l\'alto focalizzandoti sui fasci superiori.',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-man-doing-bench-press-with-barbell-close-up-40321-large.mp4'
+  },
   {
     id: 'ex-chest-press',
     name: 'Chest Press Convergente',
     category: 'Petto',
     muscleGroup: 'Pettorali',
     equipment: 'Macchina',
-    instructions: 'Spingi le maniglie in avanti tenendo le scapole addotte e il petto in fuori. Ritorna controllando il movimento.',
+    instructions: 'Regola l\'altezza del sedile affinché le maniglie siano a livello dei capezzoli. Spingi in avanti mantenendo le spalle bloccate indietro.',
     videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-man-exercising-his-chest-at-the-gym-flat-40337-large.mp4'
   },
   {
-    id: 'ex-panca-piana',
-    name: 'Panca Piana Bilanciere',
+    id: 'ex-croci-manubri-piana',
+    name: 'Croci con Manubri su Panca Piana',
     category: 'Petto',
     muscleGroup: 'Pettorali',
-    equipment: 'Bilanciere',
-    instructions: 'Abbassa il bilanciere al petto mantenendo i gomiti a 45 gradi. Spingi verso l\'alto contraendo i pettorali.',
+    equipment: 'Manubri',
+    instructions: 'Con una leggera flessione fissa dei gomiti, apri le braccia ad arco fino all\'altezza delle spalle per un allungamento profondo del petto.',
     videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-man-doing-bench-press-with-barbell-close-up-40321-large.mp4'
   },
   {
+    id: 'ex-croci-cavi-alti',
+    name: 'Croci ai Cavi Alti',
+    category: 'Petto',
+    muscleGroup: 'Pettorali',
+    equipment: 'Cavi',
+    instructions: 'Cavi posizionati in alto. Busto leggermente inclinato in avanti, porta le mani verso il basso e l\'ombelico stringendo forte i pettorali.',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-man-exercising-his-chest-at-the-gym-flat-40337-large.mp4'
+  },
+  {
+    id: 'ex-croci-cavi-bassi',
+    name: 'Croci ai Cavi Bassi',
+    category: 'Petto',
+    muscleGroup: 'Pettorali',
+    equipment: 'Cavi',
+    instructions: 'Cavi posizionati a terra. Porta le mani dal basso verso l\'alto e verso il centro all\'altezza del mento per stimolare il petto clavicolare.',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-man-exercising-his-chest-at-the-gym-flat-40337-large.mp4'
+  },
+  {
+    id: 'ex-pectoral-machine',
+    name: 'Pectoral Machine (Pec Deck)',
+    category: 'Petto',
+    muscleGroup: 'Pettorali',
+    equipment: 'Macchina',
+    instructions: 'Posiziona gli avambracci o le mani sui cuscinetti. Chiudi le braccia davanti a te focalizzando la massima spremuta al centro del petto.',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-man-exercising-his-chest-at-the-gym-flat-40337-large.mp4'
+  },
+  {
+    id: 'ex-piegamenti',
+    name: 'Piegamenti sulle Braccia (Push-Up)',
+    category: 'Petto',
+    muscleGroup: 'Pettorali',
+    equipment: 'Niente',
+    instructions: 'Corpo dritto in plank, mani leggermente più larghe delle spalle. Scendi sfiorando il pavimento con il petto e distendi con forza.',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-woman-doing-squats-with-a-barbell-40324-large.mp4'
+  },
+  {
+    id: 'ex-dip-parallele',
+    name: 'Dip alle Parallele per Petto',
+    category: 'Petto',
+    muscleGroup: 'Pettorali',
+    equipment: 'Niente',
+    instructions: 'Inclinati in avanti con il busto a circa 30° e allarga leggermente i gomiti per concentrare il carico sul petto inferiore.',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-man-doing-bench-press-with-barbell-close-up-40321-large.mp4'
+  },
+
+  // ====================== DORSO & LOMBARI ======================
+  {
     id: 'ex-lat-machine',
-    name: 'Lat Pulldown (Cavo)',
+    name: 'Lat Pulldown al Cavo (Presa Larga)',
     category: 'Dorso',
     muscleGroup: 'Dorsali',
     equipment: 'Cavi',
-    instructions: 'Tira la sbarra verso la parte alta del petto, portando indietro i gomiti ed estendendo la cassa toracica.',
+    instructions: 'Tira la sbarra verso la parte alta del petto portando i gomiti verso il basso e indietro, aprendo la cassa toracica.',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-man-exercising-on-lat-pull-down-machine-40336-large.mp4'
+  },
+  {
+    id: 'ex-lat-presa-inversa',
+    name: 'Lat Machine Presa Supina',
+    category: 'Dorso',
+    muscleGroup: 'Dorsali',
+    equipment: 'Cavi',
+    instructions: 'Presa inversa (palmi rivolti a te) alla larghezza spalle. Tira focalizzandoti sull\'estensione dei dorsali bassi e coinvolgimento bicipiti.',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-man-exercising-on-lat-pull-down-machine-40336-large.mp4'
+  },
+  {
+    id: 'ex-trazioni-sbarra',
+    name: 'Trazioni alla Sbarra (Pull-Up)',
+    category: 'Dorso',
+    muscleGroup: 'Dorsali',
+    equipment: 'Niente',
+    instructions: 'Presa prona oltre la larghezza spalle. Sollevati fino a superare la sbarra con il mento senza dondolare.',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-man-exercising-on-lat-pull-down-machine-40336-large.mp4'
+  },
+  {
+    id: 'ex-chin-ups',
+    name: 'Trazioni Presa Supina (Chin-Up)',
+    category: 'Dorso',
+    muscleGroup: 'Dorsali',
+    equipment: 'Niente',
+    instructions: 'Palmi verso il viso. Sollevati stringendo dorsali e bicipiti con massima escursione di movimento.',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-man-exercising-on-lat-pull-down-machine-40336-large.mp4'
+  },
+  {
+    id: 'ex-rematore-bilanciere',
+    name: 'Rematore con Bilanciere',
+    category: 'Dorso',
+    muscleGroup: 'Dorsali',
+    equipment: 'Bilanciere',
+    instructions: 'Busto inclinato a 45°, schiena dritta. Tira il bilanciere verso l\'ombelico spingendo indietro i gomiti.',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-man-exercising-on-lat-pull-down-machine-40336-large.mp4'
+  },
+  {
+    id: 'ex-rematore-manubrio',
+    name: 'Rematore Singolo con Manubrio',
+    category: 'Dorso',
+    muscleGroup: 'Dorsali',
+    equipment: 'Manubri',
+    instructions: 'Ginocchio e mano opposta sulla panca. Tira il manubrio verso l\'anca tenendo il gomito vicino al fianco.',
     videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-man-exercising-on-lat-pull-down-machine-40336-large.mp4'
   },
   {
     id: 'ex-rematore-seduto',
-    name: 'Rematore al Cavo da Seduto',
+    name: 'Rematore al Cavo da Seduto (Pulley)',
     category: 'Dorso',
     muscleGroup: 'Dorsali',
     equipment: 'Cavi',
-    instructions: 'Siediti con la schiena dritta. Afferra la maniglia e tirala verso l\'ombelico portando indietro le spalle e contraendo i dorsali.',
+    instructions: 'Siediti con ginocchia leggermente flesse e schiena dritta. Tira la maniglia all\'ombelico unendo le scapole.',
     videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-man-exercising-on-lat-pull-down-machine-40336-large.mp4'
   },
   {
-    id: 'ex-squat',
-    name: 'Squat con Bilanciere',
-    category: 'Gambe',
-    muscleGroup: 'Quadricipiti',
+    id: 'ex-t-bar-row',
+    name: 'T-Bar Row con Supporto',
+    category: 'Dorso',
+    muscleGroup: 'Dorsali',
+    equipment: 'Macchina',
+    instructions: 'Petto appoggiato al cuscinetto. Tira le maniglie verso di te per isolare lo spessore dorsale e i romboidi.',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-man-exercising-on-lat-pull-down-machine-40336-large.mp4'
+  },
+  {
+    id: 'ex-pullover-cavo',
+    name: 'Pullover al Cavo Alto con Corda',
+    category: 'Dorso',
+    muscleGroup: 'Dorsali',
+    equipment: 'Cavi',
+    instructions: 'Braccia quasi tese, busto inclinato a 30°. Abbassa la corda verso le cosce ad arco contraendo i dorsali.',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-man-exercising-on-lat-pull-down-machine-40336-large.mp4'
+  },
+  {
+    id: 'ex-stacco-terra',
+    name: 'Stacco da Terra Tradizionale (Deadlift)',
+    category: 'Dorso',
+    muscleGroup: 'Lombari',
     equipment: 'Bilanciere',
-    instructions: 'Poggia il bilanciere sui trapezi. Scendi spingendo il bacino all\'indietro fino a rompere il parallelo, poi risali.',
+    instructions: 'Piedi larghezza anche, schiena neutra. Spingi via il pavimento estendendo contemporaneamente ginocchia e anche.',
     videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-woman-doing-squats-with-a-barbell-40324-large.mp4'
+  },
+  {
+    id: 'ex-hyperextension',
+    name: 'Hyperextension per Lombari',
+    category: 'Dorso',
+    muscleGroup: 'Lombari',
+    equipment: 'Macchina',
+    instructions: 'Blocca le caviglie sulla panca a 45°. Fletti il busto in avanti e risali fino all\'allineamento con le gambe.',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-woman-doing-squats-with-a-barbell-40324-large.mp4'
+  },
+  {
+    id: 'ex-scrollate-bil',
+    name: 'Scrollate con Bilanciere (Shrug)',
+    category: 'Dorso',
+    muscleGroup: 'Trapezi',
+    equipment: 'Bilanciere',
+    instructions: 'Braccia tese lungo i fianchi. Solleva le spalle dritto verso le orecchie, trattieni 1 secondo e rilascia.',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-man-exercising-on-lat-pull-down-machine-40336-large.mp4'
+  },
+  {
+    id: 'ex-scrollate-manubri',
+    name: 'Scrollate con Manubri',
+    category: 'Dorso',
+    muscleGroup: 'Trapezi',
+    equipment: 'Manubri',
+    instructions: 'Tieni i manubri ai lati del corpo. Eleva i trapezi verso l\'alto senza ruotare le spalle all\'indietro.',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-man-exercising-on-lat-pull-down-machine-40336-large.mp4'
+  },
+
+  // ====================== SPALLE ======================
+  {
+    id: 'ex-military-press',
+    name: 'Military Press con Bilanciere',
+    category: 'Spalle',
+    muscleGroup: 'Spalle',
+    equipment: 'Bilanciere',
+    instructions: 'In piedi con core e glutei serrati. Spingi il bilanciere dal petto verso l\'alto fin sopra la testa.',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-man-doing-dumbbell-lateral-raises-40333-large.mp4'
+  },
+  {
+    id: 'ex-lento-manubri-seduto',
+    name: 'Lento Avanti Seduto con Manubri',
+    category: 'Spalle',
+    muscleGroup: 'Spalle',
+    equipment: 'Manubri',
+    instructions: 'Panca a 80°-90°. Spingi i manubri verso l\'alto mantenendo i gomiti leggermente avanti rispetto alle spalle.',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-man-doing-dumbbell-lateral-raises-40333-large.mp4'
+  },
+  {
+    id: 'ex-shoulder-press-mach',
+    name: 'Lento in Avanti Seduto (Macchina)',
+    category: 'Spalle',
+    muscleGroup: 'Spalle',
+    equipment: 'Macchina',
+    instructions: 'Regola l\'altezza del sedile. Spingi le impugnature verso l\'alto mantenendo la schiena aderente allo schienale.',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-man-doing-dumbbell-lateral-raises-40333-large.mp4'
+  },
+  {
+    id: 'ex-arnold-press',
+    name: 'Arnold Press con Manubri',
+    category: 'Spalle',
+    muscleGroup: 'Spalle',
+    equipment: 'Manubri',
+    instructions: 'Inizia con i palmi rivolti a te all\'altezza del petto; ruota i gomiti verso l\'esterno mentre spingi verso l\'alto.',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-man-doing-dumbbell-lateral-raises-40333-large.mp4'
   },
   {
     id: 'ex-alzate-laterali',
@@ -88,277 +315,537 @@ export const mockExercises: Exercise[] = [
     category: 'Spalle',
     muscleGroup: 'Spalle',
     equipment: 'Manubri',
-    instructions: 'Solleva i manubri verso l\'esterno fino all\'altezza delle spalle. Mantieni una leggera flessione del gomito.',
+    instructions: 'Solleva i manubri verso l\'esterno con gomiti leggermente piegati fino all\'altezza delle spalle. Ritorno controllato.',
     videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-man-doing-dumbbell-lateral-raises-40333-large.mp4'
   },
   {
-    id: 'ex-curl-bicipiti',
-    name: 'Curl Bicipiti con Manubri',
+    id: 'ex-alzate-laterali-cavo',
+    name: 'Alzate Laterali al Cavo Singolo',
+    category: 'Spalle',
+    muscleGroup: 'Spalle',
+    equipment: 'Cavi',
+    instructions: 'Cavo basso che passa dietro il corpo o davanti. Tensione costante su tutto il range del deltoide laterale.',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-man-doing-dumbbell-lateral-raises-40333-large.mp4'
+  },
+  {
+    id: 'ex-alzate-frontali-manubri',
+    name: 'Alzate Frontali con Manubri',
+    category: 'Spalle',
+    muscleGroup: 'Spalle',
+    equipment: 'Manubri',
+    instructions: 'Solleva un manubrio alla volta dritto davanti a te fino al livello degli occhi, isolando il deltoide anteriore.',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-man-doing-dumbbell-lateral-raises-40333-large.mp4'
+  },
+  {
+    id: 'ex-alzate-frontali-disco',
+    name: 'Alzate Frontali con Disco',
+    category: 'Spalle',
+    muscleGroup: 'Spalle',
+    equipment: 'Disco',
+    instructions: 'Afferra un disco olimpico a ore 9 e ore 3. Sollevalo davanti al viso mantenendo le braccia tese.',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-man-doing-dumbbell-lateral-raises-40333-large.mp4'
+  },
+  {
+    id: 'ex-alzate-posteriori',
+    name: 'Alzate Posteriori a 90° con Manubri',
+    category: 'Spalle',
+    muscleGroup: 'Spalle',
+    equipment: 'Manubri',
+    instructions: 'Busto flesso a 90° con schiena piatta. Apri le braccia a croce concentrandoti sui deltoidi posteriori.',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-man-doing-dumbbell-lateral-raises-40333-large.mp4'
+  },
+  {
+    id: 'ex-face-pull',
+    name: 'Face Pull al Cavo con Corda',
+    category: 'Spalle',
+    muscleGroup: 'Spalle',
+    equipment: 'Cavi',
+    instructions: 'Cavo all\'altezza della fronte. Tira la corda verso gli occhi aprendo i gomiti e ruotando esternamente le spalle.',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-man-doing-dumbbell-lateral-raises-40333-large.mp4'
+  },
+  {
+    id: 'ex-rear-delt-fly',
+    name: 'Rear Delt Fly alla Macchina',
+    category: 'Spalle',
+    muscleGroup: 'Spalle',
+    equipment: 'Macchina',
+    instructions: 'Petto contro il sedile della pectoral machine. Apri le braccia all\'indietro isolando la cuffia e il retro spalla.',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-man-doing-dumbbell-lateral-raises-40333-large.mp4'
+  },
+
+  // ====================== BRACCIA (BICIPITI) ======================
+  {
+    id: 'ex-curl-bilanciere',
+    name: 'Curl Bicipiti con Bilanciere',
     category: 'Braccia',
     muscleGroup: 'Bicipiti',
-    equipment: 'Manubri',
-    instructions: 'Fletti i gomiti portando i manubri verso le spalle, supina la mano durante la salita e controlla la discesa.',
+    equipment: 'Bilanciere',
+    instructions: 'Gomiti saldi ai fianchi. Fletti le braccia sollevando il bilanciere verso le spalle senza oscillare con il busto.',
     videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-close-up-of-man-doing-biceps-curls-with-dumbbells-40328-large.mp4'
   },
   {
+    id: 'ex-curl-bilanciere-ez',
+    name: 'Curl Bicipiti con Bilanciere EZ',
+    category: 'Braccia',
+    muscleGroup: 'Bicipiti',
+    equipment: 'Bilanciere',
+    instructions: 'L\'angolatura sagomata della barra EZ riduce lo stress sui polsi e massimizza la contrazione del picco del bicipite.',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-close-up-of-man-doing-biceps-curls-with-dumbbells-40328-large.mp4'
+  },
+  {
+    id: 'ex-curl-bicipiti-manubri',
+    name: 'Curl Bicipiti Alternato con Manubri',
+    category: 'Braccia',
+    muscleGroup: 'Bicipiti',
+    equipment: 'Manubri',
+    instructions: 'Inizia con presa a martello e supina il palmo verso l\'alto durante la salita strizzando il bicipite al vertice.',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-close-up-of-man-doing-biceps-curls-with-dumbbells-40328-large.mp4'
+  },
+  {
+    id: 'ex-hammer-curl',
+    name: 'Bicipiti a Martello (Hammer Curl)',
+    category: 'Braccia',
+    muscleGroup: 'Bicipiti',
+    equipment: 'Manubri',
+    instructions: 'Mantieni i palmi sempre rivolti l\'uno verso l\'altro durante tutto il movimento per sviluppare brachiale e avambraccio.',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-close-up-of-man-doing-biceps-curls-with-dumbbells-40328-large.mp4'
+  },
+  {
+    id: 'ex-curl-panca-inclinata',
+    name: 'Curl su Panca Inclinata con Manubri',
+    category: 'Braccia',
+    muscleGroup: 'Bicipiti',
+    equipment: 'Manubri',
+    instructions: 'Panca a 45°-60°. Le braccia partono all\'indietro, massimizzando l\'allungamento del capo lungo del bicipite.',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-close-up-of-man-doing-biceps-curls-with-dumbbells-40328-large.mp4'
+  },
+  {
+    id: 'ex-curl-scott',
+    name: 'Curl alla Panca Scott (Preacher Curl)',
+    category: 'Braccia',
+    muscleGroup: 'Bicipiti',
+    equipment: 'Bilanciere',
+    instructions: 'Braccia bloccate sul cuscinetto inclinato della panca Scott per impedire qualsiasi cheating con le spalle.',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-close-up-of-man-doing-biceps-curls-with-dumbbells-40328-large.mp4'
+  },
+  {
+    id: 'ex-curl-cavi-basso',
+    name: 'Curl Bicipiti al Cavo Basso',
+    category: 'Braccia',
+    muscleGroup: 'Bicipiti',
+    equipment: 'Cavi',
+    instructions: 'Tensione elastica costante anche nella parte inferiore del movimento, ideale per un pompaggio continuo.',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-close-up-of-man-doing-biceps-curls-with-dumbbells-40328-large.mp4'
+  },
+  {
+    id: 'ex-curl-21',
+    name: 'Curl Bicipiti 21',
+    category: 'Braccia',
+    muscleGroup: 'Bicipiti',
+    equipment: 'Bilanciere',
+    instructions: '7 ripetizioni dal basso a metà, 7 da metà fino in cima, e 7 ripetizioni con arco di movimento completo.',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-close-up-of-man-doing-biceps-curls-with-dumbbells-40328-large.mp4'
+  },
+
+  // ====================== BRACCIA (TRICIPITI) ======================
+  {
     id: 'ex-pushdown',
-    name: 'Pushdown Tricipiti con Cavo',
+    name: 'Pushdown Tricipiti con Cavo (Corda)',
     category: 'Braccia',
     muscleGroup: 'Tricipiti',
     equipment: 'Cavi',
-    instructions: 'Spingi la corda verso il basso distendendo completamente le braccia. Tieni i gomiti stretti vicino al corpo.',
+    instructions: 'Gomiti fermi e aderenti al busto. Spingi la corda verso il basso aprendola leggermente all\'estremità finale.',
     videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-man-performing-triceps-pushdown-at-the-gym-40335-large.mp4'
   },
   {
-    id: 'ex-crunch',
-    name: 'Crunch Addominale',
-    category: 'Core',
-    muscleGroup: 'Addominali',
-    equipment: 'Niente',
-    instructions: 'Solleva le scapole da terra contraendo gli addominali. Espira durante la contrazione e scendi lentamente.',
-    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-woman-performing-abdominal-crunches-at-home-40319-large.mp4'
+    id: 'ex-pushdown-barra',
+    name: 'Pushdown Tricipiti con Barra a V',
+    category: 'Braccia',
+    muscleGroup: 'Tricipiti',
+    equipment: 'Cavi',
+    instructions: 'Presa solida sulla barra a V. Distendi le braccia spingendo verso il basso senza alzare le spalle.',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-man-performing-triceps-pushdown-at-the-gym-40335-large.mp4'
   },
   {
-    id: 'ex-tapis-roulant',
-    name: 'Tapis Roulant',
-    category: 'Gambe',
-    muscleGroup: 'Cardio',
-    equipment: 'Macchina',
-    instructions: 'Cammina o corri a ritmo costante per stimolare l\'attività cardiovascolare e bruciare calorie.',
+    id: 'ex-pushdown-singolo',
+    name: 'Pushdown Tricipiti a Braccio Singolo',
+    category: 'Braccia',
+    muscleGroup: 'Tricipiti',
+    equipment: 'Cavi',
+    instructions: 'Lavora un braccio per volta per correggere asimmetrie muscolari e garantire una contrazione focalizzata.',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-man-performing-triceps-pushdown-at-the-gym-40335-large.mp4'
+  },
+  {
+    id: 'ex-french-press',
+    name: 'French Press con Bilanciere EZ',
+    category: 'Braccia',
+    muscleGroup: 'Tricipiti',
+    equipment: 'Bilanciere',
+    instructions: 'Sdraiati su panca. Abbassa il bilanciere verso la fronte o dietro la testa flettendo solo i gomiti e poi risali.',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-man-performing-triceps-pushdown-at-the-gym-40335-large.mp4'
+  },
+  {
+    id: 'ex-estensioni-sopra-testa',
+    name: 'Estensioni Tricipiti Sopra la Testa (Cavo)',
+    category: 'Braccia',
+    muscleGroup: 'Tricipiti',
+    equipment: 'Cavi',
+    instructions: 'Dalle spalle inclinate in avanti, distendi le braccia sopra la testa enfatizzando il capo lungo del tricipite.',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-man-performing-triceps-pushdown-at-the-gym-40335-large.mp4'
+  },
+  {
+    id: 'ex-dip-tricipiti',
+    name: 'Dip tra Due Panche',
+    category: 'Braccia',
+    muscleGroup: 'Tricipiti',
+    equipment: 'Niente',
+    instructions: 'Mani su una panca dietro la schiena e talloni sull\'altra. Fletti i gomiti fino a 90° e risali distendendo le braccia.',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-man-performing-triceps-pushdown-at-the-gym-40335-large.mp4'
+  },
+  {
+    id: 'ex-panca-stretta',
+    name: 'Panca Piana con Presa Stretta',
+    category: 'Braccia',
+    muscleGroup: 'Tricipiti',
+    equipment: 'Bilanciere',
+    instructions: 'Presa alla larghezza delle spalle con gomiti vicini al torace per spostare il lavoro dal petto ai tricipiti.',
     videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-man-doing-bench-press-with-barbell-close-up-40321-large.mp4'
   },
+
+  // ====================== AVAMBRACCI ======================
+  {
+    id: 'ex-wrist-curl',
+    name: 'Wrist Curl con Bilanciere (Flessione Polsi)',
+    category: 'Braccia',
+    muscleGroup: 'Avambracci',
+    equipment: 'Bilanciere',
+    instructions: 'Avambracci poggiati sulle cosce o su una panca con i polsi liberi. Fletti i polsi sollevando il bilanciere.',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-close-up-of-man-doing-biceps-curls-with-dumbbells-40328-large.mp4'
+  },
+  {
+    id: 'ex-farmers-walk',
+    name: 'Camminata del Contadino (Farmer\'s Walk)',
+    category: 'Braccia',
+    muscleGroup: 'Avambracci',
+    equipment: 'Manubri',
+    instructions: 'Afferra due manubri pesanti lungo i fianchi e cammina mantenendo postura eretta e presa di ferro salda.',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-close-up-of-man-doing-biceps-curls-with-dumbbells-40328-large.mp4'
+  },
+
+  // ====================== GAMBE (QUADRICIPITI) ======================
+  {
+    id: 'ex-squat',
+    name: 'Squat con Bilanciere (Back Squat)',
+    category: 'Gambe',
+    muscleGroup: 'Quadricipiti',
+    equipment: 'Bilanciere',
+    instructions: 'Bilanciere sui trapezi, piedi larghezza spalle. Scendi spingendo il bacino indietro e le ginocchia in fuori oltre il parallelo.',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-woman-doing-squats-with-a-barbell-40324-large.mp4'
+  },
+  {
+    id: 'ex-front-squat',
+    name: 'Front Squat con Bilanciere',
+    category: 'Gambe',
+    muscleGroup: 'Quadricipiti',
+    equipment: 'Bilanciere',
+    instructions: 'Bilanciere poggiato sui deltoidi anteriori con gomiti alti. Il busto rimane molto eretto, isolando i quadricipiti.',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-woman-doing-squats-with-a-barbell-40324-large.mp4'
+  },
+  {
+    id: 'ex-leg-press',
+    name: 'Leg Press a 45°',
+    category: 'Gambe',
+    muscleGroup: 'Quadricipiti',
+    equipment: 'Macchina',
+    instructions: 'Piedi a metà pedana larghezza spalle. Abbassa il carrello fino a 90° al ginocchio senza staccare il sacro dallo schienale.',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-woman-doing-squats-with-a-barbell-40324-large.mp4'
+  },
+  {
+    id: 'ex-hack-squat',
+    name: 'Hack Squat alla Macchina',
+    category: 'Gambe',
+    muscleGroup: 'Quadricipiti',
+    equipment: 'Macchina',
+    instructions: 'Schiena aderente al supporto inclinato. Scendi in profondità per uno stimolo quadricipite massimale in sicurezza.',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-woman-doing-squats-with-a-barbell-40324-large.mp4'
+  },
+  {
+    id: 'ex-leg-extension',
+    name: 'Leg Extension alla Macchina',
+    category: 'Gambe',
+    muscleGroup: 'Quadricipiti',
+    equipment: 'Macchina',
+    instructions: 'Siediti con ginocchia allineate al perno della macchina. Estendi le gambe fino al blocco orizzontale e controlla la discesa.',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-woman-doing-squats-with-a-barbell-40324-large.mp4'
+  },
+  {
+    id: 'ex-affondi-manubri',
+    name: 'Affondi Camminati con Manubri',
+    category: 'Gambe',
+    muscleGroup: 'Quadricipiti',
+    equipment: 'Manubri',
+    instructions: 'Fai un passo in avanti flettendo entrambe le ginocchia a 90°. Spingi con il tallone anteriore per fare il passo successivo.',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-woman-doing-squats-with-a-barbell-40324-large.mp4'
+  },
+  {
+    id: 'ex-bulgarian-split-squat',
+    name: 'Split Squat Bulgaro con Manubri',
+    category: 'Gambe',
+    muscleGroup: 'Quadricipiti',
+    equipment: 'Manubri',
+    instructions: 'Piede posteriore poggiato su una panca dietro di te. Scendi in verticale fino a sfiorare il terreno con il ginocchio dietro.',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-woman-doing-squats-with-a-barbell-40324-large.mp4'
+  },
+  {
+    id: 'ex-goblet-squat',
+    name: 'Goblet Squat con Kettlebell',
+    category: 'Gambe',
+    muscleGroup: 'Quadricipiti',
+    equipment: 'Kettlebell',
+    instructions: 'Tieni la kettlebell al petto per le corna. Scendi in squat profondo tenendo i gomiti tra le ginocchia.',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-woman-doing-squats-with-a-barbell-40324-large.mp4'
+  },
+
+  // ====================== GAMBE (GLUTEI & FEMORALI) ======================
   {
     id: 'ex-hip-thrust',
     name: 'Hip Thrust con Bilanciere',
     category: 'Gambe',
     muscleGroup: 'Glutei',
     equipment: 'Bilanciere',
-    instructions: 'Poggia le scapole sulla panca, posiziona il bilanciere sul bacino ed estendi le anche spingendo sui talloni e contraendo al massimo i glutei al vertice.',
+    instructions: 'Scapole contro la panca, bilanciere protetto sul bacino. Spingi sui talloni estendendo l\'anca e contrai forte i glutei in cima.',
     videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-woman-doing-squats-with-a-barbell-40324-large.mp4'
   },
   {
     id: 'ex-slanci-cavi',
-    name: 'Slanci ai Cavi per Glutei',
+    name: 'Slanci ai Cavi per Glutei (Glute Kickback)',
     category: 'Gambe',
     muscleGroup: 'Glutei',
     equipment: 'Cavi',
-    instructions: 'Aggancia la cavigliera al cavo basso. Mantieni il busto leggermente flesso ed estendi la gamba all\'indietro contraendo il gluteo.',
+    instructions: 'Cavigliera al cavo basso. Mantieni il busto fermo ed estendi la gamba all\'indietro strizzando il gluteo in fase concentrica.',
     videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-woman-doing-squats-with-a-barbell-40324-large.mp4'
   },
   {
-    id: 'ex-leg-curl',
-    name: 'Leg Curl Seduto / Sdraiato',
+    id: 'ex-abductor-machine',
+    name: 'Abductor Machine (Glutei Esterni)',
     category: 'Gambe',
-    muscleGroup: 'Femorali',
+    muscleGroup: 'Abduttori',
     equipment: 'Macchina',
-    instructions: 'Fletti le ginocchia tirando il cuscinetto verso i glutei. Mantieni la contrazione per un secondo e controlla la fase eccentrica.',
+    instructions: 'Siediti con cuscinetti esterni alle cosce. Allarga le gambe spingendo con i glutei e mantieni la massima apertura per 1 secondo.',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-woman-doing-squats-with-a-barbell-40324-large.mp4'
+  },
+  {
+    id: 'ex-adductor-machine',
+    name: 'Adductor Machine (Interno Coscia)',
+    category: 'Gambe',
+    muscleGroup: 'Adduttori',
+    equipment: 'Macchina',
+    instructions: 'Cuscinetti all\'interno delle ginocchia. Chiudi le gambe contraendo con decisione la muscolatura adduttoria.',
     videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-woman-doing-squats-with-a-barbell-40324-large.mp4'
   },
   {
     id: 'ex-stacco-rumeno',
-    name: 'Stacco Rumeno con Bilanciere',
+    name: 'Stacco Rumeno con Bilanciere (RDL)',
     category: 'Gambe',
     muscleGroup: 'Femorali',
     equipment: 'Bilanciere',
-    instructions: 'Spingi il bacino indietro mantenendo la schiena lombare solida e le ginocchia semirigide. Sentirai un forte allungamento sui femorali.',
+    instructions: 'Ginocchia semirigide. Spingi il bacino indietro mantenendo il bilanciere a contatto con le cosce per allungare i femorali.',
     videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-woman-doing-squats-with-a-barbell-40324-large.mp4'
   },
   {
+    id: 'ex-stacco-rumeno-manubri',
+    name: 'Stacco Rumeno con Manubri',
+    category: 'Gambe',
+    muscleGroup: 'Femorali',
+    equipment: 'Manubri',
+    instructions: 'Fletti le anche indietro tenendo la colonna neutra. Scendi fino a metà tibia e risali contraendo glutei e femorali.',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-woman-doing-squats-with-a-barbell-40324-large.mp4'
+  },
+  {
+    id: 'ex-leg-curl',
+    name: 'Leg Curl Seduto alla Macchina',
+    category: 'Gambe',
+    muscleGroup: 'Femorali',
+    equipment: 'Macchina',
+    instructions: 'Cosce bloccate dal cuscinetto. Fletti le ginocchia portando i talloni sotto il sedile e controlla la fase negativa.',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-woman-doing-squats-with-a-barbell-40324-large.mp4'
+  },
+  {
+    id: 'ex-leg-curl-sdraiato',
+    name: 'Leg Curl Sdraiato alla Macchina',
+    category: 'Gambe',
+    muscleGroup: 'Femorali',
+    equipment: 'Macchina',
+    instructions: 'Sdraiati prono con il cuscinetto sopra i talloni. Tira i piedi verso i glutei senza sollevare il bacino dalla panca.',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-woman-doing-squats-with-a-barbell-40324-large.mp4'
+  },
+
+  // ====================== GAMBE (POLPACCI) ======================
+  {
     id: 'ex-calf-raise-piedi',
-    name: 'Calf Raise in Piedi',
+    name: 'Calf Raise in Piedi alla Macchina',
     category: 'Gambe',
     muscleGroup: 'Polpacci',
     equipment: 'Macchina',
-    instructions: 'Sali sulla punta dei piedi con massima estensione della caviglia. Pausa di 1 secondo in alto e discesa controllata allungando il polpaccio.',
+    instructions: 'Punte sulla pedana e spalle sotto i cuscinetti. Scendi allungando il tendine e sollevati al massimo sulla punta dei piedi.',
     videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-woman-doing-squats-with-a-barbell-40324-large.mp4'
   },
   {
     id: 'ex-calf-raise-seduto',
-    name: 'Calf Raise da Seduto',
+    name: 'Calf Raise da Seduto alla Macchina',
     category: 'Gambe',
     muscleGroup: 'Polpacci',
     equipment: 'Macchina',
-    instructions: 'Siediti con le cosce bloccate dal cuscinetto. Solleva i talloni focalizzando lo stimolo sul soleo.',
+    instructions: 'Ginocchia flesse a 90° sotto il cuscinetto per isolare il muscolo soleo. Massima estensione e pausa in contrazione.',
     videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-woman-doing-squats-with-a-barbell-40324-large.mp4'
   },
   {
-    id: 'ex-military-press',
-    name: 'Military Press con Bilanciere',
-    category: 'Spalle',
-    muscleGroup: 'Spalle',
-    equipment: 'Bilanciere',
-    instructions: 'Spingi il bilanciere dal petto fin sopra la testa a braccia distese, bloccando il core ed evitando di inarcare la schiena.',
-    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-man-doing-dumbbell-lateral-raises-40333-large.mp4'
+    id: 'ex-calf-press',
+    name: 'Calf Raise alla Leg Press',
+    category: 'Gambe',
+    muscleGroup: 'Polpacci',
+    equipment: 'Macchina',
+    instructions: 'Punte sulla parte inferiore della pedana della leg press con gambe tese. Fletti ed estendi le caviglie controllando il carico.',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-woman-doing-squats-with-a-barbell-40324-large.mp4'
+  },
+
+  // ====================== CORE & ADDOMINALI ======================
+  {
+    id: 'ex-crunch',
+    name: 'Crunch Addominale a Terra',
+    category: 'Core',
+    muscleGroup: 'Addominali',
+    equipment: 'Niente',
+    instructions: 'Mani alle tempie o sul petto. Solleva le scapole dal pavimento espirando e contraendo l\'addome senza tirare il collo.',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-woman-performing-abdominal-crunches-at-home-40319-large.mp4'
   },
   {
-    id: 'ex-alzate-posteriori',
-    name: 'Alzate Posteriori a 90° (Deltoidi Post.)',
-    category: 'Spalle',
-    muscleGroup: 'Spalle',
-    equipment: 'Manubri',
-    instructions: 'Fletti il busto a 90° con la schiena neutra. Apri le braccia verso l\'esterno contraendo i deltoidi posteriori e la parte alta della schiena.',
-    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-man-doing-dumbbell-lateral-raises-40333-large.mp4'
+    id: 'ex-cable-crunch',
+    name: 'Crunch al Cavo con Corda da Inginocchiati',
+    category: 'Core',
+    muscleGroup: 'Addominali',
+    equipment: 'Cavi',
+    instructions: 'In ginocchio davanti al cavo alto. Tieni la corda ai lati della testa e fletti la gabbia toracica verso le ginocchia.',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-woman-performing-abdominal-crunches-at-home-40319-large.mp4'
+  },
+  {
+    id: 'ex-leg-raise-parallele',
+    name: 'Sollevamento Gambe alle Parallele',
+    category: 'Core',
+    muscleGroup: 'Addominali',
+    equipment: 'Niente',
+    instructions: 'Avambracci appoggiati ai supporti della torre. Solleva le gambe tese o piegate fino a superare i 90° flettendo il bacino.',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-woman-performing-abdominal-crunches-at-home-40319-large.mp4'
+  },
+  {
+    id: 'ex-hanging-leg-raise',
+    name: 'Hanging Leg Raise alla Sbarra',
+    category: 'Core',
+    muscleGroup: 'Addominali',
+    equipment: 'Niente',
+    instructions: 'Appeso alla sbarra per trazioni. Solleva le gambe tese fino alla sbarra contraendo con forza gli addominali bassi.',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-woman-performing-abdominal-crunches-at-home-40319-large.mp4'
+  },
+  {
+    id: 'ex-plank',
+    name: 'Plank Addominale Isometrico',
+    category: 'Core',
+    muscleGroup: 'Addominali',
+    equipment: 'Niente',
+    instructions: 'Poggiati sugli avambracci e sulle punte dei piedi. Mantieni il corpo rigido come una tavola stringendo glutei e addome.',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-woman-performing-abdominal-crunches-at-home-40319-large.mp4'
+  },
+  {
+    id: 'ex-bicycle-crunch',
+    name: 'Gomiti sulle Ginocchia (Bicycle Crunch)',
+    category: 'Core',
+    muscleGroup: 'Addominali',
+    equipment: 'Niente',
+    instructions: 'Sdraiato sulla schiena, alterna portando il gomito destro al ginocchio sinistro e viceversa per stimolare gli obliqui.',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-woman-performing-abdominal-crunches-at-home-40319-large.mp4'
+  },
+  {
+    id: 'ex-leg-raise-sdraiato',
+    name: 'Leg Raise Sdraiato su Tappetino',
+    category: 'Core',
+    muscleGroup: 'Addominali',
+    equipment: 'Niente',
+    instructions: 'Mani sotto i glutei per proteggere la zona lombare. Solleva le gambe tese a 90° e scendi lentamente senza toccare il pavimento.',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-woman-performing-abdominal-crunches-at-home-40319-large.mp4'
+  },
+  {
+    id: 'ex-russian-twist',
+    name: 'Russian Twist con Disco',
+    category: 'Core',
+    muscleGroup: 'Addominali',
+    equipment: 'Disco',
+    instructions: 'Busto inclinato a 45° con talloni sollevati. Ruota il disco da un fianco all\'altro ruotando il tronco.',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-woman-performing-abdominal-crunches-at-home-40319-large.mp4'
+  },
+  {
+    id: 'ex-ab-wheel',
+    name: 'Rollout con Ruota Addominale',
+    category: 'Core',
+    muscleGroup: 'Addominali',
+    equipment: 'Niente',
+    instructions: 'In ginocchio, fai scorrere la ruota in avanti estendendo il corpo e richiudi facendo forza unicamente sull\'addome.',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-woman-performing-abdominal-crunches-at-home-40319-large.mp4'
+  },
+
+  // ====================== CARDIO & FUNZIONALE ======================
+  {
+    id: 'ex-tapis-roulant',
+    name: 'Tapis Roulant (Corsa o Camminata Inclinata)',
+    category: 'Cardio',
+    muscleGroup: 'Cardio',
+    equipment: 'Macchina',
+    instructions: 'Attività cardiovascolare aerobica. Mantieni una cadenza costante o sperimenta intervalli HIIT per massimizzare il consumo calorico.',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-man-doing-bench-press-with-barbell-close-up-40321-large.mp4'
+  },
+  {
+    id: 'ex-cyclette',
+    name: 'Cyclette / Spin Bike',
+    category: 'Cardio',
+    muscleGroup: 'Cardio',
+    equipment: 'Macchina',
+    instructions: 'Pedala a ritmo sostenuto regolando la resistenza magnetica per stimolare la capacità polmonare e le gambe senza impatto sulle articolazioni.',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-woman-doing-squats-with-a-barbell-40324-large.mp4'
+  },
+  {
+    id: 'ex-vogatore',
+    name: 'Vogatore (Rowing Machine)',
+    category: 'Cardio',
+    muscleGroup: 'Cardio',
+    equipment: 'Macchina',
+    instructions: 'Spingi con le gambe, apri il bacino e poi tira con le braccia verso lo sterno. Coinvolge l\'85% dei muscoli corporei.',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-man-exercising-on-lat-pull-down-machine-40336-large.mp4'
+  },
+  {
+    id: 'ex-kettlebell-swing',
+    name: 'Kettlebell Swing',
+    category: 'Cardio',
+    muscleGroup: 'Glutei',
+    equipment: 'Kettlebell',
+    instructions: 'Hip hinge dinamico: spingi il bacino indietro e proietta la kettlebell all\'altezza del petto contraendo glutei e addome.',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-woman-doing-squats-with-a-barbell-40324-large.mp4'
+  },
+  {
+    id: 'ex-salto-corda',
+    name: 'Salto della Corda (Jump Rope)',
+    category: 'Cardio',
+    muscleGroup: 'Cardio',
+    equipment: 'Niente',
+    instructions: 'Rimbalza sulla punta dei piedi facendo ruotare la corda solo con i polsi, ritmo e coordinazione continui.',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-woman-doing-squats-with-a-barbell-40324-large.mp4'
   }
 ];
 
-// Helper to render inline SVG diagrams for muscles (anatomical maps)
-export const renderMuscleIcon = (muscle: MuscleGroup) => {
-  const getHighlightColor = () => {
-    switch (muscle) {
-      case 'Pettorali': return '#ef4444'; // Red
-      case 'Dorsali': return '#3b82f6'; // Blue
-      case 'Quadricipiti': return '#10b981'; // Emerald
-      case 'Femorali': return '#ec4899'; // Pink
-      case 'Glutei': return '#f43f5e'; // Rose
-      case 'Polpacci': return '#06b6d4'; // Cyan
-      case 'Spalle': return '#a855f7'; // Purple
-      case 'Bicipiti': return '#f59e0b'; // Yellow
-      case 'Tricipiti': return '#f97316'; // Orange
-      case 'Addominali': return '#14b8a6'; // Teal
-      case 'Cardio': return '#f43f5e'; // Rose
-      default: return '#e2e8f0';
-    }
-  };
-
-  const color = getHighlightColor();
-
-  return (
-    <svg viewBox="0 0 64 64" width="100%" height="100%" style={{ background: '#1c1c24', borderRadius: '50%', padding: '4px' }}>
-      {/*Torso outline silhouette */}
-      <path d="M 32,10 C 35,10 36,15 36,18 C 36,21 33,23 32,23 C 31,23 28,21 28,18 C 28,15 29,10 32,10 Z" fill="#4b5563" /> {/* head */}
-      <path d="M 23,26 C 25,23 39,23 41,26 C 43,29 42,42 41,50 L 23,50 C 22,42 21,29 23,26 Z" fill="#374151" /> {/* torso */}
-      <path d="M 18,26 L 22,26 L 20,44 L 17,44 Z" fill="#1f2937" /> {/* left arm */}
-      <path d="M 46,26 L 42,26 L 44,44 L 47,44 Z" fill="#1f2937" /> {/* right arm */}
-      <path d="M 24,51 H 29 V 64 H 24 Z" fill="#111827" /> {/* left leg */}
-      <path d="M 35,51 H 40 V 64 H 35 Z" fill="#111827" /> {/* right leg */}
-
-      {/* Highlights based on target muscle */}
-      {muscle === 'Pettorali' && (
-        <>
-          <ellipse cx="27" cy="30" rx="3" ry="2" fill={color} />
-          <ellipse cx="37" cy="30" rx="3" ry="2" fill={color} />
-        </>
-      )}
-      {muscle === 'Addominali' && (
-        <rect x="29" y="34" width="6" height="12" rx="1" fill={color} />
-      )}
-      {muscle === 'Spalle' && (
-        <>
-          <circle cx="21" cy="27" r="2.5" fill={color} />
-          <circle cx="43" cy="27" r="2.5" fill={color} />
-        </>
-      )}
-      {muscle === 'Bicipiti' && (
-        <>
-          <ellipse cx="19.5" cy="32" rx="1.8" ry="3" fill={color} />
-          <ellipse cx="44.5" cy="32" rx="1.8" ry="3" fill={color} />
-        </>
-      )}
-      {muscle === 'Tricipiti' && (
-        <>
-          <ellipse cx="20.5" cy="32" rx="1.5" ry="3" fill={color} />
-          <ellipse cx="43.5" cy="32" rx="1.5" ry="3" fill={color} />
-        </>
-      )}
-      {muscle === 'Dorsali' && (
-        <>
-          <path d="M 23,28 C 24,31 27,37 27,42 L 24,44 Z" fill={color} />
-          <path d="M 41,28 C 40,31 37,37 37,42 L 40,44 Z" fill={color} />
-        </>
-      )}
-      {muscle === 'Quadricipiti' && (
-        <>
-          <rect x="24.5" y="52" width="4" height="6" rx="1" fill={color} />
-          <rect x="35.5" y="52" width="4" height="6" rx="1" fill={color} />
-        </>
-      )}
-      {muscle === 'Femorali' && (
-        <>
-          <rect x="24.5" y="53" width="4" height="6" rx="1" fill={color} />
-          <rect x="35.5" y="53" width="4" height="6" rx="1" fill={color} />
-        </>
-      )}
-      {muscle === 'Glutei' && (
-        <>
-          <ellipse cx="27" cy="49" rx="3" ry="2.5" fill={color} />
-          <ellipse cx="37" cy="49" rx="3" ry="2.5" fill={color} />
-        </>
-      )}
-      {muscle === 'Polpacci' && (
-        <>
-          <rect x="25" y="59" width="3.5" height="5" rx="1" fill={color} />
-          <rect x="35.5" y="59" width="3.5" height="5" rx="1" fill={color} />
-        </>
-      )}
-      {muscle === 'Cardio' && (
-        <path d="M 32,32 C 32,32 30,30 28,30 C 26,30 25,31.5 25,33 C 25,36 29,39 32,41 C 35,39 39,36 39,33 C 39,31.5 38,30 36,30 C 34,30 32,32 32,32 Z" fill={color} className="animate-pulse" />
-      )}
-    </svg>
-  );
+// Helper to render high definition inline SVG anatomical miniatures
+export const renderMuscleIcon = (muscle: MuscleGroup, size: number = 40, highlightColor?: string) => {
+  return <AnatomicalIcon muscle={muscle} size={size} highlightColor={highlightColor} />;
 };
 
-// Helper to render inline SVG diagrams for equipment (dumbbells, barbells, etc.)
-export const renderEquipmentIcon = (eq: EquipmentType) => {
-  return (
-    <svg viewBox="0 0 64 64" width="100%" height="100%" style={{ background: '#1c1c24', borderRadius: '50%', padding: '8px' }}>
-      {eq === 'Bilanciere' && (
-        <g stroke="white" strokeWidth="3" fill="none">
-          <line x1="8" y1="32" x2="56" y2="32" strokeWidth="4" />
-          <rect x="14" y="22" width="4" height="20" rx="1" fill="gray" stroke="none" />
-          <rect x="46" y="22" width="4" height="20" rx="1" fill="gray" stroke="none" />
-          <rect x="8" y="26" width="3" height="12" rx="1" fill="darkgray" stroke="none" />
-          <rect x="53" y="26" width="3" height="12" rx="1" fill="darkgray" stroke="none" />
-        </g>
-      )}
-      {eq === 'Manubri' && (
-        <g stroke="white" strokeWidth="3" fill="none">
-          <line x1="16" y1="24" x2="48" y2="40" strokeWidth="4" />
-          <rect x="10" y="14" width="8" height="16" rx="2" fill="gray" stroke="none" transform="rotate(27 14 22)" />
-          <rect x="46" y="32" width="8" height="16" rx="2" fill="gray" stroke="none" transform="rotate(27 50 40)" />
-        </g>
-      )}
-      {eq === 'Macchina' && (
-        <g stroke="white" strokeWidth="2.5" fill="none" strokeLinecap="round">
-          <rect x="16" y="12" width="32" height="40" rx="4" />
-          <line x1="24" y1="28" x2="40" y2="28" />
-          <line x1="24" y1="38" x2="40" y2="38" />
-          <circle cx="32" cy="20" r="3" fill="white" />
-        </g>
-      )}
-      {eq === 'Cavi' && (
-        <g stroke="white" strokeWidth="2.5" fill="none">
-          <line x1="32" y1="12" x2="32" y2="38" strokeDasharray="3,3" />
-          <circle cx="32" cy="12" r="3" fill="white" />
-          <path d="M 22,44 C 27,41 37,41 42,44" strokeWidth="4" />
-          <line x1="22" y1="44" x2="32" y2="38" />
-          <line x1="42" y1="44" x2="32" y2="38" />
-        </g>
-      )}
-      {eq === 'Niente' && (
-        <g stroke="white" strokeWidth="3" fill="none">
-          <circle cx="32" cy="22" r="8" />
-          <path d="M 18,50 C 22,42 42,42 46,50" />
-          <line x1="32" y1="30" x2="32" y2="40" />
-        </g>
-      )}
-      {eq === 'Fascia di resistenza' && (
-        <ellipse cx="32" cy="32" rx="22" ry="8" stroke="var(--color-secondary)" strokeWidth="4" fill="none" transform="rotate(-15 32 32)" />
-      )}
-      {eq === 'Fasce di sospensione' && (
-        <g stroke="white" strokeWidth="3" fill="none">
-          <line x1="32" y1="10" x2="20" y2="44" />
-          <line x1="32" y1="10" x2="44" y2="44" />
-          <rect x="14" y="44" width="12" height="6" rx="1" />
-          <rect x="38" y="44" width="12" height="6" rx="1" />
-        </g>
-      )}
-      {eq === 'Kettlebell' && (
-        <g fill="white" stroke="none">
-          <path d="M 32,12 C 24,12 24,24 24,24 H 40 C 40,24 40,12 32,12 Z" stroke="white" strokeWidth="3" fill="none" />
-          <circle cx="32" cy="38" r="18" fill="gray" />
-          <text x="32" y="43" fontSize="10" fontWeight="bold" fill="white" textAnchor="middle">KB</text>
-        </g>
-      )}
-    </svg>
-  );
+// Helper to render high definition equipment icons
+export const renderEquipmentIcon = (equipment: EquipmentType | 'All', size: number = 32, color?: string) => {
+  return <EquipmentIcon equipment={equipment} size={size} color={color} />;
 };

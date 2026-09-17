@@ -193,6 +193,13 @@ export const RoutineManager: React.FC = () => {
         <ExerciseBrowserModal 
           isOpen={isBrowserOpen}
           onClose={() => setIsBrowserOpen(false)}
+          onAddExercises={(ids) => {
+            setSelectedExercises(ids.map(id => {
+              const existing = selectedExercises.find(se => se.exerciseId === id);
+              return existing || { exerciseId: id, setsCount: 3 };
+            }));
+            setIsBrowserOpen(false);
+          }}
           onSelectExercise={toggleExerciseSelection}
           selectedIds={selectedExercises.map(se => se.exerciseId)}
           isMultiSelect={true}
