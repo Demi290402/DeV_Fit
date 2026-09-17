@@ -20,7 +20,7 @@ export const SocialFeed: React.FC = () => {
   };
 
   return (
-    <div className="animate-fade-in-up" style={{ display: 'flex', flexDirection: 'column', gap: '20px', paddingBottom: '40px' }}>
+    <div className="animate-fade-in-up social-feed-wrapper" style={{ display: 'flex', flexDirection: 'column', gap: '20px', paddingBottom: '40px' }}>
       <div>
         <h2 style={{ fontSize: '1.4rem', fontWeight: 800 }}>Community Feed</h2>
         <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>Guarda gli allenamenti e sostieni i tuoi amici dell'app.</p>

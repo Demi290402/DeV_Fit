@@ -328,254 +328,268 @@ export const Dashboard: React.FC<DashboardProps> = ({ setCurrentTab }) => {
 
       {/* VIEW 1: OGGI (Daily gym action & nutrition hero) */}
       {activeSection === 'today' && (
-        <>
-          {/* HERO WORKOUT CARD (Priority #1 Gym Feature - Hevy/Strong style) */}
-          <div
-            className={`glass-card ${activeWorkout ? 'animate-glow' : ''}`}
-            style={{
-              borderLeft: '4px solid var(--color-primary)',
-              background: activeWorkout
-                ? 'linear-gradient(135deg, rgba(212, 175, 55, 0.12) 0%, #121215 100%)'
-                : 'linear-gradient(135deg, rgba(212, 175, 55, 0.05) 0%, #121215 100%)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '12px',
-              padding: '18px'
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{
-                  width: '38px',
-                  height: '38px',
-                  borderRadius: 'var(--radius-full)',
-                  background: 'rgba(212, 175, 55, 0.15)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: 'var(--color-primary)'
-                }}>
-                  <Dumbbell size={18} />
-                </div>
-                <div>
-                  <span className="section-eyebrow" style={{ color: 'var(--color-primary)', display: 'block' }}>
-                    {activeWorkout ? 'Sessione Attiva' : 'Allenamento del Giorno'}
-                  </span>
-                  <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'white', margin: 0 }}>
-                    {activeWorkout ? activeWorkout.name : 'Pronto ad allenarti?'}
-                  </h3>
-                </div>
-              </div>
-
-              {activeWorkout && (
-                <span style={{
-                  fontSize: '0.65rem',
-                  fontWeight: 800,
-                  padding: '4px 10px',
-                  borderRadius: 'var(--radius-full)',
-                  background: 'rgba(16, 185, 129, 0.15)',
-                  color: '#10b981',
-                  border: '1px solid rgba(16, 185, 129, 0.3)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '5px'
-                }}>
-                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981' }} />
-                  In Corso
-                </span>
-              )}
-            </div>
-
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: 0, lineHeight: 1.4 }}>
-              {activeWorkout
-                ? `${activeWorkout.exercises.length} esercizi registrati. Tocca per inserire carichi e ripetizioni.`
-                : 'Registra carichi, serie e supera i tuoi massimali con il timer di recupero automatico.'}
-            </p>
-
-            <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
-              <button
-                className="btn-primary"
-                onClick={() => {
-                  if (!activeWorkout) startWorkout();
-                  setCurrentTab('workout');
-                }}
-                style={{ flex: 1, padding: '10px 14px', fontSize: '0.82rem', height: '40px' }}
-              >
-                <Dumbbell size={16} /> {activeWorkout ? 'Riprendi Sessione' : 'Inizia Ora'}
-              </button>
-              {!activeWorkout && (
-                <button
-                  className="btn-secondary"
-                  onClick={() => setCurrentTab('workout')}
-                  style={{ padding: '10px 14px', fontSize: '0.82rem', height: '40px', whiteSpace: 'nowrap' }}
-                >
-                  Le mie Schede →
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Daily Energy & Macro Card */}
-          <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '18px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <span className="section-eyebrow" style={{ display: 'block' }}>
-                  Nutrizione & Dieta
-                </span>
-                <h3 style={{ fontSize: '1.05rem', fontWeight: 800, margin: 0 }}>Bilancio Energetico</h3>
-              </div>
-              <button
-                className="btn-secondary"
-                onClick={() => setCurrentTab('nutrition')}
-                style={{ padding: '6px 12px', fontSize: '0.72rem', height: '30px', display: 'flex', alignItems: 'center', gap: '4px' }}
-              >
-                <Plus size={14} /> Diario Pasti
-              </button>
-            </div>
-
-            {/* Remaining Calories Hero + Ring */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
-                  <span style={{
-                    fontSize: '2.3rem',
-                    fontWeight: 900,
-                    color: remainingCalories >= 0 ? 'white' : '#f59e0b',
-                    lineHeight: 1
-                  }}>
-                    {remainingCalories >= 0 ? remainingCalories : `+${Math.abs(remainingCalories)}`}
-                  </span>
-                  <span style={{ fontSize: '0.88rem', color: 'var(--text-muted)', fontWeight: 600 }}>kcal</span>
-                </div>
-                <span style={{ fontSize: '0.76rem', color: remainingCalories >= 0 ? 'var(--color-primary)' : '#f59e0b', fontWeight: 700 }}>
-                  {remainingCalories >= 0 ? 'Calorie Rimanenti' : 'Surplus Calorico'}
-                </span>
-                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                  Assunte: <strong style={{ color: 'white' }}>{totalCalories}</strong> / {profile.targetCalories} kcal
-                </span>
-              </div>
-
-              {/* Circular SVG Ring */}
-              <div style={{ position: 'relative', width: '92px', height: '92px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <svg width="92" height="92" style={{ transform: 'rotate(-90deg)' }}>
-                  <circle cx="46" cy="46" r={radius} fill="transparent" stroke="rgba(255,255,255,0.06)" strokeWidth="7" />
-                  <circle
-                    cx="46"
-                    cy="46"
-                    r={radius}
-                    fill="transparent"
-                    stroke="var(--color-primary)"
-                    strokeWidth="7"
-                    strokeDasharray={circumference}
-                    strokeDashoffset={safeStrokeDashoffset}
-                    strokeLinecap="round"
-                    style={{ transition: 'stroke-dashoffset 0.4s ease' }}
-                  />
-                </svg>
-                <div style={{ position: 'absolute', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                  <span style={{ fontSize: '0.95rem', fontWeight: 800, color: 'white' }}>{Math.round(safeProgressPercent)}%</span>
-                  <span style={{ fontSize: '0.55rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Target</span>
-                </div>
-              </div>
-            </div>
-
-            {/* 3 Macro Progress Bars */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', paddingTop: '10px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-              {/* Protein */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem' }}>
-                  <span style={{ color: '#3b82f6', fontWeight: 700 }}>Proteine</span>
-                  <span style={{ color: 'white', fontWeight: 600 }}>{totalProtein}g</span>
-                </div>
-                <div style={{ height: '5px', borderRadius: '3px', background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
-                  <div style={{ height: '100%', width: `${proteinPercent}%`, background: '#3b82f6', borderRadius: '3px', transition: 'width 0.4s ease' }} />
-                </div>
-                <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>Ob: {profile.targetProtein}g</span>
-              </div>
-
-              {/* Carbs */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem' }}>
-                  <span style={{ color: '#eab308', fontWeight: 700 }}>Carboidrati</span>
-                  <span style={{ color: 'white', fontWeight: 600 }}>{totalCarbs}g</span>
-                </div>
-                <div style={{ height: '5px', borderRadius: '3px', background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
-                  <div style={{ height: '100%', width: `${carbsPercent}%`, background: '#eab308', borderRadius: '3px', transition: 'width 0.4s ease' }} />
-                </div>
-                <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>Ob: {profile.targetCarbs}g</span>
-              </div>
-
-              {/* Fat */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem' }}>
-                  <span style={{ color: '#ef4444', fontWeight: 700 }}>Grassi</span>
-                  <span style={{ color: 'white', fontWeight: 600 }}>{totalFat}g</span>
-                </div>
-                <div style={{ height: '5px', borderRadius: '3px', background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
-                  <div style={{ height: '100%', width: `${fatPercent}%`, background: '#ef4444', borderRadius: '3px', transition: 'width 0.4s ease' }} />
-                </div>
-                <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>Ob: {profile.targetFat}g</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Quick Habit Bar (Water & Weight inline quick actions) */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-            {/* Quick Water */}
-            <div className="glass-card" style={{ padding: '14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        <div className="dashboard-today-grid">
+          {/* LEFT COLUMN: Workout Hero + Quick Habits */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {/* HERO WORKOUT CARD (Priority #1 Gym Feature - Hevy/Strong style) */}
+            <div
+              className={`glass-card ${activeWorkout ? 'animate-glow' : ''}`}
+              style={{
+                borderLeft: '4px solid var(--color-primary)',
+                background: activeWorkout
+                  ? 'linear-gradient(135deg, rgba(212, 175, 55, 0.12) 0%, #121215 100%)'
+                  : 'linear-gradient(135deg, rgba(212, 175, 55, 0.05) 0%, #121215 100%)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '12px',
+                padding: '18px'
+              }}
+            >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.74rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '5px', color: 'white' }}>
-                  <Droplet size={14} color="var(--color-info)" /> Acqua
-                </span>
-                <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>2000 ml</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{
+                    width: '38px',
+                    height: '38px',
+                    borderRadius: 'var(--radius-full)',
+                    background: 'rgba(212, 175, 55, 0.15)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'var(--color-primary)'
+                  }}>
+                    <Dumbbell size={18} />
+                  </div>
+                  <div>
+                    <span className="section-eyebrow" style={{ color: 'var(--color-primary)', display: 'block' }}>
+                      {activeWorkout ? 'Sessione Attiva' : 'Allenamento del Giorno'}
+                    </span>
+                    <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'white', margin: 0 }}>
+                      {activeWorkout ? activeWorkout.name : 'Pronto ad allenarti?'}
+                    </h3>
+                  </div>
+                </div>
+
+                {activeWorkout && (
+                  <span style={{
+                    fontSize: '0.65rem',
+                    fontWeight: 800,
+                    padding: '4px 10px',
+                    borderRadius: 'var(--radius-full)',
+                    background: 'rgba(16, 185, 129, 0.15)',
+                    color: '#10b981',
+                    border: '1px solid rgba(16, 185, 129, 0.3)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '5px'
+                  }}>
+                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981' }} />
+                    In Corso
+                  </span>
+                )}
               </div>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
-                <span style={{ fontSize: '1.35rem', fontWeight: 900, color: 'white', lineHeight: 1 }}>{waterCount}</span>
-                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>ml</span>
-              </div>
-              <div style={{ display: 'flex', gap: '4px' }}>
-                <button className="btn-secondary" onClick={handleAddWater} style={{ flex: 1, padding: '4px 6px', fontSize: '0.7rem', height: '28px' }}>
-                  +250ml
+
+              <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: 0, lineHeight: 1.4 }}>
+                {activeWorkout
+                  ? `${activeWorkout.exercises.length} esercizi registrati. Tocca per inserire carichi e ripetizioni.`
+                  : 'Registra carichi, serie e supera i tuoi massimali con il timer di recupero automatico.'}
+              </p>
+
+              <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+                <button
+                  className="btn-primary"
+                  onClick={() => {
+                    if (!activeWorkout) startWorkout();
+                    setCurrentTab('workout');
+                  }}
+                  style={{ flex: 1, padding: '10px 14px', fontSize: '0.82rem', height: '40px' }}
+                >
+                  <Dumbbell size={16} /> {activeWorkout ? 'Riprendi Sessione' : 'Inizia Ora'}
                 </button>
-                {waterCount > 0 && (
-                  <button className="btn-secondary" onClick={handleRemoveWater} style={{ width: '28px', padding: 0, fontSize: '0.8rem', height: '28px' }}>
-                    -
+                {!activeWorkout && (
+                  <button
+                    className="btn-secondary"
+                    onClick={() => setCurrentTab('workout')}
+                    style={{ padding: '10px 14px', fontSize: '0.82rem', height: '40px', whiteSpace: 'nowrap' }}
+                  >
+                    Le mie Schede →
                   </button>
                 )}
               </div>
             </div>
 
-            {/* Quick Weight */}
-            <div 
-              className="glass-card" 
-              style={{ padding: '14px', display: 'flex', flexDirection: 'column', gap: '8px', cursor: 'pointer' }}
-              onClick={() => setShowWeightModal(true)}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.74rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '5px', color: 'white' }}>
-                  <Scale size={14} color="var(--color-primary)" /> Peso
-                </span>
-                <span style={{ fontSize: '0.65rem', color: 'var(--color-primary)', fontWeight: 700 }}>
-                  BMI {bmi > 0 ? bmi.toFixed(1) : '--'}
-                </span>
+            {/* Quick Habit Bar (Water & Weight inline quick actions) */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              {/* Quick Water */}
+              <div className="glass-card" style={{ padding: '14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.74rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '5px', color: 'white' }}>
+                    <Droplet size={14} color="var(--color-info)" /> Acqua
+                  </span>
+                  <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>2000 ml</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
+                  <span style={{ fontSize: '1.35rem', fontWeight: 900, color: 'white', lineHeight: 1 }}>{waterCount}</span>
+                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>ml</span>
+                </div>
+                <div style={{ display: 'flex', gap: '4px' }}>
+                  <button className="btn-secondary" onClick={handleAddWater} style={{ flex: 1, padding: '4px 6px', fontSize: '0.7rem', height: '28px' }}>
+                    +250ml
+                  </button>
+                  {waterCount > 0 && (
+                    <button className="btn-secondary" onClick={handleRemoveWater} style={{ width: '28px', padding: 0, fontSize: '0.8rem', height: '28px' }}>
+                      -
+                    </button>
+                  )}
+                </div>
               </div>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
-                <span style={{ fontSize: '1.35rem', fontWeight: 900, color: 'white', lineHeight: 1 }}>{profile.weight}</span>
-                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>kg</span>
-              </div>
-              <button 
-                className="btn-secondary" 
-                onClick={(e) => { e.stopPropagation(); setShowWeightModal(true); }}
-                style={{ width: '100%', padding: '4px 6px', fontSize: '0.7rem', height: '28px' }}
+
+              {/* Quick Weight */}
+              <div 
+                className="glass-card" 
+                style={{ padding: '14px', display: 'flex', flexDirection: 'column', gap: '8px', cursor: 'pointer' }}
+                onClick={() => setShowWeightModal(true)}
               >
-                Aggiorna Peso
-              </button>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.74rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '5px', color: 'white' }}>
+                    <Scale size={14} color="var(--color-primary)" /> Peso
+                  </span>
+                  <span style={{ fontSize: '0.65rem', color: 'var(--color-primary)', fontWeight: 700 }}>
+                    BMI {bmi > 0 ? bmi.toFixed(1) : '--'}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
+                  <span style={{ fontSize: '1.35rem', fontWeight: 900, color: 'white', lineHeight: 1 }}>{profile.weight}</span>
+                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>kg</span>
+                </div>
+                <button 
+                  className="btn-secondary" 
+                  onClick={(e) => { e.stopPropagation(); setShowWeightModal(true); }}
+                  style={{ width: '100%', padding: '4px 6px', fontSize: '0.7rem', height: '28px' }}
+                >
+                  Aggiorna Peso
+                </button>
+              </div>
             </div>
           </div>
 
-          {/* Tip Widget */}
-          <TipWidget />
-        </>
+          {/* RIGHT COLUMN: Daily Energy & Macro Card + Tip Widget */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '18px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <span className="section-eyebrow" style={{ display: 'block' }}>
+                    Nutrizione & Dieta
+                  </span>
+                  <h3 style={{ fontSize: '1.05rem', fontWeight: 800, margin: 0 }}>Bilancio Energetico</h3>
+                </div>
+                <button
+                  className="btn-secondary"
+                  onClick={() => setCurrentTab('diet')}
+                  style={{ padding: '6px 12px', fontSize: '0.72rem', height: '30px', display: 'flex', alignItems: 'center', gap: '4px' }}
+                >
+                  <Plus size={14} /> Diario Pasti
+                </button>
+              </div>
+
+              {/* Remaining Calories Hero + Ring */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+                    <span style={{
+                      fontSize: '2.3rem',
+                      fontWeight: 900,
+                      color: remainingCalories >= 0 ? 'white' : '#f59e0b',
+                      lineHeight: 1
+                    }}>
+                      {remainingCalories >= 0 ? remainingCalories : `+${Math.abs(remainingCalories)}`}
+                    </span>
+                    <span style={{ fontSize: '0.88rem', color: 'var(--text-muted)', fontWeight: 600 }}>kcal</span>
+                  </div>
+                  <span style={{ fontSize: '0.76rem', color: remainingCalories >= 0 ? 'var(--color-primary)' : '#f59e0b', fontWeight: 700 }}>
+                    {remainingCalories >= 0 ? 'Calorie Rimanenti' : 'Surplus Calorico'}
+                  </span>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                    Assunte: <strong style={{ color: 'white' }}>{totalCalories}</strong> / {profile.targetCalories} kcal
+                  </span>
+                </div>
+
+                {/* Circular SVG Ring */}
+                <div style={{ position: 'relative', width: '92px', height: '92px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <svg width="92" height="92" style={{ transform: 'rotate(-90deg)' }}>
+                    <circle
+                      cx="46"
+                      cy="46"
+                      r="38"
+                      fill="none"
+                      stroke="rgba(255, 255, 255, 0.05)"
+                      strokeWidth="8"
+                    />
+                    <circle
+                      cx="46"
+                      cy="46"
+                      r="38"
+                      fill="none"
+                      stroke="var(--color-primary)"
+                      strokeWidth="8"
+                      strokeDasharray={circumference}
+                      strokeDashoffset={safeStrokeDashoffset}
+                      strokeLinecap="round"
+                      style={{ transition: 'stroke-dashoffset 0.6s ease' }}
+                    />
+                  </svg>
+                  <div style={{ position: 'absolute', textAlign: 'center' }}>
+                    <span style={{ fontSize: '0.85rem', fontWeight: 800, color: 'white', display: 'block', lineHeight: 1 }}>
+                      {Math.round(safeProgressPercent)}%
+                    </span>
+                    <span style={{ fontSize: '0.55rem', color: 'var(--text-dark)' }}>consumate</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Linear Macro Bars */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {/* Protein */}
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', marginBottom: '3px' }}>
+                    <span style={{ fontWeight: 600, color: 'white' }}>Proteine</span>
+                    <span style={{ color: 'var(--color-secondary)', fontWeight: 700 }}>{totalProtein}g</span>
+                  </div>
+                  <div style={{ height: '6px', borderRadius: '3px', background: 'rgba(255, 255, 255, 0.05)', overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${proteinPercent}%`, background: 'var(--color-secondary)', borderRadius: '3px', transition: 'width 0.4s ease' }} />
+                  </div>
+                  <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>Ob: {profile.targetProtein}g</span>
+                </div>
+
+                {/* Carbs */}
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', marginBottom: '3px' }}>
+                    <span style={{ fontWeight: 600, color: 'white' }}>Carboidrati</span>
+                    <span style={{ color: 'var(--color-primary)', fontWeight: 700 }}>{totalCarbs}g</span>
+                  </div>
+                  <div style={{ height: '6px', borderRadius: '3px', background: 'rgba(255, 255, 255, 0.05)', overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${carbsPercent}%`, background: 'var(--color-primary)', borderRadius: '3px', transition: 'width 0.4s ease' }} />
+                  </div>
+                  <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>Ob: {profile.targetCarbs}g</span>
+                </div>
+
+                {/* Fat */}
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', marginBottom: '3px' }}>
+                    <span style={{ fontWeight: 600, color: 'white' }}>Grassi</span>
+                    <span style={{ color: '#ef4444', fontWeight: 700 }}>{totalFat}g</span>
+                  </div>
+                  <div style={{ height: '6px', borderRadius: '3px', background: 'rgba(255, 255, 255, 0.05)', overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${fatPercent}%`, background: '#ef4444', borderRadius: '3px', transition: 'width 0.4s ease' }} />
+                  </div>
+                  <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>Ob: {profile.targetFat}g</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Tip Widget */}
+            <TipWidget />
+          </div>
+        </div>
       )}
 
       {/* VIEW 2: MUSCOLI & RECUPERO (Interactive Heatmap & Science) */}

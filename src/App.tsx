@@ -38,51 +38,19 @@ const AppContent: React.FC = () => {
       case 'diet':
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            {/* Segmented Control - Luxury Gold */}
-            <div style={{ 
-              display: 'flex', 
-              background: 'rgba(255, 255, 255, 0.03)', 
-              borderRadius: 'var(--radius-full)', 
-              padding: '4px',
-              border: '1px solid var(--border-color)'
-            }}>
+            {/* Segmented Control - Hevy / DeV Fit Luxury Style */}
+            <div className="segmented-control" style={{ maxWidth: '420px', margin: '0 auto 8px auto' }}>
               <button 
+                type="button"
+                className={`segmented-btn ${dietSubTab === 'diary' ? 'active' : ''}`}
                 onClick={() => setDietSubTab('diary')}
-                style={{ 
-                  flex: 1, 
-                  background: dietSubTab === 'diary' 
-                    ? 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%)' 
-                    : 'transparent',
-                  color: dietSubTab === 'diary' ? '#050506' : 'var(--text-muted)',
-                  fontWeight: dietSubTab === 'diary' ? 800 : 500,
-                  border: 'none',
-                  padding: '9px 14px',
-                  fontSize: '0.8rem',
-                  borderRadius: 'var(--radius-full)',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  boxShadow: dietSubTab === 'diary' ? '0 2px 8px rgba(212, 175, 55, 0.25)' : 'none'
-                }}
               >
                 Diario Pasti
               </button>
               <button 
+                type="button"
+                className={`segmented-btn ${dietSubTab === 'recipes' ? 'active' : ''}`}
                 onClick={() => setDietSubTab('recipes')}
-                style={{ 
-                  flex: 1, 
-                  background: dietSubTab === 'recipes' 
-                    ? 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%)' 
-                    : 'transparent',
-                  color: dietSubTab === 'recipes' ? '#050506' : 'var(--text-muted)',
-                  fontWeight: dietSubTab === 'recipes' ? 800 : 500,
-                  border: 'none',
-                  padding: '9px 14px',
-                  fontSize: '0.8rem',
-                  borderRadius: 'var(--radius-full)',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  boxShadow: dietSubTab === 'recipes' ? '0 2px 8px rgba(212, 175, 55, 0.25)' : 'none'
-                }}
               >
                 Ricettario
               </button>

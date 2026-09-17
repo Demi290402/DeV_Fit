@@ -1,24 +1,26 @@
-/* BOTTOM NAVIGATION */
-.bottom-nav {
-  position: fixed;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 100%;
-  max-width: 480px;
-  height: 74px;
-  background: rgba(10, 10, 14, 0.94);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  border-top: 1px solid var(--border-color);
-  border-left: 1px solid var(--border-color);
-  border-right: 1px solid var(--border-color);
-  display: flex;
-  justify-content: space-around;
-  align-items: center;
-  z-index: 500;
-  padding-bottom: env(safe-area-inset-bottom);
-  box-shadow: 0 -4px 25px rgba(0, 0, 0, 0.7);
+/* BOTTOM NAVIGATION (Mobile Only: max-width 767px) */
+@media (max-width: 767px) {
+  .bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 480px;
+    height: 74px;
+    background: rgba(10, 10, 14, 0.95);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border-top: 1px solid var(--border-color);
+    border-left: 1px solid var(--border-color);
+    border-right: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    z-index: 500;
+    padding-bottom: env(safe-area-inset-bottom);
+    box-shadow: 0 -4px 25px rgba(0, 0, 0, 0.7);
+  }
 }
 
 .nav-item {
@@ -486,6 +488,63 @@
   padding: 24px;
   overflow-y: auto;
   animation: fadeInUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* MODAL OVERLAY & MODAL CONTAINER (Centered Dialogs on Mobile & Desktop) */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.78);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 2000;
+}
+
+.modal-container {
+  position: relative;
+  background: #0f0f13;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.85);
+  max-height: 90vh;
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+/* Responsive Centered Drawers on Desktop */
+@media (min-width: 768px) {
+  .drawer-backdrop {
+    align-items: center !important;
+    padding: 24px !important;
+  }
+  .drawer-content {
+    border-radius: var(--radius-lg) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    max-width: 520px !important;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.9) !important;
+  }
+  .modal-portal-backdrop {
+    padding: 24px !important;
+  }
+  .modal-portal-card {
+    height: 85vh !important;
+    max-height: 820px !important;
+    border-radius: 20px !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  }
+  .drawer-desktop-center {
+    align-items: center !important;
+    padding: 24px !important;
+  }
+  .drawer-desktop-card {
+    border-radius: 20px !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.9) !important;
+  }
 }
 
 .drawer-header {

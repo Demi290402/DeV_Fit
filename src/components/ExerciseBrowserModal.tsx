@@ -164,22 +164,37 @@ export const ExerciseBrowserModal: React.FC<ExerciseBrowserModalProps> = ({
 
   return createPortal(
     <div 
+      className="modal-portal-backdrop"
       style={{
         position: 'fixed',
         inset: 0,
         zIndex: 99999,
-        background: '#09090b',
+        background: 'rgba(0, 0, 0, 0.78)',
+        backdropFilter: 'blur(8px)',
         display: 'flex',
-        flexDirection: 'column',
-        width: '100%',
-        maxWidth: '480px',
-        margin: '0 auto',
-        height: '100dvh',
-        boxShadow: '0 0 60px rgba(0, 0, 0, 0.98)',
-        color: '#ffffff',
-        fontFamily: 'inherit'
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 0
       }}
+      onClick={onClose}
     >
+      <div 
+        className="modal-portal-card"
+        onClick={e => e.stopPropagation()}
+        style={{
+          background: '#09090b',
+          display: 'flex',
+          flexDirection: 'column',
+          width: '100%',
+          maxWidth: '520px',
+          height: '100dvh',
+          boxShadow: '0 10px 60px rgba(0, 0, 0, 0.95)',
+          color: '#ffffff',
+          fontFamily: 'inherit',
+          position: 'relative',
+          overflow: 'hidden'
+        }}
+      >
       {/* 1. Modal Top Bar (Native Hevy Style: Annulla | Titolo | Crea) */}
       <div 
         style={{
@@ -476,12 +491,10 @@ export const ExerciseBrowserModal: React.FC<ExerciseBrowserModalProps> = ({
       {localSelected.length > 0 && (
         <div 
           style={{
-            position: 'fixed',
+            position: 'absolute',
             bottom: '20px',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            width: 'calc(100% - 32px)',
-            maxWidth: '448px',
+            left: '16px',
+            right: '16px',
             zIndex: 100001,
             animation: 'fadeInUp 0.2s ease-out'
           }}
@@ -517,11 +530,13 @@ export const ExerciseBrowserModal: React.FC<ExerciseBrowserModalProps> = ({
       {/* ================= BOTTOM SHEET 1: Gruppo Muscolare (Screenshot 1) ================= */}
       {showMuscleSheet && (
         <div 
+          className="drawer-desktop-center"
           style={{ 
             position: 'fixed', 
             inset: 0, 
             zIndex: 100005, 
             background: 'rgba(0, 0, 0, 0.8)', 
+            backdropFilter: 'blur(6px)',
             display: 'flex', 
             alignItems: 'flex-end', 
             justifyContent: 'center' 
@@ -529,6 +544,7 @@ export const ExerciseBrowserModal: React.FC<ExerciseBrowserModalProps> = ({
           onClick={() => setShowMuscleSheet(false)}
         >
           <div 
+            className="drawer-desktop-card"
             onClick={e => e.stopPropagation()}
             style={{ 
               width: '100%',
@@ -539,7 +555,8 @@ export const ExerciseBrowserModal: React.FC<ExerciseBrowserModalProps> = ({
               borderRadius: '20px 20px 0 0',
               display: 'flex',
               flexDirection: 'column',
-              boxShadow: '0 -10px 40px rgba(0,0,0,0.8)'
+              boxShadow: '0 -10px 40px rgba(0,0,0,0.8)',
+              overflow: 'hidden'
             }}
           >
             {/* Pull handle & header */}
@@ -708,11 +725,13 @@ export const ExerciseBrowserModal: React.FC<ExerciseBrowserModalProps> = ({
       {/* ================= BOTTOM SHEET 2: Attrezzatura (Screenshot 2) ================= */}
       {showEquipmentSheet && (
         <div 
+          className="drawer-desktop-center"
           style={{ 
             position: 'fixed', 
             inset: 0, 
             zIndex: 100005, 
             background: 'rgba(0, 0, 0, 0.8)', 
+            backdropFilter: 'blur(6px)',
             display: 'flex', 
             alignItems: 'flex-end', 
             justifyContent: 'center' 
@@ -720,6 +739,7 @@ export const ExerciseBrowserModal: React.FC<ExerciseBrowserModalProps> = ({
           onClick={() => setShowEquipmentSheet(false)}
         >
           <div 
+            className="drawer-desktop-card"
             onClick={e => e.stopPropagation()}
             style={{ 
               width: '100%',
@@ -730,7 +750,8 @@ export const ExerciseBrowserModal: React.FC<ExerciseBrowserModalProps> = ({
               borderRadius: '20px 20px 0 0',
               display: 'flex',
               flexDirection: 'column',
-              boxShadow: '0 -10px 40px rgba(0,0,0,0.8)'
+              boxShadow: '0 -10px 40px rgba(0,0,0,0.8)',
+              overflow: 'hidden'
             }}
           >
             {/* Pull handle & header */}
@@ -1053,6 +1074,7 @@ export const ExerciseBrowserModal: React.FC<ExerciseBrowserModalProps> = ({
           </form>
         </div>
       )}
+      </div>
     </div>,
     document.body
   );

@@ -337,7 +337,7 @@ export const RoutineManager: React.FC = () => {
             </p>
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <div className="history-list-desktop" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {[...workoutHistory]
               .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
               .slice(0, 5)

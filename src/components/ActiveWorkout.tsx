@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Plus, Trash, Check, Clock, X, ChevronDown, Disc, Dumbbell } from 'lucide-react';
 
 import { useApp } from '../context/AppContext';
@@ -188,6 +188,16 @@ export const ActiveWorkout: React.FC = () => {
     )
   );
 
+  // Memoize previous performances per exercise to avoid expensive O(N*M) lookups on every 1-second timer tick
+  const prevPerformancesMap = useMemo(() => {
+    const map: Record<string, { weight: number; reps: number }[]> = {};
+    if (!activeWorkout) return map;
+    activeWorkout.exercises.forEach(e => {
+      map[e.exerciseId] = getPreviousPerformances(e.exerciseId);
+    });
+    return map;
+  }, [activeWorkout?.exercises.map(e => e.exerciseId).join(','), workoutHistory]);
+
   // Render front and back mini anatomical mannequins (Hevy screenshot 5 style)
   const renderDuoMannequins = () => {
     const baseColor = '#2b2c37';
@@ -298,14 +308,12 @@ export const ActiveWorkout: React.FC = () => {
           <line x1={paddingX} y1={paddingY} x2={width - paddingX} y2={paddingY} stroke="rgba(255,255,255,0.03)" strokeWidth="1" />
           <line x1={paddingX} y1={height/2} x2={width - paddingX} y2={height/2} stroke="rgba(255,255,255,0.03)" strokeWidth="1" />
           <line x1={paddingX} y1={height - paddingY} x2={width - paddingX} y2={height - paddingY} stroke="rgba(255,255,255,0.03)" strokeWidth="1" />
-
-          <path d={pathD} className="chart-line" />
-
-          {points.map((p, idx) => (
-            <g key={idx}>
-              <circle cx={p.x} cy={p.y} r="4" className="chart-dots" />
-              <text x={p.x} y={p.y - 8} fill="white" fontSize="7" fontWeight="bold" textAnchor="middle">{p.weight}kg</text>
-              <text x={p.x} y={height - 2} fill="var(--text-dark)" fontSize="7" textAnchor="middle">{p.date}</text>
+          <path d={pathD} fill="none" stroke="var(--color-primary)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+          {points.map((p, i) => (
+            <g key={i}>
+              <circle cx={p.x} cy={p.y} r="5" fill="var(--color-primary)" stroke="#09090b" strokeWidth="2" />
+              <text x={p.x} y={p.y - 10} fill="white" fontSize="10" fontWeight="bold" textAnchor="middle">{p.weight}kg</text>
+              <text x={p.x} y={height - 2} fill="var(--text-dark)" fontSize="8" textAnchor="middle">{p.date}</text>
             </g>
           ))}
         </svg>
@@ -316,15 +324,19 @@ export const ActiveWorkout: React.FC = () => {
   return (
     <div className="animate-fade-in-up" style={{ paddingBottom: '50px' }}>
       {/* 1. TOP BAR (Registra allenamento | Dischi / 1RM | Termina) */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '14px 16px',
-        background: '#121216',
-        borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
-        margin: '-16px -16px 14px -16px'
-      }}>
+      <div 
+        className="active-workout-top-bar"
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '14px 16px',
+          background: '#121216',
+          border: '1px solid rgba(255, 255, 255, 0.08)',
+          borderRadius: '12px',
+          marginBottom: '14px'
+        }}
+      >
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <ChevronDown size={18} color="var(--text-muted)" />
           <h2 style={{ fontSize: '1.1rem', fontWeight: 800, margin: 0, color: 'white' }}>
@@ -528,7 +540,7 @@ export const ActiveWorkout: React.FC = () => {
             const exDetail = mockExercises.find(e => e.id === exLog.exerciseId);
             if (!exDetail) return null;
 
-            const prevSets = getPreviousPerformances(exLog.exerciseId);
+            const prevSets = prevPerformancesMap[exLog.exerciseId] || [];
 
             return (
               <div key={exLog.exerciseId} className="glass-card exercise-log-card">
