@@ -315,14 +315,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ setCurrentTab }) => {
           className={`segmented-btn ${activeSection === 'muscles' ? 'active' : ''}`}
           onClick={() => setActiveSection('muscles')}
         >
-          <Activity size={14} /> Muscoli & Recupero
+          <Activity size={14} /> Muscoli
         </button>
         <button
           type="button"
           className={`segmented-btn ${activeSection === 'vitals' ? 'active' : ''}`}
           onClick={() => setActiveSection('vitals')}
         >
-          <Heart size={14} /> Salute & Parametri
+          <Heart size={14} /> Salute
         </button>
       </div>
 
