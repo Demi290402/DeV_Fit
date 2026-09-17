@@ -708,9 +708,9 @@ export const Profile: React.FC = () => {
                 <span>Genere: <strong style={{ color: 'white', textTransform: 'capitalize' }}>{profile.gender === 'female' ? 'Femmina' : 'Maschio'}</strong></span>
                 <span>Altezza: <strong style={{ color: 'white' }}>{profile.height || 165} cm</strong></span>
                 <span>Peso: <strong style={{ color: 'white' }}>{profile.weight} kg</strong></span>
-                {profile.height && profile.weight && (
+                {profile.height > 0 && profile.weight > 0 && (
                   <span>BMI: <strong style={{ color: 'var(--color-primary)' }}>
-                    {(profile.weight / Math.pow((profile.height || 165) / 100, 2)).toFixed(1)}
+                    {(profile.weight / Math.pow(profile.height / 100, 2)).toFixed(1)}
                   </strong></span>
                 )}
               </div>

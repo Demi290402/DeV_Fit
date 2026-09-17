@@ -2,13 +2,43 @@ import React, { createContext, useContext, useState, useEffect, useMemo, useCall
 import confetti from 'canvas-confetti';
 import { createClient } from '@supabase/supabase-js';
 
-// Supabase client initialization (automatic fallback if env variables are missing)
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+// Supabase client configuration & initialization (reads from localStorage fallback or Vite .env)
+export const getStoredSupabaseConfig = () => {
+  const envUrl = import.meta.env.VITE_SUPABASE_URL || '';
+  const envKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+  const localUrl = localStorage.getItem('df_supabase_url') || '';
+  const localKey = localStorage.getItem('df_supabase_anon_key') || '';
 
-export const supabase = supabaseUrl && supabaseAnonKey 
-  ? createClient(supabaseUrl, supabaseAnonKey) 
-  : null;
+  const url = (localUrl || envUrl).trim();
+  const anonKey = (localKey || envKey).trim();
+
+  const isValid = url.startsWith('https://') && url.includes('.supabase.co') && !url.includes('IL_TUO_PROJECT_URL');
+  return {
+    url: isValid ? url : '',
+    anonKey: isValid && anonKey && !anonKey.includes('LA_TUA_CHIAVE') ? anonKey : ''
+  };
+};
+
+export const createSupabaseInstance = (url: string, key: string) => {
+  if (url && key) {
+    try {
+      return createClient(url, key, {
+        auth: {
+          persistSession: true,
+          autoRefreshToken: true,
+          detectSessionInUrl: true,
+        }
+      });
+    } catch (err) {
+      console.warn('Errore inizializzazione client Supabase:', err);
+      return null;
+    }
+  }
+  return null;
+};
+
+const initialSupabaseCfg = getStoredSupabaseConfig();
+export let supabase = createSupabaseInstance(initialSupabaseCfg.url, initialSupabaseCfg.anonKey);
 
 export interface ProfileData {
   name: string;
@@ -140,6 +170,11 @@ interface AppContextType {
   commentSocialPost: (postId: string, username: string, commentText: string) => void;
   triggerConfetti: () => void;
   getPreviousPerformances: (exerciseId: string) => { weight: number; reps: number }[];
+  isSupabaseConfigured: boolean;
+  supabaseUrl: string;
+  supabaseAnonKey: string;
+  saveSupabaseConfig: (url: string, anonKey: string) => { success: boolean; message: string };
+  syncAllDataToCloud: () => Promise<{ success: boolean; message: string }>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -290,44 +325,227 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, []);
 
 
+  // --- SUPABASE CLIENT STATE & DYNAMIC CONFIG ---
+  const [supabaseConfig, setSupabaseConfig] = useState(() => getStoredSupabaseConfig());
+  const [supabaseClient, setSupabaseClient] = useState(() => supabase);
+  const isSupabaseConfigured = Boolean(supabaseClient && supabaseConfig.url && supabaseConfig.anonKey);
+
+  const saveSupabaseConfig = (newUrl: string, newKey: string): { success: boolean; message: string } => {
+    const cleanUrl = newUrl.trim();
+    const cleanKey = newKey.trim();
+    if (!cleanUrl || !cleanKey) {
+      return { success: false, message: 'URL e Anon Key non possono essere vuoti.' };
+    }
+    if (!cleanUrl.startsWith('https://') || !cleanUrl.includes('.supabase.co')) {
+      return { success: false, message: 'L\'URL deve essere un indirizzo Supabase valido (es. https://xyz.supabase.co).' };
+    }
+
+    try {
+      const client = createSupabaseInstance(cleanUrl, cleanKey);
+      if (!client) throw new Error('Inizializzazione client fallita.');
+      localStorage.setItem('df_supabase_url', cleanUrl);
+      localStorage.setItem('df_supabase_anon_key', cleanKey);
+      supabase = client;
+      setSupabaseConfig({ url: cleanUrl, anonKey: cleanKey });
+      setSupabaseClient(client);
+      return { success: true, message: 'Credenziali salvate! Connessione a Supabase attiva.' };
+    } catch (err: any) {
+      return { success: false, message: `Errore: ${err.message}` };
+    }
+  };
+
+  // --- CLOUD SYNC HELPERS ---
+  const syncProfileToCloud = useCallback(async (userId: string, prof: ProfileData, client = supabaseClient) => {
+    if (!client || !userId) return;
+    try {
+      const payload = {
+        id: userId,
+        name: prof.name,
+        gender: prof.gender,
+        height: prof.height,
+        weight: prof.weight,
+        body_fat: prof.bodyFat,
+        waist: prof.waist,
+        arms: prof.arms,
+        thighs: prof.thighs,
+        avatar_url: prof.avatarUrl || null,
+        banner_url: prof.bannerUrl || null,
+        target_calories: prof.targetCalories,
+        target_protein: prof.targetProtein,
+        target_carbs: prof.targetCarbs,
+        target_fat: prof.targetFat,
+        streak: prof.streak,
+        last_logged_date: prof.lastLoggedDate,
+        updated_at: new Date().toISOString()
+      };
+      await client.from('profiles').upsert(payload, { onConflict: 'id' });
+    } catch (err) {
+      console.warn('Errore syncProfileToCloud:', err);
+    }
+  }, [supabaseClient]);
+
+  const syncProfileFromCloud = useCallback(async (userId: string, client = supabaseClient) => {
+    if (!client || !userId) return;
+    try {
+      const { data, error } = await client
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .maybeSingle();
+
+      if (error) {
+        console.warn('Errore lettura profilo da Supabase:', error);
+        return;
+      }
+
+      if (data) {
+        setProfile(prev => ({
+          ...prev,
+          name: data.name || prev.name,
+          gender: (data.gender as 'female' | 'male') || prev.gender,
+          height: typeof data.height === 'number' ? data.height : prev.height,
+          weight: typeof data.weight === 'number' ? data.weight : prev.weight,
+          bodyFat: typeof data.body_fat === 'number' ? data.body_fat : prev.bodyFat,
+          waist: typeof data.waist === 'number' ? data.waist : prev.waist,
+          arms: typeof data.arms === 'number' ? data.arms : prev.arms,
+          thighs: typeof data.thighs === 'number' ? data.thighs : prev.thighs,
+          avatarUrl: data.avatar_url ?? prev.avatarUrl,
+          bannerUrl: data.banner_url ?? prev.bannerUrl,
+          targetCalories: typeof data.target_calories === 'number' ? data.target_calories : prev.targetCalories,
+          targetProtein: typeof data.target_protein === 'number' ? data.target_protein : prev.targetProtein,
+          targetCarbs: typeof data.target_carbs === 'number' ? data.target_carbs : prev.targetCarbs,
+          targetFat: typeof data.target_fat === 'number' ? data.target_fat : prev.targetFat,
+          streak: typeof data.streak === 'number' ? data.streak : prev.streak,
+          lastLoggedDate: data.last_logged_date || prev.lastLoggedDate
+        }));
+      } else {
+        await syncProfileToCloud(userId, profile, client);
+      }
+    } catch (err) {
+      console.warn('Errore durante syncProfileFromCloud:', err);
+    }
+  }, [supabaseClient, profile, syncProfileToCloud]);
+
+  const syncAllDataToCloud = async (): Promise<{ success: boolean; message: string }> => {
+    if (!supabaseClient) {
+      return { success: false, message: 'Supabase non è configurato. Inserisci URL e Anon Key prima di sincronizzare.' };
+    }
+    if (!user) {
+      return { success: false, message: 'Devi aver effettuato l\'accesso con un account per sincronizzare i dati su Supabase.' };
+    }
+
+    try {
+      // 1. Sync Profile
+      await syncProfileToCloud(user.id, profile, supabaseClient);
+
+      // 2. Sync Routines
+      if (routines.length > 0) {
+        const routinesPayload = routines.map(r => ({
+          id: r.id,
+          user_id: user.id,
+          name: r.name,
+          description: r.description,
+          exercises: r.exercises
+        }));
+        await supabaseClient.from('routines').upsert(routinesPayload, { onConflict: 'id' });
+      }
+
+      // 3. Sync Workout Logs
+      if (workoutHistory.length > 0) {
+        const historyPayload = workoutHistory.map(w => ({
+          id: w.id,
+          user_id: user.id,
+          name: w.name,
+          date: w.date,
+          duration: w.duration,
+          volume: w.volume,
+          exercises: w.exercises
+        }));
+        await supabaseClient.from('workout_logs').upsert(historyPayload, { onConflict: 'id' });
+      }
+
+      // 4. Sync Food Logs
+      const foodEntries: any[] = [];
+      Object.entries(foodLogs).forEach(([date, items]) => {
+        items.forEach(item => {
+          foodEntries.push({
+            id: item.id,
+            user_id: user.id,
+            date,
+            name: item.name,
+            meal_type: item.mealType,
+            calories: item.calories,
+            protein: item.protein,
+            carbs: item.carbs,
+            fat: item.fat,
+            weight: item.weight
+          });
+        });
+      });
+      if (foodEntries.length > 0) {
+        await supabaseClient.from('food_logs').upsert(foodEntries, { onConflict: 'id' });
+      }
+
+      return {
+        success: true,
+        message: `Sincronizzazione completata! Profilo, ${routines.length} schede, ${workoutHistory.length} allenamenti e ${foodEntries.length} alimenti salvati sul cloud Supabase.`
+      };
+    } catch (err: any) {
+      return { success: false, message: `Errore durante la sincronizzazione: ${err.message}` };
+    }
+  };
+
   // --- SUPABASE SESSION WATCH ---
   useEffect(() => {
-    if (!supabase) return;
+    if (!supabaseClient) return;
     
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabaseClient.auth.getSession().then(({ data: { session } }) => {
       if (session) {
-        setUser({
+        const name = session.user.user_metadata?.name || session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'Utente';
+        const u = {
           id: session.user.id,
           email: session.user.email || '',
-          name: session.user.user_metadata.name || 'Utente'
-        });
+          name
+        };
+        setUser(u);
+        syncProfileFromCloud(session.user.id, supabaseClient);
       }
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabaseClient.auth.onAuthStateChange((_event, session) => {
       if (session) {
-        setUser({
+        const name = session.user.user_metadata?.name || session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'Utente';
+        const u = {
           id: session.user.id,
           email: session.user.email || '',
-          name: session.user.user_metadata.name || 'Utente'
-        });
+          name
+        };
+        setUser(u);
+        syncProfileFromCloud(session.user.id, supabaseClient);
       } else {
         setUser(null);
       }
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [supabaseClient, syncProfileFromCloud]);
 
   // --- AUTH ACTIONS ---
   const signUp = async (email: string, pass: string, name: string) => {
-    if (supabase) {
-      const { error } = await supabase.auth.signUp({
+    if (supabaseClient) {
+      const { data, error } = await supabaseClient.auth.signUp({
         email,
         password: pass,
-        options: { data: { name } }
+        options: { data: { name, full_name: name } }
       });
       if (error) throw error;
+      if (data.user) {
+        const initialProf: ProfileData = {
+          ...profile,
+          name
+        };
+        await syncProfileToCloud(data.user.id, initialProf, supabaseClient);
+      }
     } else {
       // Mock SignUp
       const mockId = `usr-${Date.now()}`;
@@ -338,9 +556,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const signIn = async (email: string, pass: string) => {
-    if (supabase) {
-      const { error } = await supabase.auth.signInWithPassword({ email, password: pass });
+    if (supabaseClient) {
+      const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password: pass });
       if (error) throw error;
+      if (data.user) {
+        await syncProfileFromCloud(data.user.id, supabaseClient);
+      }
     } else {
       // Mock SignIn
       const savedUser = localStorage.getItem('df_user');
@@ -349,7 +570,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setUser(u);
         setProfile(prev => ({ ...prev, name: u.name }));
       } else {
-        // Create user on fly for demonstration in mock mode
         const mockUser = { id: `usr-${Date.now()}`, email, name: email.split('@')[0] };
         setUser(mockUser);
         setProfile(prev => ({ ...prev, name: mockUser.name }));
@@ -358,8 +578,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const signInWithOAuth = async (provider: 'google' | 'facebook') => {
-    if (supabase) {
-      const { error } = await supabase.auth.signInWithOAuth({
+    if (supabaseClient) {
+      const { error } = await supabaseClient.auth.signInWithOAuth({
         provider,
         options: {
           redirectTo: window.location.origin
@@ -379,26 +599,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const signOut = async () => {
-    if (supabase) {
-      await supabase.auth.signOut();
+    if (supabaseClient) {
+      await supabaseClient.auth.signOut();
     }
     setUser(null);
   };
 
   const deleteAccountAndData = async () => {
-    if (supabase) {
-      // 1. Delete user database rows
-      if (user) {
-        await supabase.from('profiles').delete().eq('id', user.id);
-        // Note: other tables cascade delete if configured in Postgres,
-        // otherwise we manually delete them:
-        await supabase.from('food_logs').delete().eq('user_id', user.id);
-        await supabase.from('workout_logs').delete().eq('user_id', user.id);
-        await supabase.from('routines').delete().eq('user_id', user.id);
-      }
-      // Note: Supabase free tier doesn't allow users to delete themselves from Auth easily without an admin API,
-      // so we call a custom edge function if implemented, or we sign out and let user settings trigger:
-      await supabase.auth.signOut();
+    if (supabaseClient && user) {
+      await supabaseClient.from('profiles').delete().eq('id', user.id);
+      await supabaseClient.from('food_logs').delete().eq('user_id', user.id);
+      await supabaseClient.from('workout_logs').delete().eq('user_id', user.id);
+      await supabaseClient.from('routines').delete().eq('user_id', user.id);
+      await supabaseClient.auth.signOut();
     }
     
     // Clear LocalStorage data (right to be forgotten / data deletion compliance)
@@ -461,16 +674,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           updated.streak = 1;
         }
       }
+      if (user && supabaseClient) {
+        syncProfileToCloud(user.id, updated, supabaseClient);
+      }
       return updated;
     });
   };
 
   const addRoutine = (routine: Routine) => {
     setRoutines(prev => [routine, ...prev]);
+    if (user && supabaseClient) {
+      supabaseClient.from('routines').upsert({
+        id: routine.id,
+        user_id: user.id,
+        name: routine.name,
+        description: routine.description,
+        exercises: routine.exercises
+      }, { onConflict: 'id' }).then(({ error }) => {
+        if (error) console.warn('Errore sync routine cloud:', error);
+      });
+    }
   };
 
   const deleteRoutine = (id: string) => {
     setRoutines(prev => prev.filter(r => r.id !== id));
+    if (user && supabaseClient) {
+      supabaseClient.from('routines').delete().eq('id', id).then(({ error }) => {
+        if (error) console.warn('Errore delete routine cloud:', error);
+      });
+    }
   };
 
   const startWorkout = (routineId?: string, repeatWorkout?: WorkoutLog) => {
@@ -694,6 +926,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     setWorkoutHistory(prev => [newLog, ...prev]);
 
+    if (user && supabaseClient) {
+      supabaseClient.from('workout_logs').upsert({
+        id: newLog.id,
+        user_id: user.id,
+        name: newLog.name,
+        date: newLog.date,
+        duration: newLog.duration,
+        volume: newLog.volume,
+        exercises: newLog.exercises
+      }, { onConflict: 'id' }).then(({ error }) => {
+        if (error) console.warn('Errore salvataggio workout cloud:', error);
+      });
+    }
+
     const durationMin = `${Math.floor(duration / 60)}m`;
     addSocialPost({
       username: profile.name,
@@ -730,6 +976,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       };
     });
 
+    if (user && supabaseClient) {
+      supabaseClient.from('food_logs').upsert({
+        id: newItem.id,
+        user_id: user.id,
+        date: dateStr,
+        name: newItem.name,
+        meal_type: newItem.mealType,
+        calories: newItem.calories,
+        protein: newItem.protein,
+        carbs: newItem.carbs,
+        fat: newItem.fat,
+        weight: newItem.weight
+      }, { onConflict: 'id' }).then(({ error }) => {
+        if (error) console.warn('Errore salvataggio alimento cloud:', error);
+      });
+    }
+
     updateProfile({ lastLoggedDate: dateStr });
   };
 
@@ -741,6 +1004,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         [dateStr]: prev[dateStr].filter(item => item.id !== id)
       };
     });
+
+    if (user && supabaseClient) {
+      supabaseClient.from('food_logs').delete().eq('id', id).then(({ error }) => {
+        if (error) console.warn('Errore eliminazione alimento cloud:', error);
+      });
+    }
   };
 
   const updateCycleData = (data: Partial<CycleData>) => {
@@ -821,7 +1090,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       triggerConfetti,
       getPreviousPerformances,
       mealsList,
-      updateMealsList
+      updateMealsList,
+      isSupabaseConfigured,
+      supabaseUrl: supabaseConfig.url,
+      supabaseAnonKey: supabaseConfig.anonKey,
+      saveSupabaseConfig,
+      syncAllDataToCloud
     }}>
       {children}
     </AppContext.Provider>

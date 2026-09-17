@@ -1,10 +1,18 @@
 import React, { useState } from 'react';
-import { Mail, Lock, User, ShieldCheck } from 'lucide-react';
+import { Mail, Lock, User, ShieldCheck, Settings, Database, Key, Check, AlertCircle, X, HelpCircle } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
 
 export const AuthScreen: React.FC = () => {
-  const { signIn, signUp, signInWithOAuth } = useApp();
+  const {
+    signIn,
+    signUp,
+    signInWithOAuth,
+    isSupabaseConfigured,
+    supabaseUrl,
+    supabaseAnonKey,
+    saveSupabaseConfig
+  } = useApp();
 
   const [mode, setMode] = useState<'signin' | 'signup' | 'forgot'>('signin');
   const [email, setEmail] = useState('');
@@ -16,6 +24,45 @@ export const AuthScreen: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+
+  // Supabase In-App Configuration Modal State
+  const [showConfigModal, setShowConfigModal] = useState(false);
+  const [inputUrl, setInputUrl] = useState(supabaseUrl);
+  const [inputKey, setInputKey] = useState(supabaseAnonKey);
+  const [configFeedback, setConfigFeedback] = useState<{ success: boolean; message: string } | null>(null);
+
+  const handleSaveConfig = (e: React.FormEvent) => {
+    e.preventDefault();
+    const res = saveSupabaseConfig(inputUrl, inputKey);
+    setConfigFeedback(res);
+    if (res.success) {
+      setTimeout(() => {
+        setShowConfigModal(false);
+        setConfigFeedback(null);
+      }, 1500);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    setErrorMsg('');
+    setSuccessMsg('');
+    setLoading(true);
+    try {
+      await signInWithOAuth('google');
+    } catch (err: any) {
+      console.warn('Errore Google Sign-in:', err);
+      const raw = err.message || '';
+      if (raw.includes('provider is not enabled') || raw.includes('Unsupported provider')) {
+        setErrorMsg('Il provider Google non è attivo nel pannello Supabase (richiede configurazione OAuth da Google Cloud Console). Puoi accedere o registrarti SUBITO con Email e Password qui sotto senza alcuna configurazione esterna!');
+      } else if (!isSupabaseConfigured) {
+        setErrorMsg('Supabase non è ancora connesso al tuo progetto. Clicca sul pulsante "Configura Supabase" in cima allo schermo per inserire Project URL e Anon Key.');
+      } else {
+        setErrorMsg(raw || 'Si è verificato un errore durante l\'accesso con Google.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleAction = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,7 +78,7 @@ export const AuthScreen: React.FC = () => {
           throw new Error('È necessario acconsentire al trattamento dei dati per registrarsi.');
         }
         await signUp(email, password, name);
-        setSuccessMsg('Registrazione completata! Controlla la tua casella di posta per confermare l\'account prima di accedere.');
+        setSuccessMsg('Registrazione completata con successo!');
       } else {
         // Forgot password mock/real trigger
         setSuccessMsg('Email di recupero password inviata con successo!');
@@ -69,6 +116,41 @@ export const AuthScreen: React.FC = () => {
           </p>
         </div>
 
+        {/* Supabase Connection Status Pill */}
+        <div style={{ display: 'flex', justifyContent: 'center' }}>
+          <button
+            type="button"
+            onClick={() => setShowConfigModal(true)}
+            style={{
+              background: isSupabaseConfigured ? 'rgba(16, 185, 129, 0.12)' : 'rgba(245, 158, 11, 0.12)',
+              border: `1px solid ${isSupabaseConfigured ? 'rgba(16, 185, 129, 0.35)' : 'rgba(245, 158, 11, 0.35)'}`,
+              borderRadius: '24px',
+              padding: '6px 14px',
+              fontSize: '0.72rem',
+              color: isSupabaseConfigured ? '#34d399' : '#fbbf24',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              cursor: 'pointer',
+              fontWeight: 600,
+              transition: 'all 0.2s ease'
+            }}
+          >
+            <span style={{
+              width: '8px',
+              height: '8px',
+              borderRadius: '50%',
+              background: isSupabaseConfigured ? '#10b981' : '#f59e0b',
+              boxShadow: isSupabaseConfigured ? '0 0 8px #10b981' : '0 0 8px #f59e0b'
+            }} />
+            <span>
+              {isSupabaseConfigured 
+                ? `Cloud Supabase Connesso (${supabaseUrl.replace('https://', '').split('.')[0]})`
+                : 'Database Locale (Clicca per configurare Supabase)'}
+            </span>
+            <Settings size={13} style={{ opacity: 0.8 }} />
+          </button>
+        </div>
 
         {/* Auth Card */}
         <div className="glass-card animate-scale-in" style={{ padding: '28px', border: '1px solid var(--border-color)' }}>
@@ -196,7 +278,7 @@ export const AuthScreen: React.FC = () => {
                 type="button" 
                 className="btn-secondary" 
                 disabled={loading}
-                onClick={() => signInWithOAuth('google')}
+                onClick={handleGoogleLogin}
                 style={{ 
                   width: '100%', 
                   height: '42px', 
@@ -219,10 +301,14 @@ export const AuthScreen: React.FC = () => {
                 </svg>
                 Accedi con Google
               </button>
+
+              <div style={{ background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.05)', borderRadius: 'var(--radius-sm)', padding: '8px 10px', marginTop: '2px', textAlign: 'center' }}>
+                <p style={{ fontSize: '0.67rem', color: 'var(--text-dark)', margin: 0, lineHeight: '1.4' }}>
+                  💡 <strong>Consiglio rapido:</strong> Per te e Valeria, la registrazione con <strong>Email e Password</strong> qui sopra funziona all'istante senza richiedere autorizzazioni o account Google Cloud.
+                </p>
+              </div>
             </div>
           )}
-
-
 
           {/* Mode Switchers */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '20px', borderTop: '1px solid rgba(255,255,255,0.03)', paddingTop: '16px', fontSize: '0.78rem', textAlign: 'center' }}>
@@ -263,6 +349,119 @@ export const AuthScreen: React.FC = () => {
         </div>
 
       </div>
+
+      {/* Supabase In-App Configuration Modal */}
+      {showConfigModal && (
+        <div 
+          className="modal-overlay" 
+          onClick={() => setShowConfigModal(false)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '20px' }}
+        >
+          <div 
+            className="glass-card animate-scale-in" 
+            onClick={e => e.stopPropagation()}
+            style={{ maxWidth: '440px', width: '100%', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px', border: '1px solid var(--border-color)', background: '#111116' }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Database size={20} color="var(--color-primary)" />
+                <h3 style={{ fontSize: '1.05rem', fontWeight: 800, margin: 0 }}>Configura Supabase Cloud</h3>
+              </div>
+              <button 
+                type="button" 
+                onClick={() => setShowConfigModal(false)}
+                style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div style={{ background: 'rgba(212, 175, 55, 0.08)', border: '1px solid rgba(212, 175, 55, 0.25)', borderRadius: 'var(--radius-sm)', padding: '12px', fontSize: '0.72rem', color: 'var(--text-muted)', lineHeight: '1.45' }}>
+              <strong style={{ color: 'var(--color-primary)', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <HelpCircle size={14} /> Come recuperare le chiavi dal tuo Supabase:
+              </strong>
+              <ol style={{ margin: '6px 0 0 16px', padding: 0 }}>
+                <li>Nel pannello Supabase (dove vedi la tabella <em>profiles</em>), clicca in alto su <strong>-o- Connect</strong>.</li>
+                <li>Oppure vai sull'icona ingranaggio in basso a sinistra (<strong>Project Settings</strong>) &rarr; <strong>API</strong>.</li>
+                <li>Copia il <strong>Project URL</strong> e la chiave <strong>anon public</strong> e incollali qui sotto.</li>
+              </ol>
+            </div>
+
+            <form onSubmit={handleSaveConfig} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div>
+                <label style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>
+                  Project URL
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <Database size={15} color="var(--text-dark)" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
+                  <input
+                    type="url"
+                    required
+                    placeholder="https://xyzxyzxyz.supabase.co"
+                    value={inputUrl}
+                    onChange={e => setInputUrl(e.target.value)}
+                    className="set-input"
+                    style={{ width: '100%', paddingLeft: '36px', textAlign: 'left', height: '40px', fontSize: '0.78rem' }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>
+                  Anon Public Key
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <Key size={15} color="var(--text-dark)" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
+                  <input
+                    type="text"
+                    required
+                    placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                    value={inputKey}
+                    onChange={e => setInputKey(e.target.value)}
+                    className="set-input"
+                    style={{ width: '100%', paddingLeft: '36px', textAlign: 'left', height: '40px', fontSize: '0.78rem' }}
+                  />
+                </div>
+              </div>
+
+              {configFeedback && (
+                <div style={{
+                  padding: '10px 12px',
+                  borderRadius: 'var(--radius-sm)',
+                  fontSize: '0.74rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  background: configFeedback.success ? 'rgba(16, 185, 129, 0.12)' : 'rgba(239, 68, 68, 0.12)',
+                  border: `1px solid ${configFeedback.success ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
+                  color: configFeedback.success ? 'var(--color-success)' : 'var(--color-error)'
+                }}>
+                  {configFeedback.success ? <Check size={16} /> : <AlertCircle size={16} />}
+                  <span>{configFeedback.message}</span>
+                </div>
+              )}
+
+              <div style={{ display: 'flex', gap: '10px', marginTop: '6px' }}>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => setShowConfigModal(false)}
+                  style={{ flex: 1, height: '40px', fontSize: '0.78rem' }}
+                >
+                  Annulla
+                </button>
+                <button
+                  type="submit"
+                  className="btn-primary"
+                  style={{ flex: 1, height: '40px', fontSize: '0.78rem' }}
+                >
+                  Salva & Connetti
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

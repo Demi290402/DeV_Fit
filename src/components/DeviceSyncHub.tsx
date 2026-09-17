@@ -1,7 +1,25 @@
 import React, { useState, useEffect } from 'react';
-import { Bluetooth, Smartphone, ShieldCheck, Heart, Scale, Moon, Download, Upload, Check, AlertCircle } from 'lucide-react';
+import { Bluetooth, Smartphone, ShieldCheck, Heart, Scale, Moon, Download, Upload, Check, AlertCircle, Cloud, RefreshCw, Settings, Database, Key, X } from 'lucide-react';
+import { useApp } from '../context/AppContext';
 
 export const DeviceSyncHub: React.FC = () => {
+  const {
+    user,
+    isSupabaseConfigured,
+    supabaseUrl,
+    supabaseAnonKey,
+    saveSupabaseConfig,
+    syncAllDataToCloud
+  } = useApp();
+
+  // Cloud Sync state
+  const [isCloudSyncing, setIsCloudSyncing] = useState(false);
+  const [cloudSyncFeedback, setCloudSyncFeedback] = useState<{ success: boolean; message: string } | null>(null);
+  const [showConfigModal, setShowConfigModal] = useState(false);
+  const [inputUrl, setInputUrl] = useState(supabaseUrl);
+  const [inputKey, setInputKey] = useState(supabaseAnonKey);
+  const [configFeedback, setConfigFeedback] = useState<{ success: boolean; message: string } | null>(null);
+
   // Web Bluetooth state
   const [isBleSupported, setIsBleSupported] = useState(false);
   const [bleDeviceName, setBleDeviceName] = useState<string | null>(() => localStorage.getItem('df_ble_device_name'));
@@ -115,6 +133,32 @@ export const DeviceSyncHub: React.FC = () => {
       }
     };
     reader.readAsText(file);
+  };
+
+  const handleCloudSync = async () => {
+    setCloudSyncFeedback(null);
+    setIsCloudSyncing(true);
+    try {
+      const res = await syncAllDataToCloud();
+      setCloudSyncFeedback(res);
+      setTimeout(() => setCloudSyncFeedback(null), 5000);
+    } catch (err: any) {
+      setCloudSyncFeedback({ success: false, message: err.message || 'Errore durante la sincronizzazione.' });
+    } finally {
+      setIsCloudSyncing(false);
+    }
+  };
+
+  const handleSaveConfig = (e: React.FormEvent) => {
+    e.preventDefault();
+    const res = saveSupabaseConfig(inputUrl, inputKey);
+    setConfigFeedback(res);
+    if (res.success) {
+      setTimeout(() => {
+        setShowConfigModal(false);
+        setConfigFeedback(null);
+      }, 1500);
+    }
   };
 
   return (
@@ -274,6 +318,94 @@ export const DeviceSyncHub: React.FC = () => {
         </div>
       </div>
 
+      {/* 2.5 Cloud Sync Card (Supabase) */}
+      <div style={{
+        background: 'linear-gradient(135deg, rgba(20, 20, 26, 0.95) 0%, rgba(10, 10, 14, 0.95) 100%)',
+        border: `1px solid ${isSupabaseConfigured ? 'rgba(16, 185, 129, 0.3)' : 'rgba(245, 158, 11, 0.3)'}`,
+        borderRadius: 'var(--radius-md)',
+        padding: '16px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '12px'
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '8px' }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Cloud size={20} color={isSupabaseConfigured ? '#34d399' : '#fbbf24'} />
+              <h4 style={{ fontSize: '0.9rem', fontWeight: 800, margin: 0, color: 'white' }}>
+                Sincronizzazione Cloud Supabase
+              </h4>
+            </div>
+            <p style={{ fontSize: '0.72rem', color: 'var(--text-dark)', marginTop: '4px', margin: 0 }}>
+              {isSupabaseConfigured 
+                ? `Connesso a ${supabaseUrl.replace('https://', '').split('.')[0]}. Dati sincronizzati nel tuo PostgreSQL.`
+                : 'Supabase non è ancora connesso. Configura URL e Anon Key per salvare i dati sul cloud gratuito.'}
+            </p>
+          </div>
+
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={() => setShowConfigModal(true)}
+            style={{ fontSize: '0.7rem', padding: '6px 10px', display: 'flex', alignItems: 'center', gap: '5px' }}
+          >
+            <Settings size={13} /> {isSupabaseConfigured ? 'Modifica Chiavi' : 'Configura Chiavi'}
+          </button>
+        </div>
+
+        {/* User Badge if logged in */}
+        {user ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.03)', padding: '8px 12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', fontSize: '0.75rem' }}>
+            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981' }} />
+            <span>Account attivo: <strong style={{ color: 'var(--color-primary)' }}>{user.name}</strong> ({user.email})</span>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(245, 158, 11, 0.08)', padding: '8px 12px', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(245, 158, 11, 0.2)', fontSize: '0.72rem', color: '#fbbf24' }}>
+            <AlertCircle size={14} />
+            <span>Nessun account autenticato al momento. Accedi dal profilo per salvare su cloud.</span>
+          </div>
+        )}
+
+        {/* Feedback message */}
+        {cloudSyncFeedback && (
+          <div style={{
+            padding: '10px 12px',
+            borderRadius: 'var(--radius-sm)',
+            fontSize: '0.75rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            background: cloudSyncFeedback.success ? 'rgba(16, 185, 129, 0.12)' : 'rgba(239, 68, 68, 0.12)',
+            border: `1px solid ${cloudSyncFeedback.success ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
+            color: cloudSyncFeedback.success ? 'var(--color-success)' : 'var(--color-error)'
+          }}>
+            {cloudSyncFeedback.success ? <Check size={16} /> : <AlertCircle size={16} />}
+            <span>{cloudSyncFeedback.message}</span>
+          </div>
+        )}
+
+        {/* Sync Trigger Button */}
+        {user && isSupabaseConfigured && (
+          <button
+            type="button"
+            className="btn-primary"
+            onClick={handleCloudSync}
+            disabled={isCloudSyncing}
+            style={{
+              height: '42px',
+              fontSize: '0.78rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px'
+            }}
+          >
+            <RefreshCw size={15} className={isCloudSyncing ? 'animate-spin' : ''} />
+            {isCloudSyncing ? 'Sincronizzazione in corso...' : 'Sincronizza Tutti i Dati sul Cloud Supabase'}
+          </button>
+        )}
+      </div>
+
       {/* 3. Local Backup & Restore (Zero Server Dependency) */}
       <div style={{
         background: 'rgba(255, 255, 255, 0.02)',
@@ -325,6 +457,115 @@ export const DeviceSyncHub: React.FC = () => {
           </label>
         </div>
       </div>
+
+      {/* Supabase In-App Configuration Modal */}
+      {showConfigModal && (
+        <div 
+          className="modal-overlay" 
+          onClick={() => setShowConfigModal(false)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '20px' }}
+        >
+          <div 
+            className="glass-card animate-scale-in" 
+            onClick={e => e.stopPropagation()}
+            style={{ maxWidth: '440px', width: '100%', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px', border: '1px solid var(--border-color)', background: '#111116' }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Database size={20} color="var(--color-primary)" />
+                <h3 style={{ fontSize: '1.05rem', fontWeight: 800, margin: 0 }}>Configura Supabase Cloud</h3>
+              </div>
+              <button 
+                type="button" 
+                onClick={() => setShowConfigModal(false)}
+                style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div style={{ background: 'rgba(212, 175, 55, 0.08)', border: '1px solid rgba(212, 175, 55, 0.25)', borderRadius: 'var(--radius-sm)', padding: '12px', fontSize: '0.72rem', color: 'var(--text-muted)', lineHeight: '1.45' }}>
+              <strong style={{ color: 'var(--color-primary)' }}>Dove trovare le chiavi:</strong>
+              <p style={{ margin: '4px 0 0 0' }}>
+                Nel tuo progetto Supabase, clicca sul pulsante in alto <strong>-o- Connect</strong> oppure in <strong>Project Settings &rarr; API</strong>.
+              </p>
+            </div>
+
+            <form onSubmit={handleSaveConfig} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div>
+                <label style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>
+                  Project URL
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <Database size={15} color="var(--text-dark)" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
+                  <input
+                    type="url"
+                    required
+                    placeholder="https://xyzxyzxyz.supabase.co"
+                    value={inputUrl}
+                    onChange={e => setInputUrl(e.target.value)}
+                    className="set-input"
+                    style={{ width: '100%', paddingLeft: '36px', textAlign: 'left', height: '40px', fontSize: '0.78rem' }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>
+                  Anon Public Key
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <Key size={15} color="var(--text-dark)" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
+                  <input
+                    type="text"
+                    required
+                    placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                    value={inputKey}
+                    onChange={e => setInputKey(e.target.value)}
+                    className="set-input"
+                    style={{ width: '100%', paddingLeft: '36px', textAlign: 'left', height: '40px', fontSize: '0.78rem' }}
+                  />
+                </div>
+              </div>
+
+              {configFeedback && (
+                <div style={{
+                  padding: '10px 12px',
+                  borderRadius: 'var(--radius-sm)',
+                  fontSize: '0.74rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  background: configFeedback.success ? 'rgba(16, 185, 129, 0.12)' : 'rgba(239, 68, 68, 0.12)',
+                  border: `1px solid ${configFeedback.success ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
+                  color: configFeedback.success ? 'var(--color-success)' : 'var(--color-error)'
+                }}>
+                  {configFeedback.success ? <Check size={16} /> : <AlertCircle size={16} />}
+                  <span>{configFeedback.message}</span>
+                </div>
+              )}
+
+              <div style={{ display: 'flex', gap: '10px', marginTop: '6px' }}>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => setShowConfigModal(false)}
+                  style={{ flex: 1, height: '40px', fontSize: '0.78rem' }}
+                >
+                  Annulla
+                </button>
+                <button
+                  type="submit"
+                  className="btn-primary"
+                  style={{ flex: 1, height: '40px', fontSize: '0.78rem' }}
+                >
+                  Salva & Connetti
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
