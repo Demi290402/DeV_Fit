@@ -22,44 +22,29 @@ create table if not exists public.profiles (
   target_fat integer not null default 70,
   streak integer not null default 1,
   last_logged_date text not null default to_char(now(), 'YYYY-MM-DD'),
-  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
-  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
+  created_at timestamp with time zone default now() not null,
+  updated_at timestamp with time zone default now() not null
 );
 
--- Assicura che tutte le colonne necessarie esistano anche se la tabella era già stata creata
-do $$
-begin
-  if not exists (select 1 from information_schema.columns where table_schema='public' and table_name='profiles' and column_name='target_calories') then
-    alter table public.profiles add column target_calories integer not null default 2200;
-  end if;
-  if not exists (select 1 from information_schema.columns where table_schema='public' and table_name='profiles' and column_name='target_protein') then
-    alter table public.profiles add column target_protein integer not null default 150;
-  end if;
-  if not exists (select 1 from information_schema.columns where table_schema='public' and table_name='profiles' and column_name='target_carbs') then
-    alter table public.profiles add column target_carbs integer not null default 250;
-  end if;
-  if not exists (select 1 from information_schema.columns where table_schema='public' and table_name='profiles' and column_name='target_fat') then
-    alter table public.profiles add column target_fat integer not null default 70;
-  end if;
-  if not exists (select 1 from information_schema.columns where table_schema='public' and table_name='profiles' and column_name='streak') then
-    alter table public.profiles add column streak integer not null default 1;
-  end if;
-  if not exists (select 1 from information_schema.columns where table_schema='public' and table_name='profiles' and column_name='last_logged_date') then
-    alter table public.profiles add column last_logged_date text not null default to_char(now(), 'YYYY-MM-DD');
-  end if;
-  if not exists (select 1 from information_schema.columns where table_schema='public' and table_name='profiles' and column_name='avatar_url') then
-    alter table public.profiles add column avatar_url text;
-  end if;
-  if not exists (select 1 from information_schema.columns where table_schema='public' and table_name='profiles' and column_name='banner_url') then
-    alter table public.profiles add column banner_url text;
-  end if;
-  if not exists (select 1 from information_schema.columns where table_schema='public' and table_name='profiles' and column_name='created_at') then
-    alter table public.profiles add column created_at timestamp with time zone default timezone('utc'::text, now()) not null default now();
-  end if;
-  if not exists (select 1 from information_schema.columns where table_schema='public' and table_name='profiles' and column_name='updated_at') then
-    alter table public.profiles add column updated_at timestamp with time zone default timezone('utc'::text, now()) not null default now();
-  end if;
-end $$;
+-- Assicura che tutte le colonne necessarie esistano anche se la tabella era già stata creata in precedenza
+alter table public.profiles add column if not exists name text not null default 'Utente';
+alter table public.profiles add column if not exists gender text not null default 'male';
+alter table public.profiles add column if not exists height float8 not null default 175;
+alter table public.profiles add column if not exists weight float8 not null default 75;
+alter table public.profiles add column if not exists body_fat float8 not null default 15;
+alter table public.profiles add column if not exists waist float8 not null default 80;
+alter table public.profiles add column if not exists arms float8 not null default 35;
+alter table public.profiles add column if not exists thighs float8 not null default 55;
+alter table public.profiles add column if not exists avatar_url text;
+alter table public.profiles add column if not exists banner_url text;
+alter table public.profiles add column if not exists target_calories integer not null default 2200;
+alter table public.profiles add column if not exists target_protein integer not null default 150;
+alter table public.profiles add column if not exists target_carbs integer not null default 250;
+alter table public.profiles add column if not exists target_fat integer not null default 70;
+alter table public.profiles add column if not exists streak integer not null default 1;
+alter table public.profiles add column if not exists last_logged_date text not null default to_char(now(), 'YYYY-MM-DD');
+alter table public.profiles add column if not exists created_at timestamp with time zone not null default now();
+alter table public.profiles add column if not exists updated_at timestamp with time zone not null default now();
 
 -- Abilita Row Level Security (RLS) su profiles
 alter table public.profiles enable row level security;
@@ -202,7 +187,7 @@ create table if not exists public.routines (
   name text not null,
   description text default '',
   exercises jsonb not null default '[]'::jsonb,
-  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+  created_at timestamp with time zone default now() not null
 );
 
 alter table public.routines enable row level security;
@@ -223,7 +208,7 @@ create table if not exists public.workout_logs (
   duration integer not null default 0,
   volume float8 not null default 0,
   exercises jsonb not null default '[]'::jsonb,
-  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+  created_at timestamp with time zone default now() not null
 );
 
 alter table public.workout_logs enable row level security;
@@ -247,7 +232,7 @@ create table if not exists public.food_logs (
   carbs float8 not null default 0,
   fat float8 not null default 0,
   weight float8 not null default 0,
-  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+  created_at timestamp with time zone default now() not null
 );
 
 alter table public.food_logs enable row level security;
