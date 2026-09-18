@@ -7,7 +7,7 @@
 create table if not exists public.profiles (
   id uuid references auth.users on delete cascade primary key,
   name text not null default 'Utente',
-  gender text not null default 'male' check (gender in ('male', 'female')),
+  gender text not null default 'male',
   height float8 not null default 175,
   weight float8 not null default 75,
   body_fat float8 not null default 15,
@@ -21,12 +21,12 @@ create table if not exists public.profiles (
   target_carbs integer not null default 250,
   target_fat integer not null default 70,
   streak integer not null default 1,
-  last_logged_date text not null default to_char(now(), 'YYYY-MM-DD'),
+  last_logged_date date not null default current_date,
   created_at timestamp with time zone default now() not null,
   updated_at timestamp with time zone default now() not null
 );
 
--- Assicura che tutte le colonne necessarie esistano anche se la tabella era già stata creata in precedenza
+-- Assicura che tutte le colonne necessarie esistano anche se la tabella era già presente
 alter table public.profiles add column if not exists name text not null default 'Utente';
 alter table public.profiles add column if not exists gender text not null default 'male';
 alter table public.profiles add column if not exists height float8 not null default 175;
@@ -42,7 +42,7 @@ alter table public.profiles add column if not exists target_protein integer not 
 alter table public.profiles add column if not exists target_carbs integer not null default 250;
 alter table public.profiles add column if not exists target_fat integer not null default 70;
 alter table public.profiles add column if not exists streak integer not null default 1;
-alter table public.profiles add column if not exists last_logged_date text not null default to_char(now(), 'YYYY-MM-DD');
+alter table public.profiles add column if not exists last_logged_date date not null default current_date;
 alter table public.profiles add column if not exists created_at timestamp with time zone not null default now();
 alter table public.profiles add column if not exists updated_at timestamp with time zone not null default now();
 
@@ -71,7 +71,7 @@ create policy "Users can delete their own profile"
   using (auth.uid() = id);
 
 
--- 2. TRIGGER AUTOMATICO SU auth.users (Crea automaticamente la riga in public.profiles appena un utente si registra)
+-- 2. TRIGGER AUTOMATICO: crea automaticamente la riga in public.profiles appena un utente si registra
 create or replace function public.handle_new_user()
 returns trigger
 language plpgsql
@@ -119,7 +119,7 @@ begin
     250,
     70,
     1,
-    to_char(now(), 'YYYY-MM-DD')
+    current_date
   )
   on conflict (id) do update set
     name = coalesce(excluded.name, profiles.name),
@@ -135,7 +135,7 @@ create trigger on_auth_user_created
   for each row execute function public.handle_new_user();
 
 
--- 3. RECUPERO RETROATTIVO: SE CI SONO GIÀ UTENTI IN auth.users, CREA ORA I LORO PROFILI IN public.profiles
+-- 3. RECUPERO RETROATTIVO: se ci sono già utenti in auth.users, crea subito i rispettivi profili in public.profiles
 insert into public.profiles (
   id,
   name,
@@ -173,7 +173,7 @@ select
   250,
   70,
   1,
-  to_char(now(), 'YYYY-MM-DD')
+  current_date
 from auth.users u
 left join public.profiles p on p.id = u.id
 where p.id is null
@@ -190,6 +190,7 @@ create table if not exists public.routines (
   created_at timestamp with time zone default now() not null
 );
 
+alter table public.routines add column if not exists user_id uuid references auth.users on delete cascade;
 alter table public.routines enable row level security;
 
 drop policy if exists "Users can manage their own routines" on public.routines;
@@ -211,6 +212,7 @@ create table if not exists public.workout_logs (
   created_at timestamp with time zone default now() not null
 );
 
+alter table public.workout_logs add column if not exists user_id uuid references auth.users on delete cascade;
 alter table public.workout_logs enable row level security;
 
 drop policy if exists "Users can manage their own workout logs" on public.workout_logs;
@@ -235,6 +237,7 @@ create table if not exists public.food_logs (
   created_at timestamp with time zone default now() not null
 );
 
+alter table public.food_logs add column if not exists user_id uuid references auth.users on delete cascade;
 alter table public.food_logs enable row level security;
 
 drop policy if exists "Users can manage their own food logs" on public.food_logs;
