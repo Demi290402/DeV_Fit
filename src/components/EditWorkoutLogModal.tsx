@@ -206,7 +206,7 @@ export const EditWorkoutLogModal: React.FC<EditWorkoutLogModalProps> = ({
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
                     <div style={{ width: '28px', height: '28px' }}>
-                      {def ? renderMuscleIcon(def.muscleGroup, 28, '#00a8ff') : <Dumbbell size={20} />}
+                      {def ? renderMuscleIcon(def.muscleGroup, 28, '#d4af37') : <Dumbbell size={20} />}
                     </div>
                     <div>
                       <h4 style={{ fontSize: '0.9rem', fontWeight: 700, margin: 0, color: 'white' }}>
@@ -339,7 +339,7 @@ export const EditWorkoutLogModal: React.FC<EditWorkoutLogModalProps> = ({
                       background: 'rgba(255, 255, 255, 0.04)',
                       border: '1px dashed rgba(255, 255, 255, 0.15)',
                       borderRadius: '6px',
-                      color: '#00a8ff',
+                      color: 'var(--color-primary, #d4af37)',
                       fontSize: '0.74rem',
                       fontWeight: 600,
                       padding: '6px 12px',

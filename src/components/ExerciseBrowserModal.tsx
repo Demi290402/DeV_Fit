@@ -341,7 +341,7 @@ export const ExerciseBrowserModal: React.FC<ExerciseBrowserModalProps> = ({
               cursor: 'pointer'
             }}
           >
-            <AnatomicalIcon muscle={selectedMuscle} size={22} highlightColor={selectedMuscle !== 'All' ? '#d4af37' : '#00a8ff'} />
+            <AnatomicalIcon muscle={selectedMuscle} size={22} highlightColor="#d4af37" />
             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {selectedMuscle === 'All' ? 'Tutti i muscoli' : selectedMuscle}
             </span>
@@ -409,7 +409,7 @@ export const ExerciseBrowserModal: React.FC<ExerciseBrowserModalProps> = ({
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: 0 }}>
                   {/* High definition anatomical miniature icon */}
                   <div style={{ width: '42px', height: '42px', flexShrink: 0 }}>
-                    {renderMuscleIcon(ex.muscleGroup, 42, '#00a8ff')}
+                    {renderMuscleIcon(ex.muscleGroup, 42, '#d4af37')}
                   </div>
                   <div style={{ flex: 1, minWidth: 0, paddingRight: '8px' }}>
                     <h4 style={{ 
@@ -586,7 +586,7 @@ export const ExerciseBrowserModal: React.FC<ExerciseBrowserModalProps> = ({
                           cursor: 'pointer'
                         }}
                       >
-                        <AnatomicalIcon muscle={m.name} size={36} highlightColor={isSelected ? '#d4af37' : '#00a8ff'} />
+                        <AnatomicalIcon muscle={m.name} size={36} highlightColor="#d4af37" />
                         <span style={{ fontSize: '0.84rem', fontWeight: isSelected ? 800 : 600, color: isSelected ? 'var(--color-primary, #d4af37)' : 'white' }}>
                           {m.label}
                         </span>
@@ -619,7 +619,7 @@ export const ExerciseBrowserModal: React.FC<ExerciseBrowserModalProps> = ({
                           cursor: 'pointer'
                         }}
                       >
-                        <AnatomicalIcon muscle={m.name} size={36} highlightColor={isSelected ? '#d4af37' : '#00a8ff'} />
+                        <AnatomicalIcon muscle={m.name} size={36} highlightColor="#d4af37" />
                         <span style={{ fontSize: '0.84rem', fontWeight: isSelected ? 800 : 600, color: isSelected ? 'var(--color-primary, #d4af37)' : 'white' }}>
                           {m.label}
                         </span>
@@ -652,7 +652,7 @@ export const ExerciseBrowserModal: React.FC<ExerciseBrowserModalProps> = ({
                           cursor: 'pointer'
                         }}
                       >
-                        <AnatomicalIcon muscle={m.name} size={36} highlightColor={isSelected ? '#d4af37' : '#00a8ff'} />
+                        <AnatomicalIcon muscle={m.name} size={36} highlightColor="#d4af37" />
                         <span style={{ fontSize: '0.84rem', fontWeight: isSelected ? 800 : 600, color: isSelected ? 'var(--color-primary, #d4af37)' : 'white' }}>
                           {m.label}
                         </span>

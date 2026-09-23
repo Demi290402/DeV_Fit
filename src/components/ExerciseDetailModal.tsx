@@ -160,7 +160,7 @@ export const ExerciseDetailModal: React.FC<ExerciseDetailModalProps> = ({ exerci
           <h2 style={{ fontSize: '1.05rem', fontWeight: 800, margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {exercise.name}
           </h2>
-          <span style={{ fontSize: '0.72rem', color: '#00a8ff', fontWeight: 600 }}>
+          <span style={{ fontSize: '0.72rem', color: 'var(--color-primary, #d4af37)', fontWeight: 600 }}>
             {exercise.muscleGroup} • {isCardio ? 'Cardio' : isIso ? 'Isometrico' : exercise.equipment}
           </span>
         </div>
@@ -240,7 +240,7 @@ export const ExerciseDetailModal: React.FC<ExerciseDetailModalProps> = ({ exerci
               marginBottom: '14px',
               animation: 'pulseGlow 2s infinite ease-in-out'
             }}>
-              {renderMuscleIcon(exercise.muscleGroup, 48, '#00a8ff')}
+              {renderMuscleIcon(exercise.muscleGroup, 48, '#d4af37')}
             </div>
 
             <div style={{ textAlign: 'center' }}>
@@ -267,7 +267,7 @@ export const ExerciseDetailModal: React.FC<ExerciseDetailModalProps> = ({ exerci
                 top: 0,
                 bottom: 0,
                 width: '60px',
-                background: 'linear-gradient(90deg, #0084ff, #00d2ff)',
+                background: 'linear-gradient(90deg, #d4af37, #f6e09a)',
                 borderRadius: '4px',
                 animation: 'slideBar 1.8s infinite ease-in-out alternate'
               }} />
@@ -288,14 +288,14 @@ export const ExerciseDetailModal: React.FC<ExerciseDetailModalProps> = ({ exerci
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             <div>
-              <span style={{ fontSize: '0.72rem', color: '#00a8ff', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>
+              <span style={{ fontSize: '0.72rem', color: 'var(--color-primary, #d4af37)', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>
                 Target Primario:
               </span>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                 <span style={{
-                  background: 'rgba(0, 168, 255, 0.16)',
-                  color: '#38bdf8',
-                  border: '1px solid rgba(0, 168, 255, 0.35)',
+                  background: 'rgba(212, 175, 55, 0.15)',
+                  color: 'var(--color-primary, #d4af37)',
+                  border: '1px solid rgba(212, 175, 55, 0.35)',
                   padding: '6px 14px',
                   borderRadius: '20px',
                   fontSize: '0.82rem',
@@ -385,7 +385,7 @@ export const ExerciseDetailModal: React.FC<ExerciseDetailModalProps> = ({ exerci
                 </div>
                 <div style={{ background: 'rgba(255, 255, 255, 0.03)', padding: '12px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.06)' }}>
                   <div style={{ fontSize: '0.7rem', color: '#94a3b8' }}>Peso Massimo</div>
-                  <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#00a8ff', marginTop: '3px' }}>
+                  <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--color-primary, #d4af37)', marginTop: '3px' }}>
                     {personalRecords.maxWeight > 0 ? `${personalRecords.maxWeight} kg` : '—'}
                   </div>
                 </div>
@@ -430,8 +430,8 @@ export const ExerciseDetailModal: React.FC<ExerciseDetailModalProps> = ({ exerci
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Calendar size={18} color="#00a8ff" />
-              <h3 style={{ fontSize: '0.85rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#00a8ff', margin: 0 }}>
+              <Calendar size={18} color="var(--color-primary, #d4af37)" />
+              <h3 style={{ fontSize: '0.85rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--color-primary, #d4af37)', margin: 0 }}>
                 Cronologia Esecuzioni Passate ({exerciseHistory.length})
               </h3>
             </div>
@@ -487,7 +487,7 @@ export const ExerciseDetailModal: React.FC<ExerciseDetailModalProps> = ({ exerci
                             alignItems: 'center',
                             gap: '4px'
                           }}>
-                            <span style={{ color: '#00a8ff', fontWeight: 700 }}>#{sIdx + 1}</span> {text}
+                            <span style={{ color: 'var(--color-primary, #d4af37)', fontWeight: 700 }}>#{sIdx + 1}</span> {text}
                           </span>
                         );
                       })}

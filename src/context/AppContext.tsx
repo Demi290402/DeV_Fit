@@ -79,6 +79,7 @@ export interface SetLog {
 export interface ExerciseLog {
   exerciseId: string;
   restSeconds?: number;
+  notes?: string;
   sets: SetLog[];
 }
 

@@ -94,24 +94,26 @@ export const Navigation: React.FC<NavigationProps> = ({ currentTab, setCurrentTa
               className={`nav-item ${currentTab === item.id ? 'active' : ''}`}
               onClick={() => setCurrentTab(item.id)}
             >
-              {isProfile && profile.avatarUrl ? (
-                <div style={{
-                  width: '22px',
-                  height: '22px',
-                  borderRadius: '50%',
-                  overflow: 'hidden',
-                  border: currentTab === 'profile' ? '2px solid var(--color-primary)' : '1px solid rgba(255,255,255,0.3)',
-                  boxShadow: currentTab === 'profile' ? '0 0 8px rgba(212, 175, 55, 0.4)' : 'none',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  transition: 'all 0.2s ease'
-                }}>
-                  <img src={profile.avatarUrl} alt="Profilo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                </div>
-              ) : (
-                <Icon size={20} />
-              )}
+              <div className="nav-icon-pill">
+                {isProfile && profile.avatarUrl ? (
+                  <div style={{
+                    width: '22px',
+                    height: '22px',
+                    borderRadius: '50%',
+                    overflow: 'hidden',
+                    border: currentTab === 'profile' ? '2px solid var(--color-primary)' : '1px solid rgba(255,255,255,0.3)',
+                    boxShadow: currentTab === 'profile' ? '0 0 8px rgba(212, 175, 55, 0.4)' : 'none',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transition: 'all 0.2s ease'
+                  }}>
+                    <img src={profile.avatarUrl} alt="Profilo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  </div>
+                ) : (
+                  <Icon size={20} />
+                )}
+              </div>
               <span>{item.label}</span>
             </div>
           );

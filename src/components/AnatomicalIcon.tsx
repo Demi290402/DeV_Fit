@@ -11,7 +11,7 @@ interface AnatomicalIconProps {
 export const AnatomicalIcon: React.FC<AnatomicalIconProps> = ({
   muscle,
   size = 40,
-  highlightColor = '#00a8ff', // Hevy-style vivid cyan/blue, or gold #d4af37
+  highlightColor = '#d4af37', // Signature DeV Fit Luxury Gold
   className
 }) => {
   // Determine if muscle is back-facing or front-facing

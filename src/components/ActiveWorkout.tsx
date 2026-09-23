@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Plus, Trash, Check, Clock, X, ChevronDown, Disc, Dumbbell } from 'lucide-react';
+import { Plus, Check, Clock, X, ChevronDown, Disc, Dumbbell, MoreVertical, Info, ArrowLeftRight, Trash2 } from 'lucide-react';
 
 import { useApp } from '../context/AppContext';
 import type { SetLog } from '../context/AppContext';
@@ -31,6 +31,13 @@ export const ActiveWorkout: React.FC = () => {
   const [showAddExercise, setShowAddExercise] = useState(false);
   const [selectedDetailExerciseId, setSelectedDetailExerciseId] = useState<string | null>(null);
   
+  // Exercise Action Menu (3-dots bottom sheet)
+  const [activeExerciseMenuId, setActiveExerciseMenuId] = useState<string | null>(null);
+  // Exercise Replacement Mode
+  const [replacingExerciseId, setReplacingExerciseId] = useState<string | null>(null);
+  // Rest Picker inline popover
+  const [restPickerExId, setRestPickerExId] = useState<string | null>(null);
+
   // Rest Timer State
   const [restTimeLeft, setRestTimeLeft] = useState<number | null>(null);
   const [restTimeTotal, setRestTimeTotal] = useState<number>(90); // default 90s
@@ -116,6 +123,14 @@ export const ActiveWorkout: React.FC = () => {
     return `${m}m ${s.toString().padStart(2, '0')}s`;
   };
 
+  const formatRestDisplay = (secs?: number) => {
+    if (!secs || secs <= 0) return 'DISATTIVO';
+    const m = Math.floor(secs / 60);
+    const s = secs % 60;
+    if (m === 0) return `${s}s`;
+    return `${m}min ${s}s`;
+  };
+
   const handleSetCheck = (exId: string, setIdx: number) => {
     const currentEx = activeWorkout.exercises.find(e => e.exerciseId === exId);
     if (currentEx) {
@@ -128,7 +143,7 @@ export const ActiveWorkout: React.FC = () => {
       if (!isAlreadyCompleted) {
         const exDetail = allExercises.find(e => e.id === exId);
         const isCardio = isDistanceTimeExercise(exDetail);
-        if (!isCardio) {
+        if (!isCardio && (currentEx.restSeconds || 0) > 0) {
           const restDuration = currentEx.restSeconds || 90;
           setRestTimeTotal(restDuration);
           setRestTimeLeft(restDuration);
@@ -150,6 +165,50 @@ export const ActiveWorkout: React.FC = () => {
       const newVal = prev + amount;
       return newVal > 0 ? newVal : 10;
     });
+  };
+
+  const updateExerciseNotes = (exId: string, notes: string) => {
+    updateActiveWorkoutExercises(prev =>
+      prev.map(e => e.exerciseId === exId ? { ...e, notes } : e)
+    );
+  };
+
+  const handleRemoveExercise = (exId: string) => {
+    updateActiveWorkoutExercises(prev => prev.filter(e => e.exerciseId !== exId));
+    setActiveExerciseMenuId(null);
+  };
+
+  const handleStartReplaceExercise = (exId: string) => {
+    setReplacingExerciseId(exId);
+    setActiveExerciseMenuId(null);
+    setShowAddExercise(true);
+  };
+
+  const handleModalAddExercises = (ids: string[]) => {
+    if (replacingExerciseId) {
+      if (ids.length > 0) {
+        const newId = ids[0];
+        updateActiveWorkoutExercises(prev =>
+          prev.map(e => e.exerciseId === replacingExerciseId ? { ...e, exerciseId: newId } : e)
+        );
+      }
+      setReplacingExerciseId(null);
+    } else {
+      addExercisesToActiveWorkout(ids);
+    }
+    setShowAddExercise(false);
+  };
+
+  const handleModalSelectExercise = (id: string) => {
+    if (replacingExerciseId) {
+      updateActiveWorkoutExercises(prev =>
+        prev.map(e => e.exerciseId === replacingExerciseId ? { ...e, exerciseId: id } : e)
+      );
+      setReplacingExerciseId(null);
+    } else {
+      addExerciseToActiveWorkout(id);
+    }
+    setShowAddExercise(false);
   };
 
   const handleAddSet = (exId: string) => {
@@ -235,10 +294,10 @@ export const ActiveWorkout: React.FC = () => {
     return map;
   }, [activeWorkout?.exercises.map(e => e.exerciseId).join(','), workoutHistory]);
 
-  // Render front and back mini anatomical mannequins (Hevy screenshot 5 style)
+  // Render front and back mini anatomical mannequins with signature DeV Fit Luxury Gold
   const renderDuoMannequins = () => {
-    const baseColor = '#2b2c37';
-    const activeColor = '#00a8ff'; // vivid cyan
+    const baseColor = '#24242c';
+    const activeColor = '#d4af37'; // Luxury Gold
 
     return (
       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -302,29 +361,25 @@ export const ActiveWorkout: React.FC = () => {
   const selectedExerciseIds = useMemo(() => activeWorkout?.exercises.map(e => e.exerciseId) || [], [activeWorkout?.exercises]);
 
   return (
-    <div className="animate-fade-in-up" style={{ paddingBottom: '50px' }}>
-      {/* 1. TOP BAR (Registra allenamento | Dischi / 1RM | Termina) */}
+    <div className="animate-fade-in-up" style={{ paddingBottom: '60px' }}>
+      {/* 1. TOP BAR (Hevy Screenshot 4 & 5 Style: ∨ Registra allenamento | ⏱ | Termina in Gold) */}
       <div 
-        className="active-workout-top-bar"
         style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '14px 16px',
-          background: '#121216',
-          border: '1px solid rgba(255, 255, 255, 0.08)',
-          borderRadius: '12px',
-          marginBottom: '14px'
+          padding: '12px 4px',
+          marginBottom: '10px'
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <ChevronDown size={18} color="var(--text-muted)" />
-          <h2 style={{ fontSize: '1.1rem', fontWeight: 800, margin: 0, color: 'white' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <ChevronDown size={22} color="#ffffff" />
+          <h2 style={{ fontSize: '1.2rem', fontWeight: 700, margin: 0, color: 'white' }}>
             {activeWorkout.name || 'Registra allenamento'}
           </h2>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <button
             type="button"
             onClick={() => {
@@ -333,35 +388,34 @@ export const ActiveWorkout: React.FC = () => {
               setShowPlateModal(true);
             }}
             style={{
-              background: 'rgba(255, 255, 255, 0.05)',
-              border: '1px solid rgba(255, 255, 255, 0.08)',
-              color: 'var(--text-muted)',
-              width: '36px',
-              height: '36px',
-              borderRadius: '50%',
+              background: 'none',
+              border: 'none',
+              color: '#ffffff',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              cursor: 'pointer'
+              cursor: 'pointer',
+              padding: '4px'
             }}
             title="Calcolatore Dischi & 1RM"
           >
-            <Disc size={17} />
+            <Clock size={22} strokeWidth={1.8} />
           </button>
 
           <button
             type="button"
             onClick={() => saveActiveWorkout()}
             style={{
-              background: 'linear-gradient(135deg, #0084ff 0%, #0066cc 100%)',
-              color: '#ffffff',
+              background: 'var(--color-primary, #d4af37)',
+              color: '#000000',
               border: 'none',
               padding: '8px 18px',
               borderRadius: '8px',
               fontWeight: 800,
-              fontSize: '0.88rem',
+              fontSize: '0.92rem',
               cursor: 'pointer',
-              boxShadow: '0 2px 10px rgba(0, 132, 255, 0.35)'
+              boxShadow: '0 2px 10px rgba(212, 175, 55, 0.35)',
+              letterSpacing: '0.2px'
             }}
           >
             Termina
@@ -369,61 +423,68 @@ export const ActiveWorkout: React.FC = () => {
         </div>
       </div>
 
-      {/* 2. SUBHEADER (Status + Live Stats Banner + Mini Mannequins) */}
+      {/* 2. SUBHEADER: WearOS Status Row */}
       <div style={{
-        background: '#131318',
-        borderRadius: '12px',
-        border: '1px solid rgba(255, 255, 255, 0.06)',
-        padding: '12px 16px',
-        marginBottom: '20px'
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        padding: '6px 4px 12px 4px',
+        borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
+        marginBottom: '14px'
       }}>
-        {/* Status indicator */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
-          <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981', boxShadow: '0 0 8px #10b981' }} />
-          <span style={{ fontSize: '0.74rem', color: '#94a3b8', fontWeight: 600 }}>Sessione attiva</span>
-        </div>
+        <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#22c55e', boxShadow: '0 0 8px #22c55e' }} />
+        <span style={{ fontSize: '0.78rem', color: '#94a3b8', fontWeight: 500 }}>WearOS Watch connesso</span>
+      </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', gap: '22px' }}>
-            <div>
-              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted, #94a3b8)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Durata</div>
-              <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#00a8ff', marginTop: '2px' }}>
-                {formatTime(elapsedTime)}
-              </div>
+      {/* 3. WORKOUT STATS BAR (Durata in Gold | Volume | Serie | Duo-Mannequins) */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '0 4px',
+        marginBottom: '22px'
+      }}>
+        <div style={{ display: 'flex', gap: '32px' }}>
+          <div>
+            <div style={{ fontSize: '0.72rem', color: '#8e8e93', fontWeight: 500 }}>Durata</div>
+            <div style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--color-primary, #d4af37)', marginTop: '2px' }}>
+              {formatTime(elapsedTime)}
             </div>
-
-            <div>
-              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted, #94a3b8)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Volume</div>
-              <div style={{ fontSize: '1.05rem', fontWeight: 800, color: 'white', marginTop: '2px' }}>
-                {getLiveVolume()} kg
-              </div>
-            </div>
-
-            <div>
-              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted, #94a3b8)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Serie</div>
-              <div style={{ fontSize: '1.05rem', fontWeight: 800, color: 'white', marginTop: '2px' }}>
-                {completedSetsCount}
-              </div>
-            </div>
-
-            {getLiveCardioKm() > 0 && (
-              <div>
-                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted, #94a3b8)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Km Cardio</div>
-                <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#10b981', marginTop: '2px' }}>
-                  {getLiveCardioKm().toFixed(1)} km
-                </div>
-              </div>
-            )}
           </div>
 
-          {/* Front & Back Mini Anatomical Mannequins */}
+          <div>
+            <div style={{ fontSize: '0.72rem', color: '#8e8e93', fontWeight: 500 }}>Volume</div>
+            <div style={{ fontSize: '1.15rem', fontWeight: 700, color: '#ffffff', marginTop: '2px' }}>
+              {getLiveVolume()} kg
+            </div>
+          </div>
+
+          <div>
+            <div style={{ fontSize: '0.72rem', color: '#8e8e93', fontWeight: 500 }}>Serie</div>
+            <div style={{ fontSize: '1.15rem', fontWeight: 700, color: '#ffffff', marginTop: '2px' }}>
+              {completedSetsCount}
+            </div>
+          </div>
+
+          {getLiveCardioKm() > 0 && (
+            <div>
+              <div style={{ fontSize: '0.72rem', color: '#8e8e93', fontWeight: 500 }}>Km Cardio</div>
+              <div style={{ fontSize: '1.15rem', fontWeight: 700, color: '#10b981', marginTop: '2px' }}>
+                {getLiveCardioKm().toFixed(1)} km
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Duo silhouettes on the right */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           {renderDuoMannequins()}
         </div>
       </div>
 
-      {/* 3. WORKOUT BODY: EMPTY STATE OR EXERCISE LIST */}
+      {/* 4. WORKOUT BODY: EMPTY STATE OR EXERCISE LIST */}
       {activeWorkout.exercises.length === 0 ? (
-        /* Empty State (Hevy screenshot 5 style) */
+        /* Empty State (Hevy Screenshot 5 style) */
         <div style={{
           display: 'flex',
           flexDirection: 'column',
@@ -455,13 +516,16 @@ export const ActiveWorkout: React.FC = () => {
 
           <button
             type="button"
-            onClick={() => setShowAddExercise(true)}
+            onClick={() => {
+              setReplacingExerciseId(null);
+              setShowAddExercise(true);
+            }}
             style={{
               width: '100%',
               maxWidth: '360px',
               height: '50px',
-              background: 'linear-gradient(135deg, #0084ff 0%, #0066cc 100%)',
-              color: '#ffffff',
+              background: 'var(--color-primary, #d4af37)',
+              color: '#000000',
               border: 'none',
               borderRadius: '12px',
               fontSize: '0.96rem',
@@ -471,7 +535,7 @@ export const ActiveWorkout: React.FC = () => {
               justifyContent: 'center',
               gap: '8px',
               cursor: 'pointer',
-              boxShadow: '0 4px 20px rgba(0, 132, 255, 0.35)',
+              boxShadow: '0 4px 20px rgba(212, 175, 55, 0.35)',
               marginBottom: '20px'
             }}
           >
@@ -524,7 +588,7 @@ export const ActiveWorkout: React.FC = () => {
         </div>
       ) : (
         /* Exercises Log List */
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           {activeWorkout.exercises.map((exLog) => {
             const exDetail = allExercises.find(e => e.id === exLog.exerciseId);
             if (!exDetail) return null;
@@ -535,73 +599,171 @@ export const ActiveWorkout: React.FC = () => {
             const isPlate = isPlateLoadedExercise(exDetail);
 
             return (
-              <div key={exLog.exerciseId} className="glass-card exercise-log-card">
-                <div className="flex-between exercise-header-clickable">
-                  <div className="exercise-title-row" onClick={() => setSelectedDetailExerciseId(exLog.exerciseId)} style={{ flex: 1, cursor: 'pointer' }}>
-                    <div className="exercise-icon" style={{ width: '42px', height: '42px', background: 'transparent', padding: 0 }}>
-                      {renderMuscleIcon(exDetail.muscleGroup, 42, '#00a8ff')}
+              <div 
+                key={exLog.exerciseId}
+                style={{
+                  background: '#0d0d11',
+                  borderRadius: '14px',
+                  border: '1px solid rgba(255, 255, 255, 0.05)',
+                  padding: '16px 14px',
+                  display: 'flex',
+                  flexDirection: 'column'
+                }}
+              >
+                {/* Exercise Header: Avatar, Name in Gold, 3-dots */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <div 
+                    style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, cursor: 'pointer' }}
+                    onClick={() => setSelectedDetailExerciseId(exLog.exerciseId)}
+                  >
+                    <div style={{
+                      width: '40px',
+                      height: '40px',
+                      borderRadius: '50%',
+                      background: '#ffffff',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      overflow: 'hidden',
+                      flexShrink: 0
+                    }}>
+                      {renderMuscleIcon(exDetail.muscleGroup, 34, '#d4af37')}
                     </div>
 
-                    <div>
-                      <h4 className="exercise-title">{exDetail.name}</h4>
-                      <span className="exercise-meta">
-                        {exDetail.muscleGroup} • {isCardio ? 'Cardio' : isIso ? 'Isometrico' : exDetail.equipment}
-                      </span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <h4 style={{
+                        fontSize: '1.05rem',
+                        fontWeight: 700,
+                        color: 'var(--color-primary, #d4af37)',
+                        margin: 0,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap'
+                      }}>
+                        {exDetail.name}
+                      </h4>
                     </div>
                   </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    {!isCardio && (
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                          background: 'rgba(255, 255, 255, 0.04)',
-                          border: '1px solid rgba(255, 255, 255, 0.08)',
-                          borderRadius: '8px',
-                          padding: '3px 8px'
-                        }}
-                        onClick={e => e.stopPropagation()}
-                        title="Tempo di recupero per questo esercizio"
-                      >
-                        <Clock size={12} color="#00a8ff" />
-                        <button
-                          type="button"
-                          className="rest-adjust-btn"
-                          style={{ width: '20px', height: '20px', fontSize: '0.62rem' }}
-                          onClick={() => updateActiveWorkoutExerciseRest(exLog.exerciseId, Math.max(10, (exLog.restSeconds || 90) - 15))}
-                        >
-                          -15
-                        </button>
-                        <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#00a8ff', minWidth: '30px', textAlign: 'center' }}>
-                          {exLog.restSeconds || 90}s
-                        </span>
-                        <button
-                          type="button"
-                          className="rest-adjust-btn"
-                          style={{ width: '20px', height: '20px', fontSize: '0.62rem' }}
-                          onClick={() => updateActiveWorkoutExerciseRest(exLog.exerciseId, (exLog.restSeconds || 90) + 15)}
-                        >
-                          +15
-                        </button>
-                      </div>
-                    )}
-                    <ChevronDown size={18} color="var(--text-muted)" onClick={() => setSelectedDetailExerciseId(exLog.exerciseId)} style={{ cursor: 'pointer' }} />
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setActiveExerciseMenuId(exLog.exerciseId)}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: '#8e8e93',
+                      cursor: 'pointer',
+                      padding: '4px 6px',
+                      display: 'flex',
+                      alignItems: 'center'
+                    }}
+                    title="Opzioni esercizio"
+                  >
+                    <MoreVertical size={20} />
+                  </button>
                 </div>
 
-                {/* Sets / Sessions Table */}
+                {/* Inline Notes Field (Aggiungi delle note qui...) */}
+                <div style={{ marginBottom: '10px' }}>
+                  <input
+                    type="text"
+                    placeholder="Aggiungi delle note qui..."
+                    value={exLog.notes || ''}
+                    onChange={(e) => updateExerciseNotes(exLog.exerciseId, e.target.value)}
+                    style={{
+                      width: '100%',
+                      background: 'transparent',
+                      border: 'none',
+                      outline: 'none',
+                      color: 'rgba(255, 255, 255, 0.85)',
+                      fontSize: '0.86rem',
+                      padding: '4px 0'
+                    }}
+                  />
+                </div>
+
+                {/* Inline Rest Timer Indicator & Quick Duration Selector */}
+                <div style={{ position: 'relative', marginBottom: '12px' }}>
+                  <div
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      cursor: 'pointer',
+                      userSelect: 'none'
+                    }}
+                    onClick={() => setRestPickerExId(restPickerExId === exLog.exerciseId ? null : exLog.exerciseId)}
+                  >
+                    <Clock size={16} color="var(--color-primary, #d4af37)" />
+                    <span style={{ fontSize: '0.86rem', fontWeight: 600, color: 'var(--color-primary, #d4af37)' }}>
+                      Riposo: {formatRestDisplay(exLog.restSeconds)}
+                    </span>
+                  </div>
+
+                  {/* Rest Duration Popover */}
+                  {restPickerExId === exLog.exerciseId && (
+                    <div style={{
+                      position: 'absolute',
+                      top: '28px',
+                      left: 0,
+                      zIndex: 60,
+                      background: '#181822',
+                      border: '1px solid rgba(212, 175, 55, 0.35)',
+                      borderRadius: '12px',
+                      padding: '8px',
+                      boxShadow: '0 8px 30px rgba(0, 0, 0, 0.8)',
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(3, 1fr)',
+                      gap: '6px',
+                      minWidth: '240px'
+                    }}>
+                      {[
+                        { label: 'Off', val: 0 },
+                        { label: '30s', val: 30 },
+                        { label: '60s', val: 60 },
+                        { label: '90s', val: 90 },
+                        { label: '2m', val: 120 },
+                        { label: '2m 30s', val: 150 },
+                        { label: '3m', val: 180 },
+                        { label: '4m', val: 240 },
+                        { label: '5m', val: 300 }
+                      ].map(opt => (
+                        <button
+                          key={opt.val}
+                          type="button"
+                          onClick={() => {
+                            updateActiveWorkoutExerciseRest(exLog.exerciseId, opt.val);
+                            setRestPickerExId(null);
+                          }}
+                          style={{
+                            background: (exLog.restSeconds || 0) === opt.val ? 'var(--color-primary, #d4af37)' : 'rgba(255, 255, 255, 0.06)',
+                            color: (exLog.restSeconds || 0) === opt.val ? '#000000' : 'white',
+                            border: 'none',
+                            borderRadius: '6px',
+                            padding: '6px 4px',
+                            fontSize: '0.78rem',
+                            fontWeight: 700,
+                            cursor: 'pointer'
+                          }}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Sets Table */}
                 {isCardio ? (
-                  /* ================= CARDIO TABLE (Tempo & Distanza) ================= */
-                  <table className="sets-table">
+                  /* ================= CARDIO TABLE (KM & TEMPO) ================= */
+                  <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0 8px', tableLayout: 'fixed' }}>
                     <thead>
-                      <tr>
-                        <th style={{ width: '12%' }}>Sess.</th>
-                        <th style={{ width: '32%' }}>Ultima volta</th>
-                        <th style={{ width: '22%' }}>Tempo (min)</th>
-                        <th style={{ width: '20%' }}>Km</th>
-                        <th style={{ width: '14%', textAlign: 'center' }}>OK</th>
+                      <tr style={{ color: '#8e8e93', fontSize: '0.72rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        <th style={{ width: '14%', textAlign: 'left', paddingLeft: '4px' }}>SERIE</th>
+                        <th style={{ width: '32%', textAlign: 'left' }}>PRECEDENTE</th>
+                        <th style={{ width: '22%', textAlign: 'center' }}>KM</th>
+                        <th style={{ width: '22%', textAlign: 'center' }}>TEMPO</th>
+                        <th style={{ width: '10%', textAlign: 'center' }}>✓</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -618,38 +780,42 @@ export const ActiveWorkout: React.FC = () => {
                             canDelete={exLog.sets.length > 1}
                             onDelete={() => handleRemoveSet(exLog.exerciseId, idx)}
                           >
-                            <td className="set-index">{idx + 1}</td>
-                            <td className="prev-set-value">{prevText}</td>
-                            <td>
-                              <input
-                                type="number"
-                                inputMode="decimal"
-                                step="any"
-                                placeholder="min"
-                                className="set-input"
-                                value={set.time !== undefined && set.time !== null && set.time > 0 ? set.time : ''}
-                                onChange={(e) => updateActiveWorkoutSet(exLog.exerciseId, idx, 'time', parseFloat(e.target.value) || 0)}
-                                disabled={set.completed}
-                              />
+                            <td style={{ width: '14%', verticalAlign: 'middle', paddingLeft: '2px' }}>
+                              <div className="hevy-set-badge">{idx + 1}</div>
                             </td>
-                            <td>
+                            <td style={{ width: '32%', verticalAlign: 'middle', color: '#8e8e93', fontSize: '0.8rem', paddingRight: '4px', lineHeight: 1.2 }}>
+                              {prevText}
+                            </td>
+                            <td style={{ width: '22%', verticalAlign: 'middle', textAlign: 'center' }}>
                               <input
                                 type="number"
                                 inputMode="decimal"
                                 step="any"
                                 placeholder="km"
-                                className="set-input"
+                                className="hevy-set-input"
                                 value={set.distance !== undefined && set.distance !== null && set.distance > 0 ? set.distance : ''}
                                 onChange={(e) => updateActiveWorkoutSet(exLog.exerciseId, idx, 'distance', parseFloat(e.target.value) || 0)}
                                 disabled={set.completed}
                               />
                             </td>
-                            <td align="center">
+                            <td style={{ width: '22%', verticalAlign: 'middle', textAlign: 'center' }}>
+                              <input
+                                type="number"
+                                inputMode="decimal"
+                                step="any"
+                                placeholder="min"
+                                className="hevy-set-input"
+                                value={set.time !== undefined && set.time !== null && set.time > 0 ? set.time : ''}
+                                onChange={(e) => updateActiveWorkoutSet(exLog.exerciseId, idx, 'time', parseFloat(e.target.value) || 0)}
+                                disabled={set.completed}
+                              />
+                            </td>
+                            <td style={{ width: '10%', verticalAlign: 'middle', textAlign: 'center' }}>
                               <button 
-                                className="btn-complete-set" 
+                                className={`hevy-check-btn ${set.completed ? 'completed' : ''}`}
                                 onClick={() => handleSetCheck(exLog.exerciseId, idx)}
                               >
-                                <Check size={16} />
+                                <Check size={18} strokeWidth={2.5} />
                               </button>
                             </td>
                           </SwipeableSetRow>
@@ -658,14 +824,14 @@ export const ActiveWorkout: React.FC = () => {
                     </tbody>
                   </table>
                 ) : isIso ? (
-                  /* ================= ISOMETRIC TABLE (Tempo Tenuta) ================= */
-                  <table className="sets-table">
+                  /* ================= ISOMETRIC TABLE (TEMPO TENUTA) ================= */
+                  <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0 8px', tableLayout: 'fixed' }}>
                     <thead>
-                      <tr>
-                        <th style={{ width: '12%' }}>Set</th>
-                        <th style={{ width: '38%' }}>Ultima volta</th>
-                        <th style={{ width: '36%' }}>Tempo Tenuta (sec)</th>
-                        <th style={{ width: '14%', textAlign: 'center' }}>OK</th>
+                      <tr style={{ color: '#8e8e93', fontSize: '0.72rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        <th style={{ width: '14%', textAlign: 'left', paddingLeft: '4px' }}>SERIE</th>
+                        <th style={{ width: '40%', textAlign: 'left' }}>PRECEDENTE</th>
+                        <th style={{ width: '36%', textAlign: 'center' }}>TEMPO (SEC)</th>
+                        <th style={{ width: '10%', textAlign: 'center' }}>✓</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -680,26 +846,30 @@ export const ActiveWorkout: React.FC = () => {
                             canDelete={exLog.sets.length > 1}
                             onDelete={() => handleRemoveSet(exLog.exerciseId, idx)}
                           >
-                            <td className="set-index">{idx + 1}</td>
-                            <td className="prev-set-value">{prevText}</td>
-                            <td>
+                            <td style={{ width: '14%', verticalAlign: 'middle', paddingLeft: '2px' }}>
+                              <div className="hevy-set-badge">{idx + 1}</div>
+                            </td>
+                            <td style={{ width: '40%', verticalAlign: 'middle', color: '#8e8e93', fontSize: '0.8rem', paddingRight: '4px' }}>
+                              {prevText}
+                            </td>
+                            <td style={{ width: '36%', verticalAlign: 'middle', textAlign: 'center' }}>
                               <input
                                 type="number"
                                 inputMode="numeric"
                                 placeholder="sec"
-                                className="set-input"
-                                style={{ width: '80px' }}
+                                className="hevy-set-input"
+                                style={{ width: '84px' }}
                                 value={set.time !== undefined && set.time !== null && set.time > 0 ? set.time : ''}
                                 onChange={(e) => updateActiveWorkoutSet(exLog.exerciseId, idx, 'time', parseInt(e.target.value) || 0)}
                                 disabled={set.completed}
                               />
                             </td>
-                            <td align="center">
+                            <td style={{ width: '10%', verticalAlign: 'middle', textAlign: 'center' }}>
                               <button 
-                                className="btn-complete-set" 
+                                className={`hevy-check-btn ${set.completed ? 'completed' : ''}`}
                                 onClick={() => handleSetCheck(exLog.exerciseId, idx)}
                               >
-                                <Check size={16} />
+                                <Check size={18} strokeWidth={2.5} />
                               </button>
                             </td>
                           </SwipeableSetRow>
@@ -709,19 +879,25 @@ export const ActiveWorkout: React.FC = () => {
                   </table>
                 ) : (
                   /* ================= STRENGTH / WEIGHTS TABLE ================= */
-                  <table className="sets-table">
+                  <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0 8px', tableLayout: 'fixed' }}>
                     <thead>
-                      <tr>
-                        <th style={{ width: '10%' }}>Set</th>
-                        <th style={{ width: '30%' }}>Ultima volta</th>
-                        <th style={{ width: '22%' }}>Kg</th>
-                        <th style={{ width: '22%' }}>Rep</th>
-                        <th style={{ width: '16%', textAlign: 'center' }}>OK</th>
+                      <tr style={{ color: '#8e8e93', fontSize: '0.72rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        <th style={{ width: '14%', textAlign: 'left', paddingLeft: '4px' }}>SERIE</th>
+                        <th style={{ width: '32%', textAlign: 'left' }}>PRECEDENTE</th>
+                        <th style={{ width: '22%', textAlign: 'center' }}>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
+                            <Dumbbell size={11} /> KG
+                          </span>
+                        </th>
+                        <th style={{ width: '22%', textAlign: 'center' }}>RIPETIZIONI</th>
+                        <th style={{ width: '10%', textAlign: 'center' }}>✓</th>
                       </tr>
                     </thead>
                     <tbody>
                       {exLog.sets.map((set, idx) => {
                         const prevSet = prevSets[idx];
+                        const prevText = prevSet ? `${prevSet.weight}kg x ${prevSet.reps}` : '—';
+
                         return (
                           <SwipeableSetRow
                             key={set.id}
@@ -729,21 +905,24 @@ export const ActiveWorkout: React.FC = () => {
                             canDelete={exLog.sets.length > 1}
                             onDelete={() => handleRemoveSet(exLog.exerciseId, idx)}
                           >
-                            <td className="set-index">{idx + 1}</td>
-                            <td className="prev-set-value">
-                              {prevSet ? `${prevSet.weight}kg x ${prevSet.reps}` : '—'}
+                            <td style={{ width: '14%', verticalAlign: 'middle', paddingLeft: '2px' }}>
+                              <div className="hevy-set-badge">{idx + 1}</div>
                             </td>
-                            <td>
-                              <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                            <td style={{ width: '32%', verticalAlign: 'middle', color: '#8e8e93', fontSize: '0.8rem', paddingRight: '4px', lineHeight: 1.2 }}>
+                              {prevText}
+                            </td>
+                            <td style={{ width: '22%', verticalAlign: 'middle', textAlign: 'center' }}>
+                              <div style={{ position: 'relative', display: 'inline-block' }}>
                                 <input
                                   type="number"
                                   inputMode="decimal"
                                   step="any"
-                                  className="set-input"
+                                  placeholder="0"
+                                  className="hevy-set-input"
                                   value={set.weight !== undefined && set.weight !== null && set.weight > 0 ? set.weight : (set.weight === 0 ? '0' : '')}
                                   onChange={(e) => updateActiveWorkoutSet(exLog.exerciseId, idx, 'weight', parseFloat(e.target.value) || 0)}
                                   disabled={set.completed}
-                                  style={{ paddingRight: (!set.completed && isPlate) ? '22px' : '8px' }}
+                                  style={{ paddingRight: (!set.completed && isPlate) ? '18px' : '0' }}
                                 />
                                 {!set.completed && isPlate && (
                                   <button
@@ -757,6 +936,8 @@ export const ActiveWorkout: React.FC = () => {
                                     style={{
                                       position: 'absolute',
                                       right: '4px',
+                                      top: '50%',
+                                      transform: 'translateY(-50%)',
                                       background: 'none',
                                       border: 'none',
                                       color: 'var(--color-primary, #d4af37)',
@@ -773,22 +954,23 @@ export const ActiveWorkout: React.FC = () => {
                                 )}
                               </div>
                             </td>
-                            <td>
+                            <td style={{ width: '22%', verticalAlign: 'middle', textAlign: 'center' }}>
                               <input
                                 type="number"
                                 inputMode="numeric"
-                                className="set-input"
+                                placeholder="0"
+                                className="hevy-set-input"
                                 value={set.reps !== undefined && set.reps !== null && set.reps > 0 ? set.reps : ''}
                                 onChange={(e) => updateActiveWorkoutSet(exLog.exerciseId, idx, 'reps', parseInt(e.target.value) || 0)}
                                 disabled={set.completed}
                               />
                             </td>
-                            <td align="center">
+                            <td style={{ width: '10%', verticalAlign: 'middle', textAlign: 'center' }}>
                               <button 
-                                className="btn-complete-set" 
+                                className={`hevy-check-btn ${set.completed ? 'completed' : ''}`}
                                 onClick={() => handleSetCheck(exLog.exerciseId, idx)}
                               >
-                                <Check size={16} />
+                                <Check size={18} strokeWidth={2.5} />
                               </button>
                             </td>
                           </SwipeableSetRow>
@@ -798,8 +980,8 @@ export const ActiveWorkout: React.FC = () => {
                   </table>
                 )}
 
-                {/* Badges / Achievements under the sets */}
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                {/* Badges / Achievements under sets */}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '4px' }}>
                   {exLog.sets.map((set, idx) => {
                     if (!set.completed) return null;
                     const badges = [];
@@ -813,64 +995,69 @@ export const ActiveWorkout: React.FC = () => {
                   })}
                 </div>
 
-                {/* Set modifiers */}
-                <div style={{ display: 'flex', gap: '10px', marginTop: '4px' }}>
-                  <button 
-                    className="btn-secondary" 
-                    onClick={() => handleAddSet(exLog.exerciseId)}
-                    style={{ flex: 1, padding: '8px', fontSize: '0.75rem' }}
-                  >
-                    {isCardio ? '+ Aggiungi Sessione' : '+ Aggiungi Set'}
-                  </button>
-                  {exLog.sets.length > 1 && (
-                    <button 
-                      className="btn-secondary" 
-                      onClick={() => handleRemoveSet(exLog.exerciseId, exLog.sets.length - 1)}
-                      style={{ padding: '8px 12px', color: 'var(--color-error)' }}
-                      title="Elimina ultimo set"
-                    >
-                      <Trash size={14} />
-                    </button>
-                  )}
-                </div>
+                {/* + Aggiungi serie Button (Hevy style) */}
+                <button
+                  type="button"
+                  className="hevy-add-set-btn"
+                  onClick={() => handleAddSet(exLog.exerciseId)}
+                >
+                  <Plus size={16} strokeWidth={2.5} />
+                  <span>Aggiungi serie</span>
+                </button>
               </div>
             );
           })}
 
-          {/* Control Buttons when exercises present */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '16px' }}>
-            <button 
-              className="btn-primary" 
-              onClick={() => setShowAddExercise(true)}
+          {/* Bottom Action Controls (Aggiungi esercizio & Abbandona) */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginTop: '10px' }}>
+            <button
+              type="button"
+              onClick={() => {
+                setReplacingExerciseId(null);
+                setShowAddExercise(true);
+              }}
               style={{
-                background: 'linear-gradient(135deg, #0084ff 0%, #0066cc 100%)',
-                color: 'white',
-                boxShadow: '0 4px 15px rgba(0, 132, 255, 0.3)'
+                width: '100%',
+                height: '48px',
+                background: '#1a1a22',
+                border: '1px solid rgba(212, 175, 55, 0.4)',
+                borderRadius: '12px',
+                color: 'var(--color-primary, #d4af37)',
+                fontSize: '0.94rem',
+                fontWeight: 700,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease'
               }}
             >
-              <Plus size={18} /> Aggiungi Esercizio
+              <Plus size={18} strokeWidth={2.5} />
+              <span>Aggiungi esercizio</span>
             </button>
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <button 
-                className="btn-primary" 
-                onClick={() => saveActiveWorkout()} 
-                style={{ flex: 1, background: 'linear-gradient(135deg, var(--color-success) 0%, #059669 100%)', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)' }}
-              >
-                <Check size={18} /> Salva Allenamento
-              </button>
-              <button 
-                className="btn-secondary" 
-                onClick={cancelActiveWorkout} 
-                style={{ color: 'var(--color-error)' }}
-              >
-                Annulla
-              </button>
-            </div>
+
+            <button
+              type="button"
+              onClick={cancelActiveWorkout}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: '#ef4444',
+                fontSize: '0.88rem',
+                fontWeight: 600,
+                padding: '10px',
+                cursor: 'pointer',
+                textAlign: 'center'
+              }}
+            >
+              Abbandona l'allenamento
+            </button>
           </div>
         </div>
       )}
 
-      {/* Floating Rest Timer Component */}
+      {/* Floating Rest Timer Component (radial progress overlay) */}
       {restTimeLeft !== null && (
         <div className="rest-timer-overlay">
           <div className="rest-timer-radial">
@@ -904,6 +1091,67 @@ export const ActiveWorkout: React.FC = () => {
         </div>
       )}
 
+      {/* Exercise Action Bottom Sheet Modal (Hevy Screenshot 2 style for exercise) */}
+      {activeExerciseMenuId && (
+        <div 
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 1000,
+            background: 'rgba(0, 0, 0, 0.7)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'flex-end',
+            justifyContent: 'center'
+          }}
+          onClick={() => setActiveExerciseMenuId(null)}
+        >
+          <div 
+            className="hevy-bottom-sheet"
+            onClick={(e) => e.stopPropagation()}
+            style={{ width: '100%', maxWidth: '480px' }}
+          >
+            <div className="bottom-sheet-drag-handle" />
+
+            <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: 'white', textAlign: 'center', margin: '0 0 16px 0' }}>
+              {allExercises.find(e => e.id === activeExerciseMenuId)?.name || 'Opzioni Esercizio'}
+            </h3>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <button
+                type="button"
+                className="bottom-sheet-btn"
+                onClick={() => {
+                  setSelectedDetailExerciseId(activeExerciseMenuId);
+                  setActiveExerciseMenuId(null);
+                }}
+              >
+                <Info size={18} color="var(--color-primary, #d4af37)" />
+                <span>Dettagli & Guida esercizio</span>
+              </button>
+
+              <button
+                type="button"
+                className="bottom-sheet-btn"
+                onClick={() => handleStartReplaceExercise(activeExerciseMenuId)}
+              >
+                <ArrowLeftRight size={18} color="var(--color-primary, #d4af37)" />
+                <span>Sostituisci esercizio</span>
+              </button>
+
+              <button
+                type="button"
+                className="bottom-sheet-btn btn-danger"
+                onClick={() => handleRemoveExercise(activeExerciseMenuId)}
+              >
+                <Trash2 size={18} />
+                <span>Rimuovi esercizio dall'allenamento</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Plate Calculator and 1RM Modal */}
       <PlateAndOneRepModal
         isOpen={showPlateModal}
@@ -920,20 +1168,17 @@ export const ActiveWorkout: React.FC = () => {
         }}
       />
 
-      {/* Add Exercise Modal (Single & Multi-Select with Floating Confirmation Bar) */}
+      {/* Add / Replace Exercise Modal */}
       <ExerciseBrowserModal 
         isOpen={showAddExercise}
-        onClose={() => setShowAddExercise(false)}
-        onAddExercises={(ids) => {
-          addExercisesToActiveWorkout(ids);
+        onClose={() => {
           setShowAddExercise(false);
+          setReplacingExerciseId(null);
         }}
-        onSelectExercise={(id) => {
-          addExerciseToActiveWorkout(id);
-          setShowAddExercise(false);
-        }}
+        onAddExercises={handleModalAddExercises}
+        onSelectExercise={handleModalSelectExercise}
         selectedIds={selectedExerciseIds}
-        isMultiSelect={true}
+        isMultiSelect={!replacingExerciseId}
       />
 
       {/* Fullscreen Exercise Details View */}
@@ -944,3 +1189,4 @@ export const ActiveWorkout: React.FC = () => {
     </div>
   );
 };
+

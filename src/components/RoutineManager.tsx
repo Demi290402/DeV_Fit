@@ -1,5 +1,9 @@
 import React, { useState } from 'react';
-import { Plus, Play, Trash2, ArrowLeft, Check, BookOpen, Clock, Calendar, Trophy, Repeat, Dumbbell, Share2, Edit3, Info } from 'lucide-react';
+import { 
+  Plus, Trash2, ArrowLeft, Check, Clock, Calendar, 
+  Trophy, Repeat, Share2, Edit3, Info, ChevronDown, 
+  RotateCw, MoreHorizontal, FileText, Search, FolderPlus 
+} from 'lucide-react';
 
 import { useApp } from '../context/AppContext';
 import type { Routine, WorkoutLog } from '../context/AppContext';
@@ -9,6 +13,8 @@ import { StoryCardModal } from './StoryCardModal';
 import type { StoryCardData } from './StoryCardModal';
 import { ExerciseDetailModal } from './ExerciseDetailModal';
 import { EditWorkoutLogModal } from './EditWorkoutLogModal';
+import { RoutineDetailView } from './RoutineDetailView';
+import { RoutineBottomSheetModal } from './RoutineBottomSheetModal';
 
 interface SelectedRoutineExercise {
   exerciseId: string;
@@ -28,7 +34,8 @@ export const RoutineManager: React.FC = () => {
     workoutHistory,
     updateWorkoutLog,
     deleteWorkoutLog,
-    customExercises
+    customExercises,
+    syncAllDataFromCloud
   } = useApp();
 
   const [isCreating, setIsCreating] = useState(false);
@@ -40,6 +47,13 @@ export const RoutineManager: React.FC = () => {
   const [isCatalogOpen, setIsCatalogOpen] = useState(false);
   const [storyData, setStoryData] = useState<StoryCardData | null>(null);
   const [isStoryModalOpen, setIsStoryModalOpen] = useState(false);
+
+  // Hevy Screen Navigation & Context Menu states
+  const [selectedDetailRoutine, setSelectedDetailRoutine] = useState<Routine | null>(null);
+  const [menuRoutine, setMenuRoutine] = useState<Routine | null>(null);
+  const [isRoutinesExpanded, setIsRoutinesExpanded] = useState(true);
+  const [isSyncingCloud, setIsSyncingCloud] = useState(false);
+  const [syncNotice, setSyncNotice] = useState<string | null>(null);
 
   // Modals for exercise details & workout editing
   const [selectedDetailExerciseId, setSelectedDetailExerciseId] = useState<string | null>(null);
@@ -74,6 +88,8 @@ export const RoutineManager: React.FC = () => {
   };
 
   const handleEditRoutine = (rot: Routine) => {
+    setSelectedDetailRoutine(null);
+    setMenuRoutine(null);
     setEditingRoutineId(rot.id);
     setNewRoutineName(rot.name);
     setNewRoutineDesc(rot.description || '');
@@ -85,6 +101,67 @@ export const RoutineManager: React.FC = () => {
       distance: re.defaultSets[0]?.distance
     })));
     setIsCreating(true);
+  };
+
+  const handleDuplicateRoutine = (rot: Routine) => {
+    const cloned: Routine = {
+      id: `rot-${Date.now()}`,
+      name: `${rot.name} (Copia)`,
+      description: rot.description || '',
+      exercises: JSON.parse(JSON.stringify(rot.exercises))
+    };
+    addRoutine(cloned);
+    setMenuRoutine(null);
+    setSyncNotice(`Routine "${cloned.name}" duplicata con successo!`);
+    setTimeout(() => setSyncNotice(null), 3000);
+  };
+
+  const handleDeleteRoutine = (rot: Routine) => {
+    if (window.confirm(`Sei sicuro di voler eliminare la routine "${rot.name}"?`)) {
+      deleteRoutine(rot.id);
+      if (selectedDetailRoutine?.id === rot.id) {
+        setSelectedDetailRoutine(null);
+      }
+      setMenuRoutine(null);
+    }
+  };
+
+  const handleShareRoutine = async (rot: Routine) => {
+    const exercisesText = rot.exercises
+      .map(e => allExercises.find(m => m.id === e.exerciseId)?.name)
+      .filter(Boolean)
+      .join(', ');
+    const shareText = `Ecco la mia scheda "${rot.name}" su DeV Fit:\n${exercisesText}\nAllenati con me su ${window.location.origin}`;
+    
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `Scheda ${rot.name} - DeV Fit`,
+          text: shareText,
+          url: window.location.origin
+        });
+        return;
+      } catch {
+        // User cancelled or unsupported
+      }
+    }
+
+    try {
+      await navigator.clipboard.writeText(shareText);
+      setSyncNotice('Link e dettagli della scheda copiati negli appunti!');
+      setTimeout(() => setSyncNotice(null), 3000);
+    } catch {
+      alert(`Condividi questa scheda:\n${shareText}`);
+    }
+  };
+
+  const handleSyncCloud = async () => {
+    if (isSyncingCloud) return;
+    setIsSyncingCloud(true);
+    const res = await syncAllDataFromCloud();
+    setIsSyncingCloud(false);
+    setSyncNotice(res.message);
+    setTimeout(() => setSyncNotice(null), 3500);
   };
 
   const handleSaveRoutine = () => {
@@ -272,12 +349,12 @@ export const RoutineManager: React.FC = () => {
                         title="Clicca per visualizzare dettagli e video"
                       >
                         <div style={{ width: '36px', height: '36px' }}>
-                          {renderMuscleIcon(ex.muscleGroup, 36, '#00a8ff')}
+                          {renderMuscleIcon(ex.muscleGroup, 36, '#d4af37')}
                         </div>
                         <div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                             <h4 style={{ fontSize: '0.92rem', fontWeight: 700, margin: 0 }}>{ex.name}</h4>
-                            <Info size={13} color="#00a8ff" />
+                            <Info size={13} color="var(--color-primary, #d4af37)" />
                           </div>
                           <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
                             {ex.muscleGroup} • {ex.equipment}
@@ -369,7 +446,7 @@ export const RoutineManager: React.FC = () => {
                         >
                           -15
                         </button>
-                        <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#00a8ff', minWidth: '42px', textAlign: 'center' }}>
+                        <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--color-primary, #d4af37)', minWidth: '42px', textAlign: 'center' }}>
                           {se.restSeconds || 90}s
                         </span>
                         <button
@@ -435,27 +512,124 @@ export const RoutineManager: React.FC = () => {
     );
   }
 
+  if (selectedDetailRoutine) {
+    return (
+      <>
+        <RoutineDetailView
+          routine={selectedDetailRoutine}
+          onBack={() => setSelectedDetailRoutine(null)}
+          onStartRoutine={(rot) => startWorkout(rot.id)}
+          onEditRoutine={(rot) => handleEditRoutine(rot)}
+          onOpenMenu={(rot) => setMenuRoutine(rot)}
+          onSelectExerciseDetail={(exId) => setSelectedDetailExerciseId(exId)}
+        />
+        <RoutineBottomSheetModal
+          routine={menuRoutine}
+          isOpen={!!menuRoutine}
+          onClose={() => setMenuRoutine(null)}
+          onShare={handleShareRoutine}
+          onDuplicate={handleDuplicateRoutine}
+          onEdit={handleEditRoutine}
+          onDelete={handleDeleteRoutine}
+        />
+        <ExerciseDetailModal
+          exerciseId={selectedDetailExerciseId}
+          onClose={() => setSelectedDetailExerciseId(null)}
+        />
+      </>
+    );
+  }
+
   return (
-    <div className="animate-fade-in-up" style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>
-      {/* Header with Actions */}
-      <div className="flex-between">
-        <div>
-          <h2 style={{ fontSize: '1.4rem', fontWeight: 800, margin: 0 }}>Allenamento & Schede</h2>
-          <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '2px', margin: 0 }}>
-            Avvia sessioni, gestisci routine e consulta i tuoi progressi.
-          </p>
+    <div className="animate-fade-in-up" style={{ display: 'flex', flexDirection: 'column', gap: '16px', paddingBottom: '40px' }}>
+      
+      {/* Hevy Top Bar: "Allenamento ∨" + Sync + PRO */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '2px 0 6px 0' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <h1 style={{ fontSize: '1.45rem', fontWeight: 800, color: '#ffffff', margin: 0, letterSpacing: '-0.3px' }}>
+            Allenamento
+          </h1>
+          <ChevronDown size={18} color="#8e8e93" />
         </div>
-        <div style={{ display: 'flex', gap: '6px' }}>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <button
-            className="btn-secondary"
-            onClick={() => setIsCatalogOpen(true)}
-            style={{ padding: '8px 12px', fontSize: '0.75rem', height: '34px', display: 'flex', alignItems: 'center', gap: '5px' }}
-            title="Sfoglia catalogo oltre 100 esercizi"
+            type="button"
+            onClick={handleSyncCloud}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: isSyncingCloud ? 'var(--color-primary)' : '#ffffff',
+              cursor: 'pointer',
+              padding: '6px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+            title="Sincronizza con Cloud Supabase"
           >
-            <BookOpen size={14} /> Catalogo
+            <RotateCw size={19} className={isSyncingCloud ? 'animate-spin' : ''} />
           </button>
+          
+          <div
+            style={{
+              background: 'var(--color-primary)',
+              color: '#000000',
+              fontSize: '0.72rem',
+              fontWeight: 800,
+              padding: '3px 8px',
+              borderRadius: '99px',
+              letterSpacing: '0.4px',
+              boxShadow: '0 2px 8px rgba(212, 175, 55, 0.3)'
+            }}
+          >
+            PRO
+          </div>
+        </div>
+      </div>
+
+      {/* Sync Feedback Toast Banner */}
+      {syncNotice && (
+        <div
+          style={{
+            background: 'rgba(212, 175, 55, 0.12)',
+            border: '1px solid rgba(212, 175, 55, 0.35)',
+            borderRadius: '10px',
+            padding: '8px 12px',
+            color: 'var(--color-secondary)',
+            fontSize: '0.78rem',
+            fontWeight: 600,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}
+        >
+          <span>⚡</span>
+          <span>{syncNotice}</span>
+        </div>
+      )}
+
+      {/* Quick Start Empty Workout Card */}
+      <button
+        type="button"
+        className="hevy-quick-action"
+        onClick={() => startWorkout()}
+        style={{ height: '48px', margin: '4px 0 10px 0' }}
+      >
+        <Plus size={18} color="var(--color-primary)" />
+        <span style={{ fontSize: '0.92rem', fontWeight: 600 }}>Inizia un allenamento vuoto</span>
+      </button>
+
+      {/* "Routine" Section Header & Quick Action Buttons */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#ffffff', margin: 0 }}>
+            Routine
+          </h2>
           <button
-            className="btn-primary"
+            type="button"
+            style={{ background: 'none', border: 'none', color: '#8e8e93', cursor: 'pointer', padding: '4px' }}
+            title="Nuova cartella"
             onClick={() => {
               setEditingRoutineId(null);
               setNewRoutineName('');
@@ -463,133 +637,156 @@ export const RoutineManager: React.FC = () => {
               setSelectedExercises([]);
               setIsCreating(true);
             }}
-            style={{ padding: '8px 14px', fontSize: '0.75rem', height: '34px' }}
           >
-            <Plus size={15} /> Nuova
+            <FolderPlus size={20} />
           </button>
         </div>
-      </div>
 
-      {/* Quick Start / Free Workout */}
-      <div 
-        className="glass-card animate-glow" 
-        style={{ 
-          background: 'linear-gradient(135deg, rgba(212, 175, 55, 0.08) 0%, rgba(10, 10, 12, 0.95) 100%)', 
-          border: '1px solid var(--border-color)', 
-          borderLeft: '4px solid var(--color-primary)',
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center',
-          padding: '16px'
-        }}
-      >
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--color-primary)', fontWeight: 700 }}>
-              Sessione Libera
-            </span>
-          </div>
-          <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)', margin: '2px 0 0 0' }}>
-            Allenamento Libero
-          </h3>
-          <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px', margin: 0 }}>
-            Inizia subito senza scheda preimpostata e aggiungi esercizi al volo.
-          </p>
+        {/* Two side-by-side action buttons */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+          <button
+            type="button"
+            className="hevy-quick-action"
+            onClick={() => {
+              setEditingRoutineId(null);
+              setNewRoutineName('');
+              setNewRoutineDesc('');
+              setSelectedExercises([]);
+              setIsCreating(true);
+            }}
+            style={{ height: '46px' }}
+          >
+            <FileText size={18} color="#ffffff" />
+            <span style={{ fontSize: '0.86rem', fontWeight: 600 }}>Nuova routine</span>
+          </button>
+
+          <button
+            type="button"
+            className="hevy-quick-action"
+            onClick={() => setIsCatalogOpen(true)}
+            style={{ height: '46px' }}
+          >
+            <Search size={18} color="#ffffff" />
+            <span style={{ fontSize: '0.86rem', fontWeight: 600 }}>Esplora</span>
+          </button>
         </div>
-        <button
-          className="btn-primary"
-          onClick={() => startWorkout()}
-          style={{ width: '42px', height: '42px', borderRadius: 'var(--radius-full)', padding: 0, flexShrink: 0 }}
-          title="Inizia sessione libera"
+
+        {/* Collapsible Group Header: "▼ Le mie routine (X)" */}
+        <div
+          onClick={() => setIsRoutinesExpanded(prev => !prev)}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            color: '#8e8e93',
+            fontSize: '0.82rem',
+            fontWeight: 600,
+            cursor: 'pointer',
+            padding: '4px 0',
+            userSelect: 'none'
+          }}
         >
-          <Play size={18} fill="black" style={{ marginLeft: '3px' }} />
-        </button>
-      </div>
-
-      {/* Routines List ("Le Mie Schede") */}
-      <div>
-        <div className="flex-between" style={{ marginBottom: '10px' }}>
-          <h3 className="section-title" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Dumbbell size={16} color="var(--color-primary)" /> Le mie Schede
-          </h3>
-          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-            {routines.length} salvate
-          </span>
+          <ChevronDown
+            size={14}
+            style={{
+              transform: isRoutinesExpanded ? 'rotate(0deg)' : 'rotate(-90deg)',
+              transition: 'transform 0.2s ease'
+            }}
+          />
+          <span>Le mie routine ({routines.length})</span>
         </div>
 
-        {routines.length === 0 ? (
-          <div className="glass-card" style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)', fontSize: '0.82rem' }}>
-            <p style={{ margin: 0 }}>Nessuna scheda creata.</p>
-            <p style={{ fontSize: '0.72rem', color: 'var(--text-dark)', marginTop: '4px', margin: 0 }}>
-              Tocca "Nuova" per creare la tua prima scheda personalizzata con serie e ripetizioni!
-            </p>
-          </div>
-        ) : (
-          <div className="routine-list">
-            {routines.map(rot => (
-              <div key={rot.id} className="glass-card routine-card" style={{ cursor: 'pointer' }}>
-                <div className="routine-info" style={{ flex: 1 }} onClick={() => handleEditRoutine(rot)}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <h4 style={{ margin: 0 }}>{rot.name}</h4>
-                    <span style={{ fontSize: '0.68rem', color: '#00a8ff', opacity: 0.8 }}>(Tocca per modificare)</span>
-                  </div>
-                  {rot.description && <p style={{ marginTop: '3px' }}>{rot.description}</p>}
-                  
-                  {/* Exercises badges inside routine card */}
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '8px' }}>
-                    {rot.exercises.map(ex => {
-                      const exerciseDef = allExercises.find(m => m.id === ex.exerciseId);
-                      return (
-                        <span
-                          key={ex.exerciseId}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedDetailExerciseId(ex.exerciseId);
-                          }}
-                          style={{
-                            fontSize: '0.68rem',
-                            padding: '3px 8px',
-                            background: 'rgba(255,255,255,0.04)',
-                            border: '1px solid rgba(255,255,255,0.08)',
-                            borderRadius: '6px',
-                            color: '#e2e8f0',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '4px'
-                          }}
-                          title="Vedi scheda dettagliata esercizio"
-                        >
-                          {exerciseDef ? exerciseDef.name : 'Esercizio'}
-                          {ex.restSeconds && (
-                            <span style={{ color: '#00a8ff', fontSize: '0.62rem' }}>({ex.restSeconds}s)</span>
-                          )}
-                        </span>
-                      );
-                    })}
-                  </div>
-
-                  <span style={{ fontSize: '0.68rem', color: 'var(--color-primary)', fontWeight: 600, display: 'block', marginTop: '6px' }}>
-                    {rot.exercises.length} esercizi • {rot.exercises.reduce((sum, e) => sum + e.defaultSets.length, 0)} serie totali
-                  </span>
-                </div>
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                  <button
-                    className="icon-btn"
-                    onClick={() => handleEditRoutine(rot)}
-                    style={{ background: 'rgba(255,255,255,0.05)', color: '#38bdf8' }}
-                    title="Modifica scheda completa"
-                  >
-                    <Edit3 size={15} />
-                  </button>
-                  <button className="icon-btn" onClick={() => startWorkout(rot.id)} style={{ background: 'var(--color-primary-glow)', color: 'var(--color-primary)' }} title="Avvia questa routine">
-                    <Play size={16} fill="var(--color-primary)" style={{ marginLeft: '2px' }} />
-                  </button>
-                  <button className="icon-btn" onClick={() => deleteRoutine(rot.id)} style={{ color: 'var(--color-error)' }} title="Elimina routine">
-                    <Trash2 size={16} />
-                  </button>
-                </div>
+        {/* Routine Cards List */}
+        {isRoutinesExpanded && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            {routines.length === 0 ? (
+              <div className="hevy-card" style={{ textAlign: 'center', padding: '24px', color: '#8e8e93', fontSize: '0.82rem' }}>
+                <p style={{ margin: 0 }}>Nessuna routine salvata.</p>
+                <p style={{ fontSize: '0.74rem', color: '#71717a', marginTop: '4px', margin: 0 }}>
+                  Tocca "Nuova routine" per comporre la tua prima scheda con tempi di recupero e serie!
+                </p>
               </div>
-            ))}
+            ) : (
+              routines.map(rot => {
+                const exerciseSnippet = rot.exercises
+                  .map(re => allExercises.find(e => e.id === re.exerciseId)?.name || 'Esercizio')
+                  .join(', ');
+
+                return (
+                  <div
+                    key={rot.id}
+                    className="hevy-card"
+                    style={{
+                      padding: '16px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '8px'
+                    }}
+                    onClick={() => setSelectedDetailRoutine(rot)}
+                  >
+                    {/* Card Header: Routine Title + Three dots */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#ffffff', margin: 0 }}>
+                        {rot.name}
+                      </h3>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setMenuRoutine(rot);
+                        }}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: '#8e8e93',
+                          cursor: 'pointer',
+                          padding: '4px 6px',
+                          display: 'flex',
+                          alignItems: 'center'
+                        }}
+                        title="Opzioni routine"
+                      >
+                        <MoreHorizontal size={20} />
+                      </button>
+                    </div>
+
+                    {/* Truncated Exercise preview snippet */}
+                    <p
+                      style={{
+                        fontSize: '0.82rem',
+                        color: '#8e8e93',
+                        margin: 0,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        lineHeight: 1.4
+                      }}
+                    >
+                      {exerciseSnippet || 'Nessun esercizio'}
+                    </p>
+
+                    {/* Big Solid Gold CTA Button: "Avvia la Routine" */}
+                    <button
+                      type="button"
+                      className="hevy-cta-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        startWorkout(rot.id);
+                      }}
+                      style={{
+                        width: '100%',
+                        height: '42px',
+                        marginTop: '8px',
+                        fontSize: '0.92rem'
+                      }}
+                    >
+                      Avvia la Routine
+                    </button>
+                  </div>
+                );
+              })
+            )}
           </div>
         )}
       </div>
@@ -858,6 +1055,17 @@ export const RoutineManager: React.FC = () => {
         isOpen={!!editingWorkoutLog}
         onClose={() => setEditingWorkoutLog(null)}
         onSave={updateWorkoutLog}
+      />
+
+      {/* Routine Bottom Sheet Menu Modal */}
+      <RoutineBottomSheetModal
+        routine={menuRoutine}
+        isOpen={!!menuRoutine}
+        onClose={() => setMenuRoutine(null)}
+        onShare={handleShareRoutine}
+        onDuplicate={handleDuplicateRoutine}
+        onEdit={handleEditRoutine}
+        onDelete={handleDeleteRoutine}
       />
     </div>
   );
