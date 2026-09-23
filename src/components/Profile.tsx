@@ -1,9 +1,13 @@
-import React, { useState } from 'react';
-import { User, Scale, Activity, Calendar as CalendarIcon, Check, Settings, LogOut, Trash2, ShieldAlert, Download, Camera } from 'lucide-react';
-
+import React, { useState, useMemo } from 'react';
+import { 
+  User, Scale, Calendar as CalendarIcon, Check, Settings, LogOut, 
+  Trash2, ShieldAlert, Camera, Share2, Dumbbell, BarChart2, 
+  MoreHorizontal, ChevronDown, Edit3, Award, Clock, X, Search,
+  Activity
+} from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import type { WorkoutLog } from '../context/AppContext';
-import { mockExercises, isDistanceTimeExercise } from '../data/mockExercises';
+import { mockExercises, renderMuscleIcon, type MuscleGroup } from '../data/mockExercises';
 import { CycleTracker } from './CycleTracker';
 import { DeviceSyncHub } from './DeviceSyncHub';
 
@@ -46,7 +50,6 @@ const compressImage = (file: File, maxWidth: number, maxHeight: number): Promise
 
         ctx.drawImage(img, 0, 0, width, height);
 
-        // Convert to JPEG blob first (more memory efficient than toDataURL on mobile)
         canvas.toBlob(
           (blob) => {
             if (blob) {
@@ -63,7 +66,7 @@ const compressImage = (file: File, maxWidth: number, maxHeight: number): Promise
             }
           },
           'image/jpeg',
-          0.7
+          0.75
         );
       };
       img.onerror = () => {
@@ -77,17 +80,29 @@ const compressImage = (file: File, maxWidth: number, maxHeight: number): Promise
   });
 };
 
-
-
 export const Profile: React.FC = () => {
-  const { profile, updateProfile, workoutHistory, foodLogs, signOut, deleteAccountAndData } = useApp();
-  const [editing, setEditing] = useState(false);
-  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+  const { 
+    profile, 
+    updateProfile, 
+    workoutHistory, 
+    foodLogs, 
+    deleteWorkoutLog,
+    signOut, 
+    deleteAccountAndData 
+  } = useApp();
+
+  // Active Modals state
+  const [activeModal, setActiveModal] = useState<
+    'settings' | 'stats' | 'exercises' | 'measurements' | 'calendar' | 'privacy' | 'workout_detail' | null
+  >(null);
   
-  // Profile settings state
+  // Selected Workout for detailed inspection / edit
+  const [selectedWorkout, setSelectedWorkout] = useState<WorkoutLog | null>(null);
+
+  // Profile Form state
   const [name, setName] = useState(profile.name);
   const [gender, setGender] = useState(profile.gender);
-  const [height, setHeight] = useState(profile.height ? profile.height.toString() : '165');
+  const [height, setHeight] = useState(profile.height ? profile.height.toString() : '175');
   const [weight, setWeight] = useState(profile.weight.toString());
   const [avatarUrl, setAvatarUrl] = useState(profile.avatarUrl || '');
   const [bannerUrl, setBannerUrl] = useState(profile.bannerUrl || '');
@@ -102,11 +117,24 @@ export const Profile: React.FC = () => {
   const [thighs, setThighs] = useState(profile.thighs.toString());
   const [bf, setBf] = useState(profile.bodyFat.toString());
 
-  // Sync state with profile (e.g. from smartscale data update)
+  // Chart Metric & Timeframe
+  const [metricType, setMetricType] = useState<'duration' | 'volume' | 'reps'>('duration');
+  const [timeRangeDays, setTimeRangeDays] = useState<number>(90); // 90 = Ultimi 3 mesi
+  const [showTimeRangeDropdown, setShowTimeRangeDropdown] = useState(false);
+  const [selectedBarIndex, setSelectedBarIndex] = useState<number | null>(null);
+
+  // Exercises Modal search & filter
+  const [exerciseSearch, setExerciseSearch] = useState('');
+  const [exerciseMuscleFilter, setExerciseMuscleFilter] = useState('all');
+
+  // Workout History Three-dot dropdown menu
+  const [activeMenuWorkoutId, setActiveMenuWorkoutId] = useState<string | null>(null);
+
+  // Sync state with profile
   React.useEffect(() => {
     setName(profile.name);
     setGender(profile.gender);
-    setHeight(profile.height ? profile.height.toString() : '165');
+    setHeight(profile.height ? profile.height.toString() : '175');
     setWeight(profile.weight.toString());
     setAvatarUrl(profile.avatarUrl || '');
     setBannerUrl(profile.bannerUrl || '');
@@ -114,17 +142,19 @@ export const Profile: React.FC = () => {
     setTargetP(profile.targetProtein.toString());
     setTargetC(profile.targetCarbs.toString());
     setTargetF(profile.targetFat.toString());
-    
     setWaist(profile.waist.toString());
     setArms(profile.arms.toString());
     setThighs(profile.thighs.toString());
     setBf(profile.bodyFat.toString());
   }, [profile]);
 
-  // Chart stats selector
-  const [timeRange, setTimeRange] = useState<'7' | '30' | '90'>('7');
-  const [metricType, setMetricType] = useState<'volume' | 'duration' | 'distance' | 'reps'>('volume');
+  // Username generator
+  const username = useMemo(() => {
+    const raw = profile.name.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+    return raw ? raw : 'demi02';
+  }, [profile.name]);
 
+  // Image Upload handler
   const handleUploadImage = async (e: React.ChangeEvent<HTMLInputElement>, type: 'avatar' | 'banner') => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -132,20 +162,19 @@ export const Profile: React.FC = () => {
     try {
       const maxWidth = type === 'avatar' ? 300 : 800;
       const maxHeight = type === 'avatar' ? 300 : 260;
-      
       const compressed = await compressImage(file, maxWidth, maxHeight);
+      
       if (type === 'avatar') {
         setAvatarUrl(compressed);
         updateProfile({ avatarUrl: compressed });
-        window.dispatchEvent(new CustomEvent('df_data_updated'));
       } else {
         setBannerUrl(compressed);
         updateProfile({ bannerUrl: compressed });
-        window.dispatchEvent(new CustomEvent('df_data_updated'));
       }
+      window.dispatchEvent(new CustomEvent('df_data_updated'));
     } catch (err) {
       console.error(err);
-      alert("Errore durante la compressione dell'immagine. Riprova con un altro file.");
+      alert("Errore durante il caricamento dell'immagine. Riprova.");
     }
   };
 
@@ -153,163 +182,289 @@ export const Profile: React.FC = () => {
     updateProfile({
       name,
       gender,
-      height: parseFloat(height) || 165,
-      weight: parseFloat(weight) || 60.0,
+      height: parseFloat(height) || 175,
+      weight: parseFloat(weight) || 70,
       avatarUrl,
       bannerUrl,
-      targetCalories: parseInt(targetKcal) || 1800,
-      targetProtein: parseInt(targetP) || 120,
-      targetCarbs: parseInt(targetC) || 185,
-      targetFat: parseInt(targetF) || 55
+      targetCalories: parseInt(targetKcal) || 2000,
+      targetProtein: parseInt(targetP) || 140,
+      targetCarbs: parseInt(targetC) || 200,
+      targetFat: parseInt(targetF) || 60
     });
-    setEditing(false);
+    setActiveModal(null);
   };
-
-
 
   const handleSaveMeasurements = () => {
     updateProfile({
+      weight: parseFloat(weight) || profile.weight,
       waist: parseFloat(waist) || 0,
       arms: parseFloat(arms) || 0,
       thighs: parseFloat(thighs) || 0,
       bodyFat: parseFloat(bf) || 0
     });
-    alert('Misurazioni aggiornate!');
+    setActiveModal(null);
   };
 
   const handleDeleteAccount = async () => {
     const confirmation = window.confirm(
-      'ATTENZIONE: Questa azione è irreversibile. Verranno eliminati permanentemente il tuo account, il tuo profilo e tutta la cronologia dei tuoi allenamenti e pasti. Vuoi procedere?'
+      'ATTENZIONE: Questa azione è irreversibile. Verranno eliminati permanentemente il tuo account, il tuo profilo e tutti gli allenamenti e cibi salvati. Vuoi procedere?'
     );
     if (confirmation) {
       await deleteAccountAndData();
     }
   };
 
-  // --- STATS COMPUTATION FOR CHARTS ---
-  const getFilteredLogs = (): WorkoutLog[] => {
-    const limitDate = new Date();
-    limitDate.setDate(limitDate.getDate() - parseInt(timeRange));
-    return workoutHistory.filter(log => new Date(log.date).getTime() >= limitDate.getTime());
+  const handleShareProfile = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `Profilo di ${profile.name} su DeV Fit`,
+          text: `Guarda il mio profilo fitness e i miei progressi su DeV Fit!`,
+          url: window.location.href,
+        });
+      } catch (err) {
+        // User cancelled or aborted
+      }
+    } else {
+      navigator.clipboard.writeText(window.location.href);
+      alert('Link al profilo copiato negli appunti!');
+    }
   };
 
-  const renderStatsChart = () => {
-    const logs = getFilteredLogs().reverse(); // Chronological
+  // --- WEEKLY AGGREGATION FOR BAR CHART ---
+  const weeklyChartData = useMemo(() => {
+    const numWeeks = timeRangeDays === 30 ? 4 : timeRangeDays === 90 ? 12 : timeRangeDays === 180 ? 24 : 52;
+    const now = new Date();
+    // Align to Sunday/Monday or 7-day increments
+    const data: { label: string; value: number; isCurrentWeek: boolean }[] = [];
 
-    if (logs.length === 0) {
-      return (
-        <div style={{ padding: '30px', textAlign: 'center', color: 'var(--text-dark)', fontSize: '0.8rem' }}>
-          Nessun dato di allenamento registrato in questo arco temporale.
-        </div>
-      );
+    for (let w = numWeeks - 1; w >= 0; w--) {
+      const weekEnd = new Date(now.getTime() - w * 7 * 24 * 60 * 60 * 1000);
+      const weekStart = new Date(weekEnd.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+      const logsInWeek = workoutHistory.filter(log => {
+        const d = new Date(log.date).getTime();
+        return d >= weekStart.getTime() && d < weekEnd.getTime();
+      });
+
+      let totalVal = 0;
+      logsInWeek.forEach(log => {
+        if (metricType === 'duration') {
+          totalVal += Math.round(log.duration / 60); // minutes
+        } else if (metricType === 'volume') {
+          totalVal += log.volume;
+        } else if (metricType === 'reps') {
+          log.exercises.forEach(ex => {
+            ex.sets.forEach(s => {
+              if (s.completed) totalVal += (s.reps || 0);
+            });
+          });
+        }
+      });
+
+      const label = weekStart.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' });
+      data.push({
+        label,
+        value: totalVal,
+        isCurrentWeek: w === 0
+      });
     }
 
-    // Extract metrics values
-    const chartData = logs.map(log => {
-      let val = 0;
-      if (metricType === 'volume') {
-        val = log.volume;
-      } else if (metricType === 'duration') {
-        val = Math.round(log.duration / 60); // minutes
-      } else if (metricType === 'distance') {
-        log.exercises.forEach(ex => {
-          const exDef = mockExercises.find(m => m.id === ex.exerciseId);
-          if (isDistanceTimeExercise(exDef)) {
-            ex.sets.forEach(s => {
-              if (s.completed && s.distance) val += s.distance;
-            });
-          }
-        });
-        val = Math.round(val * 10) / 10;
-      } else if (metricType === 'reps') {
-        log.exercises.forEach(ex => {
-          ex.sets.forEach(s => {
-            if (s.completed) val += s.reps;
-          });
-        });
+    return data;
+  }, [workoutHistory, timeRangeDays, metricType]);
+
+  // Current week or selected week value for Headline
+  const currentOrSelectedVal = useMemo(() => {
+    if (selectedBarIndex !== null && weeklyChartData[selectedBarIndex]) {
+      return weeklyChartData[selectedBarIndex].value;
+    }
+    const cur = weeklyChartData[weeklyChartData.length - 1];
+    return cur ? cur.value : 0;
+  }, [weeklyChartData, selectedBarIndex]);
+
+  // Headline text generator matching Screenshot 2
+  const headlineText = useMemo(() => {
+    if (metricType === 'duration') {
+      const hours = Math.floor(currentOrSelectedVal / 60);
+      const mins = currentOrSelectedVal % 60;
+      if (hours > 0 && mins === 0) {
+        return `${hours} ${hours === 1 ? 'ora' : 'ore'} questa settimana`;
+      } else if (hours > 0) {
+        return `${hours}h ${mins}m questa settimana`;
+      } else {
+        return `${mins} min questa settimana`;
       }
-      return {
-        label: new Date(log.date).toLocaleDateString('it-IT', { day: '2-digit', month: 'short' }),
-        value: val
-      };
+    } else if (metricType === 'volume') {
+      return `${currentOrSelectedVal.toLocaleString('it-IT')} kg questa settimana`;
+    } else {
+      return `${currentOrSelectedVal.toLocaleString('it-IT')} ripetizioni questa settimana`;
+    }
+  }, [metricType, currentOrSelectedVal]);
+
+  const timeRangeLabel = useMemo(() => {
+    switch (timeRangeDays) {
+      case 30: return 'Ultimo mese';
+      case 90: return 'Ultimi 3 mesi';
+      case 180: return 'Ultimi 6 mesi';
+      case 365: return 'Tutto';
+      default: return 'Ultimi 3 mesi';
+    }
+  }, [timeRangeDays]);
+
+  // Total Lifetime Stats
+  const lifetimeStats = useMemo(() => {
+    let totalWorkouts = workoutHistory.length;
+    let totalSeconds = 0;
+    let totalVol = 0;
+    let totalSets = 0;
+
+    workoutHistory.forEach(log => {
+      totalSeconds += log.duration;
+      totalVol += log.volume;
+      log.exercises.forEach(ex => {
+        totalSets += ex.sets.filter(s => s.completed).length;
+      });
     });
 
-    const values = chartData.map(d => d.value);
-    const maxVal = Math.max(...values) || 10;
+    const totalHours = Math.round((totalSeconds / 3600) * 10) / 10;
+    return {
+      totalWorkouts,
+      totalHours,
+      totalVol,
+      totalSets
+    };
+  }, [workoutHistory]);
 
-    // SVG parameters
-    const svgW = 380;
-    const svgH = 140;
-    const padX = 40;
-    const padY = 20;
-    const chartW = svgW - 2 * padX;
-    const chartH = svgH - 2 * padY;
+  // 1RM Personal Records per Exercise
+  const personalRecords = useMemo(() => {
+    const prMap: Record<string, { weight: number; reps: number; oneRepMax: number; date: string }> = {};
 
-    // Drawing lines & bars
-    const barWidth = Math.max(10, (chartW / chartData.length) - 10);
-    const stepX = chartData.length > 1 ? chartW / (chartData.length - 1) : chartW;
+    workoutHistory.forEach(log => {
+      log.exercises.forEach(ex => {
+        ex.sets.forEach(s => {
+          if (s.completed && s.weight && s.reps) {
+            // Epley 1RM formula: weight * (1 + reps / 30)
+            const est1RM = Math.round(s.weight * (1 + s.reps / 30));
+            const existing = prMap[ex.exerciseId];
+            if (!existing || est1RM > existing.oneRepMax) {
+              prMap[ex.exerciseId] = {
+                weight: s.weight,
+                reps: s.reps,
+                oneRepMax: est1RM,
+                date: log.date
+              };
+            }
+          }
+        });
+      });
+    });
+
+    return prMap;
+  }, [workoutHistory]);
+
+  // Filtered exercises for catalog
+  const filteredCatalogExercises = useMemo(() => {
+    return mockExercises.filter(ex => {
+      const matchSearch = ex.name.toLowerCase().includes(exerciseSearch.toLowerCase()) ||
+        ex.category.toLowerCase().includes(exerciseSearch.toLowerCase()) ||
+        ex.muscleGroup.toLowerCase().includes(exerciseSearch.toLowerCase());
+      const matchCategory = exerciseMuscleFilter === 'all' || ex.category === exerciseMuscleFilter;
+      return matchSearch && matchCategory;
+    });
+  }, [exerciseSearch, exerciseMuscleFilter]);
+
+  // SVG Bar Chart rendering
+  const renderSvgBarChart = () => {
+    const data = weeklyChartData;
+    const maxVal = Math.max(...data.map(d => d.value), metricType === 'duration' ? 60 : 100);
+
+    const svgW = 360;
+    const svgH = 130;
+    const padTop = 15;
+    const padBottom = 25;
+    const padLeft = 10;
+    const padRight = 10;
+    const chartW = svgW - padLeft - padRight;
+    const chartH = svgH - padTop - padBottom;
+
+    const n = data.length;
+    const slotW = chartW / n;
+    const barW = Math.max(6, Math.min(18, slotW * 0.55));
+
+    // Label interval: show ~4-5 labels max along X-axis
+    const stepLabel = Math.max(1, Math.floor(n / 4));
 
     return (
-      <div style={{ marginTop: '16px' }}>
-        <svg viewBox={`0 0 ${svgW} ${svgH}`} style={{ width: '100%', height: 'auto' }}>
-          {/* Grid lines */}
-          <line x1={padX} y1={padY} x2={svgW - padX} y2={padY} stroke="rgba(255,255,255,0.03)" />
-          <line x1={padX} y1={padY + chartH/2} x2={svgW - padX} y2={padY + chartH/2} stroke="rgba(255,255,255,0.03)" />
-          <line x1={padX} y1={padY + chartH} x2={svgW - padX} y2={padY + chartH} stroke="rgba(255,255,255,0.08)" />
+      <div style={{ position: 'relative', width: '100%', overflow: 'hidden' }}>
+        <svg 
+          viewBox={`0 0 ${svgW} ${svgH}`} 
+          style={{ width: '100%', height: 'auto', display: 'block' }}
+        >
+          {/* Subtle Grid Lines */}
+          <line x1={padLeft} y1={padTop} x2={svgW - padRight} y2={padTop} stroke="rgba(255,255,255,0.03)" />
+          <line x1={padLeft} y1={padTop + chartH / 2} x2={svgW - padRight} y2={padTop + chartH / 2} stroke="rgba(255,255,255,0.03)" />
+          <line x1={padLeft} y1={padTop + chartH} x2={svgW - padRight} y2={padTop + chartH} stroke="rgba(255,255,255,0.08)" />
 
-          {/* Draw bars */}
-          {chartData.map((d, i) => {
-            const pct = d.value / maxVal;
-            const h = chartH * pct;
-            const x = padX + i * stepX - barWidth/2;
-            const y = padY + chartH - h;
+          {/* Vertical Bars */}
+          {data.map((item, idx) => {
+            const isSelected = selectedBarIndex === idx || (selectedBarIndex === null && item.isCurrentWeek);
+            const pct = maxVal > 0 ? item.value / maxVal : 0;
+            const h = Math.max(3, chartH * pct);
+            const x = padLeft + idx * slotW + (slotW - barW) / 2;
+            const y = padTop + chartH - h;
 
             return (
-              <g key={i}>
+              <g 
+                key={idx} 
+                onClick={() => setSelectedBarIndex(idx)} 
+                style={{ cursor: 'pointer' }}
+              >
+                {/* Background Hit Target for touch */}
+                <rect 
+                  x={padLeft + idx * slotW} 
+                  y={padTop} 
+                  width={slotW} 
+                  height={chartH} 
+                  fill="transparent" 
+                />
+
+                {/* The Bar */}
                 <rect 
                   x={x} 
                   y={y} 
-                  width={barWidth} 
+                  width={barW} 
                   height={h} 
-                  rx="3" 
-                  fill={`url(#glowGrad-${metricType})`}
-                  style={{ filter: 'drop-shadow(0px 2px 4px rgba(139, 92, 246, 0.15))' }}
+                  rx={3}
+                  fill={isSelected ? '#f6e09a' : 'var(--color-primary)'}
+                  style={{
+                    filter: isSelected ? 'drop-shadow(0 0 6px rgba(212, 175, 55, 0.6))' : 'none',
+                    transition: 'all 0.2s ease'
+                  }}
                 />
-                <text x={x + barWidth/2} y={y - 5} fill="white" fontSize="7" fontWeight="700" textAnchor="middle">
-                  {d.value}{metricType === 'distance' ? ' km' : ''}
-                </text>
-                <text x={x + barWidth/2} y={svgH - 5} fill="var(--text-muted)" fontSize="7" textAnchor="middle">
-                  {d.label}
-                </text>
+
+                {/* Label on X-axis */}
+                {(idx % stepLabel === 0 || idx === n - 1) && (
+                  <text 
+                    x={padLeft + idx * slotW + slotW / 2} 
+                    y={svgH - 6} 
+                    fill="var(--text-muted)" 
+                    fontSize="7" 
+                    textAnchor="middle"
+                    fontWeight="500"
+                  >
+                    {item.label}
+                  </text>
+                )}
               </g>
             );
           })}
-
-          <defs>
-            <linearGradient id="glowGrad-volume" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="var(--color-primary)" />
-              <stop offset="100%" stopColor="#4c1d95" />
-            </linearGradient>
-            <linearGradient id="glowGrad-duration" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="var(--color-secondary)" />
-              <stop offset="100%" stopColor="#155e75" />
-            </linearGradient>
-            <linearGradient id="glowGrad-distance" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#10b981" />
-              <stop offset="100%" stopColor="#047857" />
-            </linearGradient>
-            <linearGradient id="glowGrad-reps" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#ec4899" stopOpacity="0.8" />
-              <stop offset="100%" stopColor="#831843" stopOpacity="0.3" />
-            </linearGradient>
-          </defs>
         </svg>
       </div>
     );
   };
 
-  // --- MOCK CONSISTENCY CALENDAR GRID (Last 28 Days) ---
-  const renderConsistencyGrid = () => {
+  // 28-day consistency grid generator
+  const render28DayGrid = () => {
     const blocks = [];
     const today = new Date();
 
@@ -321,18 +476,18 @@ export const Profile: React.FC = () => {
       const hasWorkout = workoutHistory.some(log => log.date.split('T')[0] === dStr);
       const hasFood = !!foodLogs[dStr] && foodLogs[dStr].length > 0;
 
-      let color = 'rgba(255, 255, 255, 0.03)';
-      let title = `Nessun record per il ${d.toLocaleDateString()}`;
+      let color = 'rgba(255, 255, 255, 0.04)';
+      let title = `Nessun record per il ${d.toLocaleDateString('it-IT')}`;
 
       if (hasWorkout && hasFood) {
-        color = 'var(--color-success)';
-        title = `Allenamento e Dieta loggati! (${d.toLocaleDateString()})`;
-      } else if (hasWorkout) {
         color = 'var(--color-primary)';
-        title = `Solo Allenamento loggato (${d.toLocaleDateString()})`;
+        title = `Allenamento e Dieta loggati (${d.toLocaleDateString('it-IT')})`;
+      } else if (hasWorkout) {
+        color = '#f59e0b';
+        title = `Allenamento loggato (${d.toLocaleDateString('it-IT')})`;
       } else if (hasFood) {
         color = 'var(--color-secondary)';
-        title = `Solo Dieta loggata (${d.toLocaleDateString()})`;
+        title = `Dieta loggata (${d.toLocaleDateString('it-IT')})`;
       }
 
       blocks.push(
@@ -340,10 +495,10 @@ export const Profile: React.FC = () => {
           key={i} 
           style={{
             background: color, 
-            width: '18px', 
-            height: '18px', 
+            aspectRatio: '1', 
             borderRadius: '4px',
-            border: '1px solid rgba(255,255,255,0.02)'
+            border: '1px solid rgba(255,255,255,0.04)',
+            transition: 'transform 0.15s ease'
           }}
           title={title}
         />
@@ -351,569 +506,914 @@ export const Profile: React.FC = () => {
     }
 
     return (
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '8px', marginTop: '10px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '6px', margin: '14px 0' }}>
         {blocks}
       </div>
     );
   };
 
   return (
-    <div className="animate-fade-in-up" style={{ display: 'flex', flexDirection: 'column', gap: '20px', paddingBottom: '40px' }}>
+    <div className="animate-fade-in-up" style={{ paddingBottom: '70px', maxWidth: '640px', margin: '0 auto' }}>
       
-      {/* Header Profile Title */}
-      <div className="flex-between">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <User size={22} color="var(--color-primary)" />
-          <h2 style={{ fontSize: '1.4rem', fontWeight: 800 }}>Profilo & Statistiche</h2>
+      {/* 1. TOP HEADER (Username ✏️, Share ↗️, Settings ⚙️) matching Screenshot 2 */}
+      <div className="hevy-profile-header">
+        <button 
+          className="hevy-profile-username-btn"
+          onClick={() => setActiveModal('settings')}
+          title="Modifica profilo"
+        >
+          <span>{username}</span>
+          <Edit3 size={15} style={{ color: 'var(--text-muted)' }} />
+        </button>
+
+        <div className="hevy-profile-actions">
+          <button 
+            className="icon-btn" 
+            onClick={handleShareProfile} 
+            title="Condividi profilo"
+            style={{ width: '36px', height: '36px' }}
+          >
+            <Share2 size={18} />
+          </button>
+          <button 
+            className="icon-btn" 
+            onClick={() => setActiveModal('settings')} 
+            title="Impostazioni"
+            style={{ width: '36px', height: '36px' }}
+          >
+            <Settings size={18} />
+          </button>
         </div>
-        <button className="btn-secondary" onClick={() => setEditing(!editing)} style={{ padding: '8px 14px', fontSize: '0.78rem' }}>
-          <Settings size={14} style={{ marginRight: '4px' }} />
-          {editing ? 'Annulla' : 'Modifica'}
+      </div>
+
+      {/* 2. USER ROW (Avatar, Display Name, 3 stats: Allenamenti, Seguaci, Seguendo) */}
+      <div className="hevy-profile-user-row">
+        {/* Large Avatar */}
+        <div 
+          className="hevy-profile-avatar"
+          onClick={() => setActiveModal('settings')}
+          title="Tocca per cambiare foto profilo"
+          style={{ cursor: 'pointer' }}
+        >
+          {profile.avatarUrl ? (
+            <img src={profile.avatarUrl} alt="Avatar" />
+          ) : (
+            <span style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--color-primary)' }}>
+              {profile.name.charAt(0).toUpperCase() || 'D'}
+            </span>
+          )}
+        </div>
+
+        {/* Name and Stats */}
+        <div className="hevy-profile-identity-col">
+          <h2 className="hevy-profile-display-name">{profile.name || 'Demi'}</h2>
+          
+          <div className="hevy-profile-stats-row">
+            <div className="hevy-profile-stat-item">
+              <span className="hevy-profile-stat-value">{workoutHistory.length}</span>
+              <span className="hevy-profile-stat-label">Allenamenti</span>
+            </div>
+            <div className="hevy-profile-stat-item">
+              <span className="hevy-profile-stat-value">1</span>
+              <span className="hevy-profile-stat-label">Seguaci</span>
+            </div>
+            <div className="hevy-profile-stat-item">
+              <span className="hevy-profile-stat-value">1</span>
+              <span className="hevy-profile-stat-label">Seguendo</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 3. HEADLINE STATS & TIMEFRAME SELECTOR */}
+      <div className="hevy-chart-headline-row">
+        <h3 className="hevy-chart-headline-text">{headlineText}</h3>
+
+        <div style={{ position: 'relative' }}>
+          <button 
+            className="hevy-period-badge"
+            onClick={() => setShowTimeRangeDropdown(!showTimeRangeDropdown)}
+          >
+            <span>{timeRangeLabel}</span>
+            <ChevronDown size={14} />
+          </button>
+
+          {showTimeRangeDropdown && (
+            <div 
+              className="glass-card animate-scale-in"
+              style={{
+                position: 'absolute',
+                top: 'calc(100% + 6px)',
+                right: 0,
+                zIndex: 100,
+                padding: '6px',
+                minWidth: '140px',
+                background: '#16161c',
+                border: '1px solid rgba(255,255,255,0.1)',
+                borderRadius: '12px',
+                boxShadow: '0 8px 24px rgba(0,0,0,0.8)'
+              }}
+            >
+              {[
+                { label: 'Ultimo mese', days: 30 },
+                { label: 'Ultimi 3 mesi', days: 90 },
+                { label: 'Ultimi 6 mesi', days: 180 },
+                { label: 'Tutto', days: 365 }
+              ].map(opt => (
+                <button
+                  key={opt.days}
+                  onClick={() => {
+                    setTimeRangeDays(opt.days);
+                    setSelectedBarIndex(null);
+                    setShowTimeRangeDropdown(false);
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    textAlign: 'left',
+                    background: timeRangeDays === opt.days ? 'rgba(212, 175, 55, 0.15)' : 'none',
+                    color: timeRangeDays === opt.days ? 'var(--color-primary)' : '#ffffff',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '0.8rem',
+                    fontWeight: timeRangeDays === opt.days ? 700 : 500,
+                    cursor: 'pointer'
+                  }}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* 4. INTERACTIVE WEEKLY BAR CHART (Hevy gold style) */}
+      <div style={{ margin: '8px 0 12px 0' }}>
+        {renderSvgBarChart()}
+      </div>
+
+      {/* 5. METRIC FILTER PILLS (Durata, Volume, Ripetizioni) matching Screenshot 2 */}
+      <div className="hevy-filter-pills-row">
+        <button 
+          className={`hevy-filter-pill ${metricType === 'duration' ? 'active' : ''}`}
+          onClick={() => {
+            setMetricType('duration');
+            setSelectedBarIndex(null);
+          }}
+        >
+          Durata
+        </button>
+        <button 
+          className={`hevy-filter-pill ${metricType === 'volume' ? 'active' : ''}`}
+          onClick={() => {
+            setMetricType('volume');
+            setSelectedBarIndex(null);
+          }}
+        >
+          Volume
+        </button>
+        <button 
+          className={`hevy-filter-pill ${metricType === 'reps' ? 'active' : ''}`}
+          onClick={() => {
+            setMetricType('reps');
+            setSelectedBarIndex(null);
+          }}
+        >
+          Ripetizioni
         </button>
       </div>
 
-      {/* Editing Settings Profile */}
-      {editing ? (
-        <div className="glass-card animate-scale-in" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          <h3 style={{ fontSize: '0.95rem', fontWeight: 700 }}>Modifica Account</h3>
-          
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            <label style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Nome Utente</label>
-            <input 
-              type="text" 
-              className="set-input" 
-              value={name} 
-              onChange={e => setName(e.target.value)}
-              style={{ width: '100%', height: '38px', padding: '10px', textAlign: 'left' }}
-            />
-          </div>
+      {/* 6. PANNELLO DI CONTROLLO (2x2 Grid) matching Screenshot 2 */}
+      <h3 className="section-title" style={{ fontSize: '1.05rem', marginBottom: '12px' }}>
+        Pannello di controllo
+      </h3>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            <label style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Genere</label>
-            <select 
-              className="set-input" 
-              value={gender} 
-              onChange={e => setGender(e.target.value as any)}
-              style={{ width: '100%', height: '38px', padding: '0 10px' }}
-            >
-              <option value="male">Maschio</option>
-              <option value="female">Femmina</option>
-            </select>
-          </div>
+      <div className="hevy-control-grid">
+        {/* Statistiche */}
+        <div 
+          className="hevy-control-card"
+          onClick={() => setActiveModal('stats')}
+        >
+          <BarChart2 size={20} color="var(--color-primary)" />
+          <span>Statistiche</span>
+        </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <label style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Altezza (cm)</label>
-              <input 
-                type="number" 
-                className="set-input" 
-                value={height} 
-                onChange={e => setHeight(e.target.value)}
-                style={{ width: '100%', height: '38px' }}
-              />
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <label style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Peso (kg)</label>
-              <input 
-                type="number" 
-                className="set-input" 
-                value={weight} 
-                onChange={e => setWeight(e.target.value)}
-                style={{ width: '100%', height: '38px' }}
-              />
-            </div>
-          </div>
+        {/* Esercizi */}
+        <div 
+          className="hevy-control-card"
+          onClick={() => setActiveModal('exercises')}
+        >
+          <Dumbbell size={20} color="var(--color-primary)" />
+          <span>Esercizi</span>
+        </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <label style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Calorie Obiettivo</label>
-              <input 
-                type="number" 
-                className="set-input" 
-                value={targetKcal} 
-                onChange={e => setTargetKcal(e.target.value)}
-                style={{ width: '100%', height: '38px' }}
-              />
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <label style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Pro target (g)</label>
-              <input 
-                type="number" 
-                className="set-input" 
-                value={targetP} 
-                onChange={e => setTargetP(e.target.value)}
-                style={{ width: '100%', height: '38px' }}
-              />
-            </div>
-          </div>
+        {/* Misurazioni */}
+        <div 
+          className="hevy-control-card"
+          onClick={() => setActiveModal('measurements')}
+        >
+          <Scale size={20} color="var(--color-primary)" />
+          <span>Misurazioni</span>
+        </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <label style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Carbi target (g)</label>
-              <input 
-                type="number" 
-                className="set-input" 
-                value={targetC} 
-                onChange={e => setTargetC(e.target.value)}
-                style={{ width: '100%', height: '38px' }}
-              />
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <label style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Grassi target (g)</label>
-              <input 
-                type="number" 
-                className="set-input" 
-                value={targetF} 
-                onChange={e => setTargetF(e.target.value)}
-                style={{ width: '100%', height: '38px' }}
-              />
-            </div>
-          </div>
+        {/* Calendario */}
+        <div 
+          className="hevy-control-card"
+          onClick={() => setActiveModal('calendar')}
+        >
+          <CalendarIcon size={20} color="var(--color-primary)" />
+          <span>Calendario</span>
+        </div>
+      </div>
 
-          {/* Immagini del Profilo con Live Preview */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <label style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Foto Profilo</label>
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+      {/* 7. ALLENAMENTI SECTION (Past Workouts List) matching Screenshot 2 */}
+      <div style={{ marginTop: '10px' }}>
+        <div className="flex-between" style={{ marginBottom: '14px' }}>
+          <h3 className="section-title" style={{ fontSize: '1.05rem', margin: 0 }}>
+            Allenamenti
+          </h3>
+          <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+            {workoutHistory.length} completati
+          </span>
+        </div>
+
+        {workoutHistory.length === 0 ? (
+          <div className="empty-state" style={{ padding: '36px 16px' }}>
+            <Dumbbell size={32} color="var(--text-dark)" style={{ marginBottom: '10px' }} />
+            <p style={{ fontSize: '0.86rem', color: 'var(--text-muted)' }}>
+              Nessun allenamento salvato finora.
+            </p>
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-dark)' }}>
+              Inizia una sessione dalla scheda Allenamento per vedere qui i tuoi log!
+            </p>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {workoutHistory.map(log => {
+              const dateFormatted = new Date(log.date).toLocaleDateString('it-IT', { 
+                weekday: 'long', 
+                day: 'numeric', 
+                month: 'short' 
+              });
+              const durationMin = Math.round(log.duration / 60);
+              const totalSetsCount = log.exercises.reduce((acc, ex) => acc + ex.sets.filter(s => s.completed).length, 0);
+
+              return (
+                <div key={log.id} className="hevy-workout-history-card">
+                  {/* Card Header: Routine Title + Menu */}
+                  <div className="flex-between" style={{ marginBottom: '8px' }}>
+                    <div>
+                      <h4 style={{ fontSize: '1.02rem', fontWeight: 800, color: '#ffffff', margin: 0 }}>
+                        {log.name || 'Allenamento Personalizzato'}
+                      </h4>
+                      <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', textTransform: 'capitalize' }}>
+                        {dateFormatted}
+                      </span>
+                    </div>
+
+                    <div style={{ position: 'relative' }}>
+                      <button 
+                        className="icon-btn"
+                        onClick={() => setActiveMenuWorkoutId(activeMenuWorkoutId === log.id ? null : log.id)}
+                        style={{ width: '32px', height: '32px' }}
+                      >
+                        <MoreHorizontal size={18} />
+                      </button>
+
+                      {activeMenuWorkoutId === log.id && (
+                        <div 
+                          className="glass-card animate-scale-in"
+                          style={{
+                            position: 'absolute',
+                            right: 0,
+                            top: 'calc(100% + 4px)',
+                            zIndex: 100,
+                            padding: '6px',
+                            minWidth: '130px',
+                            background: '#16161c',
+                            border: '1px solid rgba(255,255,255,0.1)',
+                            borderRadius: '10px',
+                            boxShadow: '0 8px 24px rgba(0,0,0,0.8)'
+                          }}
+                        >
+                          <button
+                            onClick={() => {
+                              setSelectedWorkout(log);
+                              setActiveModal('workout_detail');
+                              setActiveMenuWorkoutId(null);
+                            }}
+                            style={{
+                              width: '100%',
+                              padding: '8px 10px',
+                              textAlign: 'left',
+                              background: 'none',
+                              border: 'none',
+                              color: '#ffffff',
+                              fontSize: '0.78rem',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px'
+                            }}
+                          >
+                            <Activity size={14} color="var(--color-primary)" />
+                            <span>Vedi Dettagli</span>
+                          </button>
+                          
+                          <button
+                            onClick={() => {
+                              if (window.confirm("Eliminare definitivamente questo allenamento dalla cronologia?")) {
+                                deleteWorkoutLog(log.id);
+                              }
+                              setActiveMenuWorkoutId(null);
+                            }}
+                            style={{
+                              width: '100%',
+                              padding: '8px 10px',
+                              textAlign: 'left',
+                              background: 'none',
+                              border: 'none',
+                              color: 'var(--color-error)',
+                              fontSize: '0.78rem',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px'
+                            }}
+                          >
+                            <Trash2 size={14} />
+                            <span>Elimina</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Summary Stats Chips */}
+                  <div style={{ display: 'flex', gap: '16px', margin: '10px 0 14px 0', fontSize: '0.78rem', color: '#a1a1aa' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                      <Clock size={14} color="var(--color-primary)" />
+                      <span>{durationMin} min</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                      <Dumbbell size={14} color="var(--color-primary)" />
+                      <span>{log.volume.toLocaleString('it-IT')} kg</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                      <Award size={14} color="var(--color-primary)" />
+                      <span>{totalSetsCount} serie</span>
+                    </div>
+                  </div>
+
+                  {/* Exercise Preview List */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    {log.exercises.map((ex, i) => {
+                      const completedCount = ex.sets.filter(s => s.completed).length;
+                      const exDetail = mockExercises.find(m => m.id === ex.exerciseId);
+                      const exName = exDetail ? exDetail.name : 'Esercizio';
+                      const exMuscleGroup: MuscleGroup = exDetail ? exDetail.muscleGroup : 'Pettorali';
+                      return (
+                        <div key={i} className="hevy-exercise-preview-row">
+                          <div className="hevy-exercise-icon-avatar">
+                            {renderMuscleIcon(exMuscleGroup, 32)}
+                          </div>
+                          <span className="hevy-exercise-preview-text">
+                            <strong>{completedCount} serie</strong> {exName}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* =========================================================================
+          MODALS & DRAWERS
+          ========================================================================= */}
+
+      {/* 1. SETTINGS / EDIT PROFILE MODAL */}
+      {activeModal === 'settings' && (
+        <div className="drawer-backdrop" onClick={() => setActiveModal(null)}>
+          <div className="drawer-content animate-fade-in-up" onClick={e => e.stopPropagation()} style={{ maxHeight: '88vh' }}>
+            <div className="drawer-header">
+              <h3 className="section-title">Impostazioni Profilo & Account</h3>
+              <button className="drawer-close" onClick={() => setActiveModal(null)}><X size={20} /></button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '12px', overflowY: 'auto', paddingRight: '4px' }}>
+              
+              {/* Avatar Upload */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px', background: '#121217', padding: '12px', borderRadius: '12px' }}>
                 <div style={{
-                  width: '38px',
-                  height: '38px',
+                  width: '60px',
+                  height: '60px',
                   borderRadius: '50%',
-                  overflow: 'hidden',
                   border: '2px solid var(--color-primary)',
-                  background: '#050506',
+                  overflow: 'hidden',
+                  background: '#0a0a0c',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   flexShrink: 0
                 }}>
                   {avatarUrl ? (
-                    <img src={avatarUrl} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <img src={avatarUrl} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   ) : (
-                    <User size={16} color="var(--text-dark)" />
+                    <User size={24} color="var(--color-primary)" />
                   )}
                 </div>
-                <input 
-                  type="file" 
-                  accept="image/*" 
-                  id="avatar-upload" 
-                  onChange={e => handleUploadImage(e, 'avatar')}
-                  style={{ display: 'none' }} 
-                />
-                <label 
-                  htmlFor="avatar-upload" 
-                  className="btn-secondary" 
-                  style={{ 
-                    flex: 1, 
-                    padding: '8px 10px', 
-                    fontSize: '0.7rem', 
-                    height: '34px', 
-                    cursor: 'pointer',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    margin: 0
-                  }}
-                >
-                  {avatarUrl ? 'Cambia' : 'Carica Foto'}
-                </label>
-                {avatarUrl && (
-                  <button 
-                    className="icon-btn" 
-                    onClick={() => {
-                      setAvatarUrl('');
-                      updateProfile({ avatarUrl: '' });
-                      window.dispatchEvent(new CustomEvent('df_data_updated'));
-                    }} 
-                    style={{ width: '34px', height: '34px', color: 'var(--color-error)', flexShrink: 0 }}
-                    title="Rimuovi Foto Profilo"
-                  >
-                    <Trash2 size={12} />
-                  </button>
-                )}
-              </div>
-            </div>
-            
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <label style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Foto Copertina</label>
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                <div style={{
-                  width: '48px',
-                  height: '34px',
-                  borderRadius: 'var(--radius-sm)',
-                  overflow: 'hidden',
-                  border: '1px solid var(--border-color)',
-                  backgroundImage: bannerUrl ? `url(${bannerUrl})` : 'linear-gradient(135deg, var(--color-primary) 0%, #1a1505 100%)',
-                  backgroundPosition: 'center',
-                  backgroundSize: 'cover',
-                  flexShrink: 0
-                }} />
-                <input 
-                  type="file" 
-                  accept="image/*" 
-                  id="banner-upload" 
-                  onChange={e => handleUploadImage(e, 'banner')}
-                  style={{ display: 'none' }} 
-                />
-                <label 
-                  htmlFor="banner-upload" 
-                  className="btn-secondary" 
-                  style={{ 
-                    flex: 1, 
-                    padding: '8px 10px', 
-                    fontSize: '0.7rem', 
-                    height: '34px', 
-                    cursor: 'pointer',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    margin: 0
-                  }}
-                >
-                  {bannerUrl ? 'Cambia' : 'Carica Sfondo'}
-                </label>
-                {bannerUrl && (
-                  <button 
-                    className="icon-btn" 
-                    onClick={() => {
-                      setBannerUrl('');
-                      updateProfile({ bannerUrl: '' });
-                      window.dispatchEvent(new CustomEvent('df_data_updated'));
-                    }} 
-                    style={{ width: '34px', height: '34px', color: 'var(--color-error)', flexShrink: 0 }}
-                    title="Rimuovi Sfondo"
-                  >
-                    <Trash2 size={12} />
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
 
-          <button className="btn-primary" onClick={handleSaveProfile} style={{ padding: '10px' }}>
-            <Check size={16} /> Salva Impostazioni
-          </button>
-        </div>
-      ) : (
-        /* Account Info Display (Redesigned with Banner, Avatar & Dynamic BMI - No overlaps) */
-        <div className="glass-card" style={{ padding: '0', overflow: 'hidden', display: 'flex', flexDirection: 'column', border: '1px solid var(--border-color)' }}>
-          {/* Banner container with direct edit button */}
-          <div style={{ 
-            height: '110px', 
-            width: '100%', 
-            backgroundImage: profile.bannerUrl ? `url(${profile.bannerUrl})` : 'linear-gradient(135deg, var(--color-primary) 0%, #1a1505 100%)',
-            backgroundPosition: 'center',
-            backgroundSize: 'cover',
-            backgroundRepeat: 'no-repeat',
-            position: 'relative'
-          }}>
-            <label
-              htmlFor="direct-banner-upload"
-              style={{
-                position: 'absolute',
-                top: '10px',
-                right: '10px',
-                background: 'rgba(8, 8, 10, 0.75)',
-                backdropFilter: 'blur(8px)',
-                border: '1px solid rgba(212, 175, 55, 0.4)',
-                color: 'var(--color-primary)',
-                width: '32px',
-                height: '32px',
-                borderRadius: '50%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.5)'
-              }}
-              title="Cambia immagine di copertina"
-            >
-              <input 
-                type="file" 
-                accept="image/*" 
-                id="direct-banner-upload" 
-                onChange={e => handleUploadImage(e, 'banner')}
-                style={{ display: 'none' }} 
-              />
-              <Camera size={14} />
-            </label>
-          </div>
-          
-          {/* Avatar and User details area */}
-          <div style={{ padding: '16px', position: 'relative', marginTop: '-36px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '12px' }}>
-              {/* Avatar circle with direct camera upload */}
-              <label 
-                htmlFor="direct-avatar-upload"
-                style={{ 
-                  position: 'relative',
-                  cursor: 'pointer'
-                }}
-                title="Tocca per cambiare foto profilo"
-              >
-                <input 
-                  type="file" 
-                  accept="image/*" 
-                  id="direct-avatar-upload" 
-                  onChange={e => handleUploadImage(e, 'avatar')}
-                  style={{ display: 'none' }} 
-                />
-                <div style={{ 
-                  width: '74px', 
-                  height: '74px', 
-                  borderRadius: '50%', 
-                  border: '3px solid var(--color-primary)', 
-                  background: '#050506', 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'center', 
-                  overflow: 'hidden',
-                  boxShadow: '0 4px 15px rgba(0,0,0,0.6)',
-                  flexShrink: 0,
-                  position: 'relative'
-                }}>
-                  {profile.avatarUrl ? (
-                    <img src={profile.avatarUrl} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  ) : (
-                    <span style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--color-primary)' }}>
-                      {profile.name.split(' ').map(n => n[0]).join('').toUpperCase() || 'U'}
-                    </span>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1 }}>
+                  <label htmlFor="settings-avatar-input" className="btn-secondary" style={{ padding: '6px 12px', fontSize: '0.74rem', cursor: 'pointer', textAlign: 'center' }}>
+                    <Camera size={14} style={{ marginRight: '4px' }} /> Cambia Foto
+                  </label>
+                  <input 
+                    type="file" 
+                    id="settings-avatar-input" 
+                    accept="image/*" 
+                    onChange={e => handleUploadImage(e, 'avatar')} 
+                    style={{ display: 'none' }} 
+                  />
+                  {avatarUrl && (
+                    <button 
+                      onClick={() => {
+                        setAvatarUrl('');
+                        updateProfile({ avatarUrl: '' });
+                      }}
+                      style={{ background: 'none', border: 'none', color: 'var(--color-error)', fontSize: '0.7rem', cursor: 'pointer', textAlign: 'left' }}
+                    >
+                      Rimuovi foto
+                    </button>
                   )}
-                  {/* Camera overlay badge */}
-                  <div style={{
-                    position: 'absolute',
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
-                    height: '24px',
-                    background: 'rgba(0, 0, 0, 0.7)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: 'var(--color-primary)'
-                  }}>
-                    <Camera size={12} />
+                </div>
+              </div>
+
+              {/* Basic Details */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <label style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Nome Visualizzato</label>
+                <input 
+                  type="text" 
+                  className="set-input" 
+                  value={name} 
+                  onChange={e => setName(e.target.value)}
+                  style={{ width: '100%', height: '38px', textAlign: 'left', padding: '0 12px' }}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <label style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Genere</label>
+                  <select 
+                    className="set-input" 
+                    value={gender} 
+                    onChange={e => setGender(e.target.value as any)}
+                    style={{ width: '100%', height: '38px', padding: '0 10px' }}
+                  >
+                    <option value="male">Maschio</option>
+                    <option value="female">Femmina</option>
+                  </select>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <label style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Altezza (cm)</label>
+                  <input 
+                    type="number" 
+                    className="set-input" 
+                    value={height} 
+                    onChange={e => setHeight(e.target.value)}
+                    style={{ width: '100%', height: '38px' }}
+                  />
+                </div>
+              </div>
+
+              {/* Nutritional Targets */}
+              <div style={{ background: '#121217', padding: '14px', borderRadius: '12px' }}>
+                <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#ffffff', display: 'block', marginBottom: '10px' }}>
+                  Target Nutrizionali Giornalieri
+                </span>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
+                  <div>
+                    <label style={{ fontSize: '0.64rem', color: 'var(--text-muted)' }}>Kcal</label>
+                    <input type="number" className="set-input" value={targetKcal} onChange={e => setTargetKcal(e.target.value)} style={{ width: '100%', height: '32px' }} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '0.64rem', color: 'var(--text-muted)' }}>Pro (g)</label>
+                    <input type="number" className="set-input" value={targetP} onChange={e => setTargetP(e.target.value)} style={{ width: '100%', height: '32px' }} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '0.64rem', color: 'var(--text-muted)' }}>Carb (g)</label>
+                    <input type="number" className="set-input" value={targetC} onChange={e => setTargetC(e.target.value)} style={{ width: '100%', height: '32px' }} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '0.64rem', color: 'var(--text-muted)' }}>Fat (g)</label>
+                    <input type="number" className="set-input" value={targetF} onChange={e => setTargetF(e.target.value)} style={{ width: '100%', height: '32px' }} />
                   </div>
                 </div>
-              </label>
-              
-              {/* Logout button */}
-              <button 
-                className="icon-btn" 
-                onClick={signOut} 
-                title="Disconnettiti" 
-                style={{ 
-                  color: 'var(--color-error)', 
-                  width: '34px', 
-                  height: '34px', 
-                  background: 'rgba(239, 68, 68, 0.04)',
-                  border: '1px solid rgba(239, 68, 68, 0.1)',
-                  margin: 0
-                }}
-              >
-                <LogOut size={15} />
+              </div>
+
+              {/* Save Changes button */}
+              <button className="btn-primary" onClick={handleSaveProfile} style={{ width: '100%', height: '42px' }}>
+                <Check size={16} /> Salva Modifiche
+              </button>
+
+              {/* Extra Tools Section: Wearables, Cycle tracker, GDPR */}
+              <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <span style={{ fontSize: '0.76rem', fontWeight: 700, color: 'var(--text-muted)' }}>
+                  Funzionalità Avanzate & Sicurezza
+                </span>
+
+                {profile.gender === 'female' && (
+                  <div style={{ background: '#121217', padding: '12px', borderRadius: '12px' }}>
+                    <CycleTracker />
+                  </div>
+                )}
+
+                <div style={{ background: '#121217', padding: '12px', borderRadius: '12px' }}>
+                  <DeviceSyncHub />
+                </div>
+
+                <button 
+                  className="btn-secondary" 
+                  onClick={() => setActiveModal('privacy')}
+                  style={{ width: '100%', padding: '10px', fontSize: '0.78rem' }}
+                >
+                  <ShieldAlert size={15} style={{ marginRight: '6px' }} /> Informativa Privacy & GDPR
+                </button>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '6px' }}>
+                  <button 
+                    className="btn-secondary" 
+                    onClick={signOut}
+                    style={{ color: 'var(--color-error)', borderColor: 'rgba(239, 68, 68, 0.2)' }}
+                  >
+                    <LogOut size={14} style={{ marginRight: '4px' }} /> Esci
+                  </button>
+
+                  <button 
+                    className="btn-secondary" 
+                    onClick={handleDeleteAccount}
+                    style={{ color: 'var(--color-error)', borderColor: 'rgba(239, 68, 68, 0.2)' }}
+                  >
+                    <Trash2 size={14} style={{ marginRight: '4px' }} /> Elimina Account
+                  </button>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 2. STATISTICHE MODAL */}
+      {activeModal === 'stats' && (
+        <div className="drawer-backdrop" onClick={() => setActiveModal(null)}>
+          <div className="drawer-content animate-fade-in-up" onClick={e => e.stopPropagation()} style={{ maxHeight: '85vh' }}>
+            <div className="drawer-header">
+              <h3 className="section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <BarChart2 size={20} color="var(--color-primary)" /> Statistiche Globali
+              </h3>
+              <button className="drawer-close" onClick={() => setActiveModal(null)}><X size={20} /></button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '14px', overflowY: 'auto' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div style={{ background: '#111116', padding: '14px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.06)' }}>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Allenamenti Totali</span>
+                  <p style={{ fontSize: '1.4rem', fontWeight: 800, color: '#ffffff', margin: '4px 0 0 0' }}>
+                    {lifetimeStats.totalWorkouts}
+                  </p>
+                </div>
+
+                <div style={{ background: '#111116', padding: '14px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.06)' }}>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Ore in Palestra</span>
+                  <p style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--color-primary)', margin: '4px 0 0 0' }}>
+                    {lifetimeStats.totalHours} h
+                  </p>
+                </div>
+
+                <div style={{ background: '#111116', padding: '14px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.06)' }}>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Volume Totale</span>
+                  <p style={{ fontSize: '1.4rem', fontWeight: 800, color: '#ffffff', margin: '4px 0 0 0' }}>
+                    {lifetimeStats.totalVol.toLocaleString('it-IT')} kg
+                  </p>
+                </div>
+
+                <div style={{ background: '#111116', padding: '14px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.06)' }}>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Serie Eseguite</span>
+                  <p style={{ fontSize: '1.4rem', fontWeight: 800, color: '#ffffff', margin: '4px 0 0 0' }}>
+                    {lifetimeStats.totalSets}
+                  </p>
+                </div>
+              </div>
+
+              {/* BMI Card */}
+              <div style={{ background: '#111116', padding: '14px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.06)' }}>
+                <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#ffffff', display: 'block', marginBottom: '8px' }}>
+                  Indice di Massa Corporea (BMI)
+                </span>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px' }}>
+                  <span style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--color-primary)' }}>
+                    {(profile.weight / Math.pow((profile.height || 175) / 100, 2)).toFixed(1)}
+                  </span>
+                  <span style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>
+                    Peso: {profile.weight} kg • Altezza: {profile.height || 175} cm
+                  </span>
+                </div>
+              </div>
+
+              <button className="btn-primary" onClick={() => setActiveModal(null)} style={{ width: '100%' }}>
+                Chiudi
               </button>
             </div>
-            
-            {/* Info details aligned cleanly below to prevent overlap */}
-            <div style={{ marginTop: '2px' }}>
-              <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'white' }}>{profile.name}</h3>
-              
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 14px', marginTop: '6px', fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                <span>Genere: <strong style={{ color: 'white', textTransform: 'capitalize' }}>{profile.gender === 'female' ? 'Femmina' : 'Maschio'}</strong></span>
-                <span>Altezza: <strong style={{ color: 'white' }}>{profile.height || 165} cm</strong></span>
-                <span>Peso: <strong style={{ color: 'white' }}>{profile.weight} kg</strong></span>
-                {profile.height > 0 && profile.weight > 0 && (
-                  <span>BMI: <strong style={{ color: 'var(--color-primary)' }}>
-                    {(profile.weight / Math.pow(profile.height / 100, 2)).toFixed(1)}
-                  </strong></span>
-                )}
+          </div>
+        </div>
+      )}
+
+      {/* 3. ESERCIZI MODAL (Exercise Library & 1RM Records) */}
+      {activeModal === 'exercises' && (
+        <div className="drawer-backdrop" onClick={() => setActiveModal(null)}>
+          <div className="drawer-content animate-fade-in-up" onClick={e => e.stopPropagation()} style={{ maxHeight: '88vh', display: 'flex', flexDirection: 'column' }}>
+            <div className="drawer-header">
+              <h3 className="section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Dumbbell size={20} color="var(--color-primary)" /> Catalogo & Record 1RM
+              </h3>
+              <button className="drawer-close" onClick={() => setActiveModal(null)}><X size={20} /></button>
+            </div>
+
+            {/* Search and muscle filter */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', margin: '10px 0' }}>
+              <div style={{ position: 'relative' }}>
+                <Search size={15} style={{ position: 'absolute', left: '12px', top: '11px', color: 'var(--text-muted)' }} />
+                <input 
+                  type="text" 
+                  placeholder="Cerca esercizio..."
+                  className="set-input"
+                  value={exerciseSearch}
+                  onChange={e => setExerciseSearch(e.target.value)}
+                  style={{ width: '100%', height: '36px', paddingLeft: '34px', textAlign: 'left' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '4px' }}>
+                {['all', 'Petto', 'Schiena', 'Gambe', 'Spalle', 'Braccia', 'Core', 'Cardio'].map(m => (
+                  <button
+                    key={m}
+                    className={`filter-badge ${exerciseMuscleFilter === m ? 'active' : ''}`}
+                    onClick={() => setExerciseMuscleFilter(m)}
+                    style={{ whiteSpace: 'nowrap', padding: '4px 10px', fontSize: '0.72rem' }}
+                  >
+                    {m === 'all' ? 'Tutti' : m}
+                  </button>
+                ))}
               </div>
             </div>
+
+            {/* Exercises List with 1RM Records */}
+            <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px', paddingRight: '4px' }}>
+              {filteredCatalogExercises.map(ex => {
+                const pr = personalRecords[ex.id];
+                return (
+                  <div 
+                    key={ex.id}
+                    style={{
+                      background: '#111116',
+                      border: '1px solid rgba(255,255,255,0.06)',
+                      borderRadius: '12px',
+                      padding: '12px 14px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <div className="hevy-exercise-icon-avatar">
+                        {renderMuscleIcon(ex.muscleGroup, 32)}
+                      </div>
+                      <div>
+                        <span style={{ fontSize: '0.88rem', fontWeight: 700, color: '#ffffff', display: 'block' }}>
+                          {ex.name}
+                        </span>
+                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                          {ex.category} • {ex.equipment}
+                        </span>
+                      </div>
+                    </div>
+
+                    {pr ? (
+                      <div style={{ textAlign: 'right' }}>
+                        <span style={{ fontSize: '0.84rem', fontWeight: 800, color: 'var(--color-primary)', display: 'block' }}>
+                          1RM: {pr.oneRepMax} kg
+                        </span>
+                        <span style={{ fontSize: '0.66rem', color: 'var(--text-muted)' }}>
+                          {pr.weight}kg × {pr.reps} rip
+                        </span>
+                      </div>
+                    ) : (
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-dark)' }}>
+                        Nessun PR
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
       )}
 
-      {/* Body Measurements Log Card */}
-      <div className="glass-card">
-        <h3 style={{ fontSize: '0.98rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '14px' }}>
-          <Scale size={16} color="var(--color-secondary)" /> Registro Misure Corporee
-        </h3>
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', marginBottom: '12px' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-            <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)' }}>Vita (cm)</span>
-            <input type="number" className="set-input" value={waist} onChange={e => setWaist(e.target.value)} style={{ width: '100%', height: '32px' }} />
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-            <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)' }}>Braccio (cm)</span>
-            <input type="number" className="set-input" value={arms} onChange={e => setArms(e.target.value)} style={{ width: '100%', height: '32px' }} />
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-            <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)' }}>Coscia (cm)</span>
-            <input type="number" className="set-input" value={thighs} onChange={e => setThighs(e.target.value)} style={{ width: '100%', height: '32px' }} />
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-            <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)' }}>Massa G. (%)</span>
-            <input type="number" className="set-input" value={bf} onChange={e => setBf(e.target.value)} style={{ width: '100%', height: '32px' }} />
-          </div>
-        </div>
-
-        <button className="btn-secondary" onClick={handleSaveMeasurements} style={{ width: '100%', padding: '8px', fontSize: '0.75rem' }}>
-          Aggiorna Misure
-        </button>
-      </div>
-
-      {/* Smart wearable sync hub */}
-      <DeviceSyncHub />
-
-      {/* Embedded Cycle Tracker: Render only for Female Users */}
-      {profile.gender === 'female' && (
-        <div style={{ marginTop: '4px' }}>
-          <CycleTracker />
-        </div>
-      )}
-
-      {/* Fitness Logs Statistics with filters */}
-      <div className="glass-card">
-        <h3 style={{ fontSize: '0.98rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-          <Activity size={16} color="var(--color-primary)" /> Dashboard Statistiche
-        </h3>
-
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', marginTop: '12px' }}>
-          <div style={{ display: 'flex', gap: '4px' }}>
-            {(['7', '30', '90'] as const).map(range => (
-              <button 
-                key={range} 
-                className={`filter-badge ${timeRange === range ? 'active' : ''}`}
-                onClick={() => setTimeRange(range)}
-                style={{ padding: '4px 10px', fontSize: '0.68rem' }}
-              >
-                {range} gg
-              </button>
-            ))}
-          </div>
-
-          <select 
-            className="set-input" 
-            value={metricType}
-            onChange={e => setMetricType(e.target.value as any)}
-            style={{ height: '28px', fontSize: '0.68rem', padding: '0 4px', width: '96px' }}
-          >
-            <option value="volume">Volume (kg)</option>
-            <option value="duration">Tempo (min)</option>
-            <option value="distance">Distanza (km)</option>
-            <option value="reps">Ripetizioni</option>
-          </select>
-        </div>
-
-        {renderStatsChart()}
-      </div>
-
-      {/* Monthly Consistency Calendar Map */}
-      <div className="glass-card">
-        <h3 style={{ fontSize: '0.98rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <CalendarIcon size={16} color="var(--color-success)" /> Mappa di Costanza (Ultimi 28gg)
-        </h3>
-        
-        {renderConsistencyGrid()}
-
-        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginTop: '12px', fontSize: '0.62rem', color: 'var(--text-muted)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <div style={{ width: '10px', height: '10px', borderRadius: '2px', background: 'var(--color-success)' }} />
-            <span>Allenamento + Dieta</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <div style={{ width: '10px', height: '10px', borderRadius: '2px', background: 'var(--color-primary)' }} />
-            <span>Solo Allenamento</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <div style={{ width: '10px', height: '10px', borderRadius: '2px', background: 'var(--color-secondary)' }} />
-            <span>Solo Dieta</span>
-          </div>
-        </div>
-      </div>
-
-      {/* PWA Install Guide Card */}
-      <div className="glass-card" style={{ border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-        <h3 style={{ fontSize: '0.95rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <Download size={16} color="var(--color-primary)" /> Installa DeV Fit sul tuo Dispositivo
-        </h3>
-        <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: '1.4' }}>
-          Installa l'app per un'esperienza a tutto schermo fluida ed immediata:
-        </p>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.72rem', background: 'rgba(255,255,255,0.01)', padding: '12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}>
-          <p>
-            <strong>📱 Su iPhone/iPad (Safari)</strong>: Tocca il pulsante di <strong>Condividi</strong> (quadrato con freccia verso l'alto) nel browser, scorri verso il basso e seleziona <strong>"Aggiungi alla schermata Home"</strong>.
-          </p>
-          <p style={{ borderTop: '1px solid rgba(255,255,255,0.03)', paddingTop: '6px' }}>
-            <strong>🤖 Su Android (Chrome)</strong>: Tocca il menu a tre puntini in alto a destra e seleziona <strong>"Installa app"</strong>, oppure usa il pulsante nella Dashboard principale.
-          </p>
-        </div>
-      </div>
-
-      {/* Compliance / Privacy Policy / Deletion Area */}
-      <div className="glass-card" style={{ border: '1px dashed rgba(239, 68, 68, 0.3)', background: 'rgba(239, 68, 68, 0.02)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        <h3 style={{ fontSize: '0.92rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--color-error)' }}>
-          <ShieldAlert size={16} /> Data Security & GDPR
-        </h3>
-        <p style={{ fontSize: '0.75rem', lineHeight: '1.4', color: 'var(--text-muted)' }}>
-          Gestisci i tuoi consensi e la rimozione definitiva dei tuoi dati personali ed account (conforme alle linee guida di Google Play e Apple Store).
-        </p>
-        <div style={{ display: 'flex', gap: '10px' }}>
-          <button 
-            className="btn-secondary" 
-            onClick={() => setShowPrivacyModal(true)}
-            style={{ flex: 1, padding: '8px', fontSize: '0.72rem' }}
-          >
-            Informativa Privacy
-          </button>
-          <button 
-            className="btn-primary" 
-            onClick={handleDeleteAccount}
-            style={{ flex: 1, padding: '8px', fontSize: '0.72rem', background: 'linear-gradient(135deg, var(--color-error) 0%, #b91c1c 100%)', boxShadow: 'none' }}
-          >
-            <Trash2 size={12} /> Elimina Account & Dati
-          </button>
-        </div>
-      </div>
-
-      {/* Privacy Policy Modal */}
-      {showPrivacyModal && (
-        <div className="drawer-backdrop" onClick={() => setShowPrivacyModal(false)}>
-          <div className="drawer-content animate-fade-in-up" onClick={e => e.stopPropagation()} style={{ maxHeight: '80vh', paddingBottom: '30px' }}>
+      {/* 4. MISURAZIONI MODAL */}
+      {activeModal === 'measurements' && (
+        <div className="drawer-backdrop" onClick={() => setActiveModal(null)}>
+          <div className="drawer-content animate-fade-in-up" onClick={e => e.stopPropagation()} style={{ maxHeight: '85vh' }}>
             <div className="drawer-header">
-              <h3 className="section-title">Informativa sulla Privacy</h3>
-              <button className="drawer-close" onClick={() => setShowPrivacyModal(false)}><Check size={20} /></button>
+              <h3 className="section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Scale size={20} color="var(--color-primary)" /> Misure Corporee
+              </h3>
+              <button className="drawer-close" onClick={() => setActiveModal(null)}><X size={20} /></button>
             </div>
-            
-            <div style={{ fontSize: '0.78rem', lineHeight: '1.5', color: 'var(--text-primary)', display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '10px', maxHeight: '450px', overflowY: 'auto', paddingRight: '6px' }}>
-              <p><strong>Ultimo aggiornamento: 14 Luglio 2026</strong></p>
-              
-              <p>La presente Informativa sulla Privacy descrive come raccogliamo, utilizziamo e proteggiamo i tuoi dati sensibili all'interno dell'applicazione DeV Fit, in conformità con il Regolamento Generale sulla Protezione dei Dati (GDPR) e i requisiti delle piattaforme Google Play e App Store.</p>
 
-              
-              <h5 style={{ color: 'var(--color-secondary)', fontWeight: 'bold' }}>1. Dati Raccolti</h5>
-              <p>Raccogliamo le seguenti categorie di dati per consentire il funzionamento corretto delle funzioni dell'app:</p>
-              <ul>
-                <li><strong>Dati di Autenticazione:</strong> Email, password e nome forniti durante la registrazione.</li>
-                <li><strong>Metriche Fisiche:</strong> Peso, percentuale di grasso, e circonferenze corporee (vita, braccia, cosce).</li>
-                <li><strong>Dati di Allenamento:</strong> Esercizi eseguiti, carichi sollevati, ripetizioni e tempi di recupero.</li>
-                <li><strong>Dati Nutrizionali:</strong> Alimenti e cibi registrati nel diario alimentare giornaliero.</li>
-                <li><strong>Dati Sanitari Femminili (opzionale):</strong> Date di inizio del ciclo mestruale e sintomi segnalati, per il calcolo delle fasi del ciclo.</li>
-              </ul>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginTop: '14px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <label style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Peso Corporeo (kg)</label>
+                  <input type="number" className="set-input" value={weight} onChange={e => setWeight(e.target.value)} style={{ width: '100%', height: '36px' }} />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <label style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Massa Grassa (%)</label>
+                  <input type="number" className="set-input" value={bf} onChange={e => setBf(e.target.value)} style={{ width: '100%', height: '36px' }} />
+                </div>
+              </div>
 
-              <h5 style={{ color: 'var(--color-secondary)', fontWeight: 'bold' }}>2. Finalità del Trattamento</h5>
-              <p>I dati sono utilizzati esclusivamente per mostrarti statistiche personali, calcolare i tuoi massimali (1RM), visualizzare il diario alimentare e fornire suggerimenti sportivi/nutrizionali personalizzati. Nessun dato viene venduto o condiviso con scopi commerciali.</p>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <label style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Vita (cm)</label>
+                  <input type="number" className="set-input" value={waist} onChange={e => setWaist(e.target.value)} style={{ width: '100%', height: '36px' }} />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <label style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Braccia (cm)</label>
+                  <input type="number" className="set-input" value={arms} onChange={e => setArms(e.target.value)} style={{ width: '100%', height: '36px' }} />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <label style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Cosce (cm)</label>
+                  <input type="number" className="set-input" value={thighs} onChange={e => setThighs(e.target.value)} style={{ width: '100%', height: '36px' }} />
+                </div>
+              </div>
 
-              <h5 style={{ color: 'var(--color-secondary)', fontWeight: 'bold' }}>3. Condivisione dei Dati (Social)</h5>
-              <p>Gli allenamenti completati (durata, volume totale e record infranti) vengono pubblicati sul feed social visibile esclusivamente agli utenti con cui hai stretto amicizia nell'applicazione. Puoi smettere di condividere in qualsiasi momento.</p>
-
-              <h5 style={{ color: 'var(--color-secondary)', fontWeight: 'bold' }}>4. Diritti dell'Utente e Cancellazione dei Dati</h5>
-              <p>In conformità con il GDPR e le linee guida per gli store, hai il diritto di accedere ai tuoi dati ed ottenerne la rimozione permanente in qualsiasi momento. All'interno del tuo Profilo è presente il pulsante <strong>"Elimina Account & Dati"</strong>, il quale provvederà a cancellare istantaneamente e in modo irreversibile ogni traccia del tuo profilo e dei tuoi registri fisici dal nostro database cloud e locale.</p>
+              <button className="btn-primary" onClick={handleSaveMeasurements} style={{ width: '100%', height: '42px', marginTop: '10px' }}>
+                <Check size={16} /> Salva Misure
+              </button>
             </div>
-            
-            <button className="btn-primary" onClick={() => setShowPrivacyModal(false)} style={{ width: '100%', marginTop: '20px' }}>
+          </div>
+        </div>
+      )}
+
+      {/* 5. CALENDARIO MODAL (28-day consistency map & streak) */}
+      {activeModal === 'calendar' && (
+        <div className="drawer-backdrop" onClick={() => setActiveModal(null)}>
+          <div className="drawer-content animate-fade-in-up" onClick={e => e.stopPropagation()} style={{ maxHeight: '85vh' }}>
+            <div className="drawer-header">
+              <h3 className="section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <CalendarIcon size={20} color="var(--color-primary)" /> Calendario di Costanza
+              </h3>
+              <button className="drawer-close" onClick={() => setActiveModal(null)}><X size={20} /></button>
+            </div>
+
+            <div style={{ marginTop: '14px' }}>
+              <span style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>
+                Attività registrata negli ultimi 28 giorni:
+              </span>
+
+              {render28DayGrid()}
+
+              <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap', fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <div style={{ width: '10px', height: '10px', borderRadius: '2px', background: 'var(--color-primary)' }} />
+                  <span>Allenamento + Dieta</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <div style={{ width: '10px', height: '10px', borderRadius: '2px', background: '#f59e0b' }} />
+                  <span>Solo Allenamento</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <div style={{ width: '10px', height: '10px', borderRadius: '2px', background: 'var(--color-secondary)' }} />
+                  <span>Solo Dieta</span>
+                </div>
+              </div>
+
+              <button className="btn-primary" onClick={() => setActiveModal(null)} style={{ width: '100%', marginTop: '20px' }}>
+                Chiudi
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 6. WORKOUT DETAIL MODAL */}
+      {activeModal === 'workout_detail' && selectedWorkout && (
+        <div className="drawer-backdrop" onClick={() => setActiveModal(null)}>
+          <div className="drawer-content animate-fade-in-up" onClick={e => e.stopPropagation()} style={{ maxHeight: '88vh', display: 'flex', flexDirection: 'column' }}>
+            <div className="drawer-header">
+              <div>
+                <h3 className="section-title" style={{ margin: 0 }}>
+                  {selectedWorkout.name || 'Allenamento'}
+                </h3>
+                <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                  {new Date(selectedWorkout.date).toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                </span>
+              </div>
+              <button className="drawer-close" onClick={() => setActiveModal(null)}><X size={20} /></button>
+            </div>
+
+            <div style={{ display: 'flex', gap: '16px', margin: '14px 0', padding: '12px', background: '#111116', borderRadius: '12px' }}>
+              <div>
+                <span style={{ fontSize: '0.66rem', color: 'var(--text-muted)' }}>DURATA</span>
+                <p style={{ fontSize: '1rem', fontWeight: 800, color: '#ffffff', margin: 0 }}>
+                  {Math.round(selectedWorkout.duration / 60)} min
+                </p>
+              </div>
+              <div>
+                <span style={{ fontSize: '0.66rem', color: 'var(--text-muted)' }}>VOLUME</span>
+                <p style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--color-primary)', margin: 0 }}>
+                  {selectedWorkout.volume.toLocaleString('it-IT')} kg
+                </p>
+              </div>
+              <div>
+                <span style={{ fontSize: '0.66rem', color: 'var(--text-muted)' }}>ESERCIZI</span>
+                <p style={{ fontSize: '1rem', fontWeight: 800, color: '#ffffff', margin: 0 }}>
+                  {selectedWorkout.exercises.length}
+                </p>
+              </div>
+            </div>
+
+            {/* Exercise sets details */}
+            <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '14px', paddingRight: '4px' }}>
+              {selectedWorkout.exercises.map((ex, idx) => {
+                const exDetail = mockExercises.find(m => m.id === ex.exerciseId);
+                const exName = exDetail ? exDetail.name : 'Esercizio';
+                const exMuscleGroup: MuscleGroup = exDetail ? exDetail.muscleGroup : 'Pettorali';
+                return (
+                  <div key={idx} style={{ background: '#111116', padding: '12px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.06)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                      <div className="hevy-exercise-icon-avatar">
+                        {renderMuscleIcon(exMuscleGroup, 32)}
+                      </div>
+                      <span style={{ fontSize: '0.92rem', fontWeight: 800, color: '#ffffff' }}>
+                        {exName}
+                      </span>
+                    </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    {ex.sets.map((s, sIdx) => (
+                      <div key={sIdx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', color: '#a1a1aa', padding: '4px 0', borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
+                        <span>Serie {sIdx + 1}</span>
+                        {s.distance ? (
+                          <span style={{ color: '#ffffff', fontWeight: 700 }}>{s.distance} km • {Math.round((s.time || 0) / 60)} min</span>
+                        ) : (
+                          <span style={{ color: '#ffffff', fontWeight: 700 }}>{s.weight || 0} kg × {s.reps || 0} rip</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+            <button className="btn-primary" onClick={() => setActiveModal(null)} style={{ width: '100%', marginTop: '14px' }}>
+              Chiudi
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 7. PRIVACY POLICY MODAL */}
+      {activeModal === 'privacy' && (
+        <div className="drawer-backdrop" onClick={() => setActiveModal(null)}>
+          <div className="drawer-content animate-fade-in-up" onClick={e => e.stopPropagation()} style={{ maxHeight: '85vh', paddingBottom: '24px' }}>
+            <div className="drawer-header">
+              <h3 className="section-title">Informativa Privacy & GDPR</h3>
+              <button className="drawer-close" onClick={() => setActiveModal(null)}><X size={20} /></button>
+            </div>
+
+            <div style={{ fontSize: '0.78rem', lineHeight: '1.5', color: 'var(--text-primary)', display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '10px', maxHeight: '450px', overflowY: 'auto' }}>
+              <p><strong>Ultimo aggiornamento: 23 Settembre 2026</strong></p>
+              <p>La presente Informativa sulla Privacy descrive come raccogliamo, utilizziamo e proteggiamo i tuoi dati sensibili all'interno dell'applicazione DeV Fit, in piena conformità con il Regolamento Generale sulla Protezione dei Dati (GDPR) e i requisiti delle piattaforme Google Play e Apple Store.</p>
+              
+              <h5 style={{ color: 'var(--color-primary)', fontWeight: 'bold' }}>1. Dati Raccolti</h5>
+              <p>Raccogliamo le seguenti categorie di dati: Dati di autenticazione (email, nome), metriche fisiche (peso, altezza, circonferenze), dati di allenamento (serie, carichi, ripetizioni), dati nutrizionali (diario pasti) e dati sanitari femminili opzionali (fasi del ciclo).</p>
+
+              <h5 style={{ color: 'var(--color-primary)', fontWeight: 'bold' }}>2. Finalità e Condivisione</h5>
+              <p>I tuoi dati sono utilizzati per calcolare progressi, massimali (1RM) e statistiche. Non vendiamo né cediamo dati a soggetti terzi. Gli allenamenti completati sono condivisi sul feed solo con gli utenti autorizzati.</p>
+
+              <h5 style={{ color: 'var(--color-primary)', fontWeight: 'bold' }}>3. Cancellazione Definitiva</h5>
+              <p>Hai il diritto in qualsiasi momento di richiedere la rimozione immediata ed irreversibile del tuo account e di tutti i record di allenamento e salute tramite il pulsante "Elimina Account" nelle Impostazioni.</p>
+            </div>
+
+            <button className="btn-primary" onClick={() => setActiveModal(null)} style={{ width: '100%', marginTop: '16px' }}>
               Ho Capito
             </button>
           </div>

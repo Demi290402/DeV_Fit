@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { AppProvider, useApp } from './context/AppContext';
 import { Navigation } from './components/Navigation';
-import { Dashboard } from './components/Dashboard';
+import { HomeFeed } from './components/HomeFeed';
 import { RoutineManager } from './components/RoutineManager';
 import { ActiveWorkout } from './components/ActiveWorkout';
 import { FoodScanner } from './components/FoodScanner';
@@ -42,7 +42,7 @@ const AppContent: React.FC = () => {
   const renderTabContent = () => {
     switch (currentTab) {
       case 'dashboard':
-        return <Dashboard setCurrentTab={setCurrentTab} />;
+        return <HomeFeed setCurrentTab={setCurrentTab} />;
       case 'workout':
         if (activeWorkout) {
           return <ActiveWorkout />;
@@ -119,7 +119,7 @@ const AppContent: React.FC = () => {
           </div>
         );
       default:
-        return <Dashboard setCurrentTab={setCurrentTab} />;
+        return <HomeFeed setCurrentTab={setCurrentTab} />;
     }
   };
 
