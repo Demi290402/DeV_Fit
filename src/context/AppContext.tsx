@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import confetti from 'canvas-confetti';
 import { createClient } from '@supabase/supabase-js';
 import { mockExercises, isDistanceTimeExercise, isTimeOnlyExercise, type Exercise } from '../data/mockExercises';
@@ -226,6 +226,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const saved = localStorage.getItem('df_user');
     return saved ? JSON.parse(saved) : null;
   });
+  const userRef = useRef(user);
+  userRef.current = user;
 
   const [hasConsented, setHasConsentedState] = useState<boolean>(() => {
     return localStorage.getItem('df_consent') === 'true';
@@ -235,6 +237,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const saved = localStorage.getItem('df_profile');
     return saved ? JSON.parse(saved) : defaultProfile;
   });
+  const profileRef = useRef(profile);
+  profileRef.current = profile;
 
   const [routines, setRoutines] = useState<Routine[]>(() => {
     const saved = localStorage.getItem('df_routines');
@@ -418,12 +422,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [supabaseClient]);
 
+  const isSyncingRef = useRef(false);
+
   const syncAllDataFromCloud = useCallback(async (userId?: string, client = supabaseClient): Promise<{ success: boolean; message: string }> => {
-    const targetId = userId || user?.id;
+    const targetId = userId || userRef.current?.id;
     if (!client || !targetId) {
       return { success: false, message: 'Supabase non è configurato o utente non loggato.' };
     }
 
+    if (isSyncingRef.current) {
+      return { success: false, message: 'Sincronizzazione già in corso.' };
+    }
+
+    isSyncingRef.current = true;
     try {
       // 1. Fetch Profile
       const { data: profData, error: profError } = await client
@@ -452,8 +463,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           streak: typeof profData.streak === 'number' ? profData.streak : prev.streak,
           lastLoggedDate: profData.last_logged_date || prev.lastLoggedDate
         }));
-      } else if (!profError) {
-        await syncProfileToCloud(targetId, profile, client);
+      } else if (!profError && profileRef.current) {
+        await syncProfileToCloud(targetId, profileRef.current, client);
       }
 
       // 2. Fetch Routines
@@ -470,7 +481,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           exercises: Array.isArray(r.exercises) ? r.exercises : []
         }));
         setRoutines(parsedRoutines);
-        localStorage.setItem('df_routines', JSON.stringify(parsedRoutines));
       }
 
       // 3. Fetch Workout Logs
@@ -490,7 +500,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           exercises: Array.isArray(w.exercises) ? w.exercises : []
         }));
         setWorkoutHistory(parsedWorkouts);
-        localStorage.setItem('df_history', JSON.stringify(parsedWorkouts));
       }
 
       // 4. Fetch Food Logs
@@ -515,7 +524,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           });
         });
         setFoodLogs(grouped);
-        localStorage.setItem('df_food_logs', JSON.stringify(grouped));
       }
 
       // 5. Fetch Custom Exercises
@@ -536,33 +544,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           trackingType: ex.tracking_type || 'weight_reps'
         }));
         setCustomExercises(parsedCustom);
-        localStorage.setItem('devfit_custom_exercises', JSON.stringify(parsedCustom));
       }
 
       return { success: true, message: 'Dati sincronizzati con successo dal cloud Supabase!' };
     } catch (err: any) {
       console.warn('Errore syncAllDataFromCloud:', err);
       return { success: false, message: err.message || 'Errore durante la sincronizzazione.' };
+    } finally {
+      isSyncingRef.current = false;
     }
-  }, [supabaseClient, user, profile, syncProfileToCloud]);
+  }, [supabaseClient, syncProfileToCloud]);
 
   const syncAllDataToCloud = async (): Promise<{ success: boolean; message: string }> => {
     if (!supabaseClient) {
       return { success: false, message: 'Supabase non è configurato. Inserisci URL e Anon Key prima di sincronizzare.' };
     }
-    if (!user) {
+    const targetUser = userRef.current;
+    if (!targetUser) {
       return { success: false, message: 'Devi aver effettuato l\'accesso con un account per sincronizzare i dati su Supabase.' };
     }
 
     try {
       // 1. Sync Profile
-      await syncProfileToCloud(user.id, profile, supabaseClient);
+      await syncProfileToCloud(targetUser.id, profileRef.current, supabaseClient);
 
       // 2. Sync Routines
       if (routines.length > 0) {
         const routinesPayload = routines.map(r => ({
           id: r.id,
-          user_id: user.id,
+          user_id: targetUser.id,
           name: r.name,
           description: r.description,
           exercises: r.exercises
@@ -574,7 +584,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (workoutHistory.length > 0) {
         const historyPayload = workoutHistory.map(w => ({
           id: w.id,
-          user_id: user.id,
+          user_id: targetUser.id,
           name: w.name,
           date: w.date,
           duration: w.duration,
@@ -590,7 +600,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         items.forEach(item => {
           foodEntries.push({
             id: item.id,
-            user_id: user.id,
+            user_id: targetUser.id,
             date,
             name: item.name,
             meal_type: item.mealType,
@@ -615,40 +625,60 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const syncAllDataRef = useRef(syncAllDataFromCloud);
+  syncAllDataRef.current = syncAllDataFromCloud;
+
+  const lastSyncedUserIdRef = useRef<string | null>(null);
+
   // --- SUPABASE SESSION WATCH ---
   useEffect(() => {
     if (!supabaseClient) return;
-    
-    supabaseClient.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        const name = session.user.user_metadata?.name || session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'Utente';
-        const u = {
-          id: session.user.id,
-          email: session.user.email || '',
-          name
-        };
-        setUser(u);
-        syncAllDataFromCloud(session.user.id, supabaseClient);
-      }
-    });
 
-    const { data: { subscription } } = supabaseClient.auth.onAuthStateChange((_event, session) => {
-      if (session) {
-        const name = session.user.user_metadata?.name || session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'Utente';
-        const u = {
-          id: session.user.id,
-          email: session.user.email || '',
-          name
-        };
-        setUser(u);
-        syncAllDataFromCloud(session.user.id, supabaseClient);
+    let isMounted = true;
+
+    const handleSession = (session: any, shouldSync = false) => {
+      if (!isMounted) return;
+      if (session?.user) {
+        const name = session.user.user_metadata?.name || 
+                     session.user.user_metadata?.full_name || 
+                     session.user.email?.split('@')[0] || 
+                     'Utente';
+        const userId = session.user.id;
+        const email = session.user.email || '';
+
+        setUser(prev => {
+          if (prev && prev.id === userId && prev.email === email && prev.name === name) {
+            return prev;
+          }
+          return { id: userId, email, name };
+        });
+
+        if (shouldSync && lastSyncedUserIdRef.current !== userId) {
+          lastSyncedUserIdRef.current = userId;
+          syncAllDataRef.current(userId, supabaseClient);
+        }
       } else {
+        lastSyncedUserIdRef.current = null;
         setUser(null);
       }
+    };
+
+    // 1. Check existing session on mount or client change
+    supabaseClient.auth.getSession().then(({ data: { session } }) => {
+      handleSession(session, true);
     });
 
-    return () => subscription.unsubscribe();
-  }, [supabaseClient, syncAllDataFromCloud]);
+    // 2. Listen for auth state transitions
+    const { data: { subscription } } = supabaseClient.auth.onAuthStateChange((event, session) => {
+      const shouldSync = event === 'SIGNED_IN' || event === 'USER_UPDATED';
+      handleSession(session, shouldSync);
+    });
+
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
+  }, [supabaseClient]);
 
   // --- AUTH ACTIONS ---
   const signUp = async (email: string, pass: string, name: string) => {
@@ -661,10 +691,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (error) throw error;
       if (data.user) {
         const initialProf: ProfileData = {
-          ...profile,
+          ...profileRef.current,
           name
         };
         await syncProfileToCloud(data.user.id, initialProf, supabaseClient);
+        lastSyncedUserIdRef.current = data.user.id;
         await syncAllDataFromCloud(data.user.id, supabaseClient);
       }
     } else {
@@ -692,6 +723,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           email: data.user.email || email,
           name: uName
         });
+        lastSyncedUserIdRef.current = data.user.id;
         await syncAllDataFromCloud(data.user.id, supabaseClient);
       }
     } else {
@@ -726,6 +758,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (supabaseClient) {
       await supabaseClient.auth.signOut();
     }
+    lastSyncedUserIdRef.current = null;
     setUser(null);
   };
 
@@ -803,8 +836,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           updated.streak = 1;
         }
       }
-      if (user && supabaseClient) {
-        syncProfileToCloud(user.id, updated, supabaseClient);
+      if (userRef.current && supabaseClient) {
+        syncProfileToCloud(userRef.current.id, updated, supabaseClient);
       }
       return updated;
     });
