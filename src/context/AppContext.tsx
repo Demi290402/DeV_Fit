@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import confetti from 'canvas-confetti';
 import { createClient } from '@supabase/supabase-js';
+import { mockExercises, isDistanceTimeExercise, isTimeOnlyExercise, type Exercise } from '../data/mockExercises';
 
 // Supabase client configuration & initialization (reads from localStorage fallback or Vite .env)
 export const getStoredSupabaseConfig = () => {
@@ -64,14 +65,20 @@ export interface SetLog {
   id: string;
   weight: number;
   reps: number;
+  time?: number; // duration in minutes (for cardio) or seconds (for isometric)
+  distance?: number; // distance in km
   completed: boolean;
   is1RM?: boolean;
   isMaxVolume?: boolean;
   isMaxWeight?: boolean;
+  isMaxReps?: boolean;
+  isMaxDistance?: boolean;
+  isMaxTime?: boolean;
 }
 
 export interface ExerciseLog {
   exerciseId: string;
+  restSeconds?: number;
   sets: SetLog[];
 }
 
@@ -90,7 +97,13 @@ export interface Routine {
   description: string;
   exercises: {
     exerciseId: string;
-    defaultSets: { weight: number; reps: number }[];
+    restSeconds?: number;
+    defaultSets: {
+      weight: number;
+      reps: number;
+      time?: number;
+      distance?: number;
+    }[];
   }[];
 }
 
@@ -143,19 +156,26 @@ interface AppContextType {
   updateProfile: (data: Partial<ProfileData>) => void;
   routines: Routine[];
   addRoutine: (routine: Routine) => void;
+  updateRoutine: (routine: Routine) => void;
   deleteRoutine: (id: string) => void;
   workoutHistory: WorkoutLog[];
+  updateWorkoutLog: (updatedLog: WorkoutLog) => void;
+  deleteWorkoutLog: (id: string) => void;
+  customExercises: Exercise[];
+  addCustomExercise: (ex: Exercise) => Promise<void>;
+  deleteCustomExercise: (id: string) => Promise<void>;
   activeWorkout: {
     name: string;
     startTime: number | null;
     exercises: ExerciseLog[];
   } | null;
   startWorkout: (routineId?: string, repeatWorkout?: WorkoutLog) => void;
-  updateActiveWorkoutSet: (exerciseId: string, setIndex: number, field: 'weight' | 'reps', value: number) => void;
+  updateActiveWorkoutSet: (exerciseId: string, setIndex: number, field: 'weight' | 'reps' | 'time' | 'distance', value: number) => void;
   updateActiveWorkoutExercises: (updater: (prev: ExerciseLog[]) => ExerciseLog[]) => void;
+  updateActiveWorkoutExerciseRest: (exerciseId: string, restSeconds: number) => void;
 
   toggleCompleteSet: (exerciseId: string, setIndex: number) => void;
-  addExerciseToActiveWorkout: (exerciseId: string) => void;
+  addExerciseToActiveWorkout: (exerciseId: string, restSeconds?: number) => void;
   addExercisesToActiveWorkout: (exerciseIds: string[]) => void;
   saveActiveWorkout: (customName?: string) => void;
   cancelActiveWorkout: () => void;
@@ -169,12 +189,13 @@ interface AppContextType {
   likeSocialPost: (postId: string, username: string) => void;
   commentSocialPost: (postId: string, username: string, commentText: string) => void;
   triggerConfetti: () => void;
-  getPreviousPerformances: (exerciseId: string) => { weight: number; reps: number }[];
+  getPreviousPerformances: (exerciseId: string) => { weight: number; reps: number; time?: number; distance?: number }[];
   isSupabaseConfigured: boolean;
   supabaseUrl: string;
   supabaseAnonKey: string;
   saveSupabaseConfig: (url: string, anonKey: string) => { success: boolean; message: string };
   syncAllDataToCloud: () => Promise<{ success: boolean; message: string }>;
+  syncAllDataFromCloud: (userId?: string) => Promise<{ success: boolean; message: string }>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -253,6 +274,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const saved = localStorage.getItem('df_meals_list');
     return saved ? JSON.parse(saved) : ['Colazione', 'Pranzo', 'Spuntino', 'Cena'];
   });
+
+  const [customExercises, setCustomExercises] = useState<Exercise[]>(() => {
+    try {
+      const saved = localStorage.getItem('devfit_custom_exercises');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    localStorage.setItem('devfit_custom_exercises', JSON.stringify(customExercises));
+  }, [customExercises]);
 
 
   // --- PERSISTENCE ---
@@ -384,47 +418,133 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [supabaseClient]);
 
-  const syncProfileFromCloud = useCallback(async (userId: string, client = supabaseClient) => {
-    if (!client || !userId) return;
+  const syncAllDataFromCloud = useCallback(async (userId?: string, client = supabaseClient): Promise<{ success: boolean; message: string }> => {
+    const targetId = userId || user?.id;
+    if (!client || !targetId) {
+      return { success: false, message: 'Supabase non è configurato o utente non loggato.' };
+    }
+
     try {
-      const { data, error } = await client
+      // 1. Fetch Profile
+      const { data: profData, error: profError } = await client
         .from('profiles')
         .select('*')
-        .eq('id', userId)
+        .eq('id', targetId)
         .maybeSingle();
 
-      if (error) {
-        console.warn('Errore lettura profilo da Supabase:', error);
-        return;
-      }
-
-      if (data) {
+      if (profData) {
         setProfile(prev => ({
           ...prev,
-          name: data.name || prev.name,
-          gender: (data.gender as 'female' | 'male') || prev.gender,
-          height: typeof data.height === 'number' ? data.height : prev.height,
-          weight: typeof data.weight === 'number' ? data.weight : prev.weight,
-          bodyFat: typeof data.body_fat === 'number' ? data.body_fat : prev.bodyFat,
-          waist: typeof data.waist === 'number' ? data.waist : prev.waist,
-          arms: typeof data.arms === 'number' ? data.arms : prev.arms,
-          thighs: typeof data.thighs === 'number' ? data.thighs : prev.thighs,
-          avatarUrl: data.avatar_url ?? prev.avatarUrl,
-          bannerUrl: data.banner_url ?? prev.bannerUrl,
-          targetCalories: typeof data.target_calories === 'number' ? data.target_calories : prev.targetCalories,
-          targetProtein: typeof data.target_protein === 'number' ? data.target_protein : prev.targetProtein,
-          targetCarbs: typeof data.target_carbs === 'number' ? data.target_carbs : prev.targetCarbs,
-          targetFat: typeof data.target_fat === 'number' ? data.target_fat : prev.targetFat,
-          streak: typeof data.streak === 'number' ? data.streak : prev.streak,
-          lastLoggedDate: data.last_logged_date || prev.lastLoggedDate
+          name: profData.name || prev.name,
+          gender: (profData.gender as 'female' | 'male') || prev.gender,
+          height: typeof profData.height === 'number' ? profData.height : prev.height,
+          weight: typeof profData.weight === 'number' ? profData.weight : prev.weight,
+          bodyFat: typeof profData.body_fat === 'number' ? profData.body_fat : prev.bodyFat,
+          waist: typeof profData.waist === 'number' ? profData.waist : prev.waist,
+          arms: typeof profData.arms === 'number' ? profData.arms : prev.arms,
+          thighs: typeof profData.thighs === 'number' ? profData.thighs : prev.thighs,
+          avatarUrl: profData.avatar_url ?? prev.avatarUrl,
+          bannerUrl: profData.banner_url ?? prev.bannerUrl,
+          targetCalories: typeof profData.target_calories === 'number' ? profData.target_calories : prev.targetCalories,
+          targetProtein: typeof profData.target_protein === 'number' ? profData.target_protein : prev.targetProtein,
+          targetCarbs: typeof profData.target_carbs === 'number' ? profData.target_carbs : prev.targetCarbs,
+          targetFat: typeof profData.target_fat === 'number' ? profData.target_fat : prev.targetFat,
+          streak: typeof profData.streak === 'number' ? profData.streak : prev.streak,
+          lastLoggedDate: profData.last_logged_date || prev.lastLoggedDate
         }));
-      } else {
-        await syncProfileToCloud(userId, profile, client);
+      } else if (!profError) {
+        await syncProfileToCloud(targetId, profile, client);
       }
-    } catch (err) {
-      console.warn('Errore durante syncProfileFromCloud:', err);
+
+      // 2. Fetch Routines
+      const { data: routinesData } = await client
+        .from('routines')
+        .select('*')
+        .eq('user_id', targetId);
+
+      if (routinesData && routinesData.length > 0) {
+        const parsedRoutines: Routine[] = routinesData.map((r: any) => ({
+          id: r.id,
+          name: r.name,
+          description: r.description || '',
+          exercises: Array.isArray(r.exercises) ? r.exercises : []
+        }));
+        setRoutines(parsedRoutines);
+        localStorage.setItem('df_routines', JSON.stringify(parsedRoutines));
+      }
+
+      // 3. Fetch Workout Logs
+      const { data: workoutsData } = await client
+        .from('workout_logs')
+        .select('*')
+        .eq('user_id', targetId)
+        .order('date', { ascending: false });
+
+      if (workoutsData && workoutsData.length > 0) {
+        const parsedWorkouts: WorkoutLog[] = workoutsData.map((w: any) => ({
+          id: w.id,
+          name: w.name,
+          date: w.date,
+          duration: w.duration || 0,
+          volume: w.volume || 0,
+          exercises: Array.isArray(w.exercises) ? w.exercises : []
+        }));
+        setWorkoutHistory(parsedWorkouts);
+        localStorage.setItem('df_history', JSON.stringify(parsedWorkouts));
+      }
+
+      // 4. Fetch Food Logs
+      const { data: foodData } = await client
+        .from('food_logs')
+        .select('*')
+        .eq('user_id', targetId);
+
+      if (foodData && foodData.length > 0) {
+        const grouped: FoodLogs = {};
+        foodData.forEach((f: any) => {
+          if (!grouped[f.date]) grouped[f.date] = [];
+          grouped[f.date].push({
+            id: f.id,
+            name: f.name,
+            mealType: f.meal_type || 'Pranzo',
+            calories: f.calories || 0,
+            protein: f.protein || 0,
+            carbs: f.carbs || 0,
+            fat: f.fat || 0,
+            weight: f.weight || 0
+          });
+        });
+        setFoodLogs(grouped);
+        localStorage.setItem('df_food_logs', JSON.stringify(grouped));
+      }
+
+      // 5. Fetch Custom Exercises
+      const { data: customExData } = await client
+        .from('exercises')
+        .select('*')
+        .or(`created_by.eq.${targetId},is_custom.eq.true`);
+
+      if (customExData && customExData.length > 0) {
+        const parsedCustom: Exercise[] = customExData.map((ex: any) => ({
+          id: ex.id,
+          name: ex.name,
+          category: ex.category as any,
+          muscleGroup: ex.muscle_group as any,
+          equipment: ex.equipment as any,
+          instructions: ex.instructions || '',
+          videoUrl: ex.video_url || '',
+          trackingType: ex.tracking_type || 'weight_reps'
+        }));
+        setCustomExercises(parsedCustom);
+        localStorage.setItem('devfit_custom_exercises', JSON.stringify(parsedCustom));
+      }
+
+      return { success: true, message: 'Dati sincronizzati con successo dal cloud Supabase!' };
+    } catch (err: any) {
+      console.warn('Errore syncAllDataFromCloud:', err);
+      return { success: false, message: err.message || 'Errore durante la sincronizzazione.' };
     }
-  }, [supabaseClient, profile, syncProfileToCloud]);
+  }, [supabaseClient, user, profile, syncProfileToCloud]);
 
   const syncAllDataToCloud = async (): Promise<{ success: boolean; message: string }> => {
     if (!supabaseClient) {
@@ -508,7 +628,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           name
         };
         setUser(u);
-        syncProfileFromCloud(session.user.id, supabaseClient);
+        syncAllDataFromCloud(session.user.id, supabaseClient);
       }
     });
 
@@ -521,14 +641,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           name
         };
         setUser(u);
-        syncProfileFromCloud(session.user.id, supabaseClient);
+        syncAllDataFromCloud(session.user.id, supabaseClient);
       } else {
         setUser(null);
       }
     });
 
     return () => subscription.unsubscribe();
-  }, [supabaseClient, syncProfileFromCloud]);
+  }, [supabaseClient, syncAllDataFromCloud]);
 
   // --- AUTH ACTIONS ---
   const signUp = async (email: string, pass: string, name: string) => {
@@ -545,35 +665,39 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           name
         };
         await syncProfileToCloud(data.user.id, initialProf, supabaseClient);
+        await syncAllDataFromCloud(data.user.id, supabaseClient);
       }
     } else {
-      // Mock SignUp
-      const mockId = `usr-${Date.now()}`;
-      const newUser = { id: mockId, email, name };
-      setUser(newUser);
-      setProfile(prev => ({ ...prev, name }));
+      throw new Error(
+        'Supabase non è configurato su questo dispositivo. Clicca sul pulsante in alto per inserire Project URL e Anon Key prima di registrarti.'
+      );
     }
   };
 
   const signIn = async (email: string, pass: string) => {
     if (supabaseClient) {
       const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password: pass });
-      if (error) throw error;
+      if (error) {
+        if (error.message.includes('Email not confirmed')) {
+          throw new Error('Email non ancora confermata. Controlla la tua casella di posta oppure disattiva "Confirm email" nel pannello Supabase (Authentication -> Providers -> Email).');
+        } else if (error.message.includes('Invalid login credentials')) {
+          throw new Error('Credenziali non valide. Verifica email e password.');
+        }
+        throw error;
+      }
       if (data.user) {
-        await syncProfileFromCloud(data.user.id, supabaseClient);
+        const uName = data.user.user_metadata?.name || data.user.user_metadata?.full_name || data.user.email?.split('@')[0] || 'Utente';
+        setUser({
+          id: data.user.id,
+          email: data.user.email || email,
+          name: uName
+        });
+        await syncAllDataFromCloud(data.user.id, supabaseClient);
       }
     } else {
-      // Mock SignIn
-      const savedUser = localStorage.getItem('df_user');
-      const u = savedUser ? JSON.parse(savedUser) : null;
-      if (u && u.email === email) {
-        setUser(u);
-        setProfile(prev => ({ ...prev, name: u.name }));
-      } else {
-        const mockUser = { id: `usr-${Date.now()}`, email, name: email.split('@')[0] };
-        setUser(mockUser);
-        setProfile(prev => ({ ...prev, name: mockUser.name }));
-      }
+      throw new Error(
+        'Supabase non è configurato su questo dispositivo. Clicca sul pulsante "Configura Supabase" in cima allo schermo per inserire Project URL e Anon Key del tuo database.'
+      );
     }
   };
 
@@ -643,19 +767,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // --- PREVIOUS EXERCISE VALUES (Memoized O(1) lookup) ---
   const previousPerformancesMap = useMemo(() => {
-    const map: Record<string, { weight: number; reps: number }[]> = {};
+    const map: Record<string, { weight: number; reps: number; time?: number; distance?: number }[]> = {};
     const sortedHistory = [...workoutHistory].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     for (const log of sortedHistory) {
       for (const ex of log.exercises) {
         if (!map[ex.exerciseId] && ex.sets.length > 0) {
-          map[ex.exerciseId] = ex.sets.map(s => ({ weight: s.weight, reps: s.reps }));
+          map[ex.exerciseId] = ex.sets.map(s => ({
+            weight: s.weight,
+            reps: s.reps,
+            time: s.time,
+            distance: s.distance
+          }));
         }
       }
     }
     return map;
   }, [workoutHistory]);
 
-  const getPreviousPerformances = useCallback((exerciseId: string): { weight: number; reps: number }[] => {
+  const getPreviousPerformances = useCallback((exerciseId: string): { weight: number; reps: number; time?: number; distance?: number }[] => {
     return previousPerformancesMap[exerciseId] || [];
   }, [previousPerformancesMap]);
 
@@ -696,6 +825,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const updateRoutine = (routine: Routine) => {
+    setRoutines(prev => prev.map(r => r.id === routine.id ? routine : r));
+    if (user && supabaseClient) {
+      supabaseClient.from('routines').upsert({
+        id: routine.id,
+        user_id: user.id,
+        name: routine.name,
+        description: routine.description,
+        exercises: routine.exercises
+      }, { onConflict: 'id' }).then(({ error }) => {
+        if (error) console.warn('Errore update routine cloud:', error);
+      });
+    }
+  };
+
   const deleteRoutine = (id: string) => {
     setRoutines(prev => prev.filter(r => r.id !== id));
     if (user && supabaseClient) {
@@ -705,14 +849,87 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const updateWorkoutLog = (updatedLog: WorkoutLog) => {
+    setWorkoutHistory(prev => prev.map(w => w.id === updatedLog.id ? updatedLog : w));
+    if (user && supabaseClient) {
+      supabaseClient.from('workout_logs').upsert({
+        id: updatedLog.id,
+        user_id: user.id,
+        name: updatedLog.name,
+        date: updatedLog.date,
+        duration: updatedLog.duration,
+        volume: updatedLog.volume,
+        exercises: updatedLog.exercises
+      }, { onConflict: 'id' }).then(({ error }) => {
+        if (error) console.warn('Errore update workout cloud:', error);
+      });
+    }
+  };
+
+  const deleteWorkoutLog = (id: string) => {
+    setWorkoutHistory(prev => prev.filter(w => w.id !== id));
+    if (user && supabaseClient) {
+      supabaseClient.from('workout_logs').delete().eq('id', id).then(({ error }) => {
+        if (error) console.warn('Errore delete workout cloud:', error);
+      });
+    }
+  };
+
+  const addCustomExercise = async (ex: Exercise) => {
+    setCustomExercises(prev => [...prev.filter(e => e.id !== ex.id), ex]);
+    if (user && supabaseClient) {
+      try {
+        await supabaseClient.from('exercises').upsert({
+          id: ex.id,
+          name: ex.name,
+          category: ex.category,
+          muscle_group: ex.muscleGroup,
+          equipment: ex.equipment,
+          instructions: ex.instructions || '',
+          video_url: ex.videoUrl || '',
+          tracking_type: ex.trackingType || 'weight_reps',
+          is_custom: true,
+          created_by: user.id
+        }, { onConflict: 'id' });
+      } catch (err) {
+        console.warn('Errore aggiunta esercizio custom su Supabase:', err);
+      }
+    }
+  };
+
+  const deleteCustomExercise = async (id: string) => {
+    setCustomExercises(prev => prev.filter(e => e.id !== id));
+    if (user && supabaseClient) {
+      try {
+        await supabaseClient.from('exercises').delete().eq('id', id);
+      } catch (err) {
+        console.warn('Errore rimozione esercizio custom da Supabase:', err);
+      }
+    }
+  };
+
+  const updateActiveWorkoutExerciseRest = (exerciseId: string, restSeconds: number) => {
+    if (!activeWorkout) return;
+    const updatedExercises = activeWorkout.exercises.map(ex => {
+      if (ex.exerciseId === exerciseId) {
+        return { ...ex, restSeconds };
+      }
+      return ex;
+    });
+    setActiveWorkout({ ...activeWorkout, exercises: updatedExercises });
+  };
+
   const startWorkout = (routineId?: string, repeatWorkout?: WorkoutLog) => {
     if (repeatWorkout) {
       const exercises: ExerciseLog[] = repeatWorkout.exercises.map(ex => ({
         exerciseId: ex.exerciseId,
+        restSeconds: ex.restSeconds || 90,
         sets: ex.sets.map((s, idx) => ({
           id: `s-${Date.now()}-${idx}-${Math.random().toString(36).substr(2, 4)}`,
           weight: s.weight,
           reps: s.reps,
+          time: s.time,
+          distance: s.distance,
           completed: false
         }))
       }));
@@ -728,10 +945,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (routine) {
         const exercises: ExerciseLog[] = routine.exercises.map(ex => ({
           exerciseId: ex.exerciseId,
+          restSeconds: ex.restSeconds || 90,
           sets: ex.defaultSets.map((s, idx) => ({
             id: `s-${Date.now()}-${idx}-${Math.random().toString(36).substr(2, 4)}`,
             weight: s.weight,
             reps: s.reps,
+            time: s.time,
+            distance: s.distance,
             completed: false
           }))
         }));
@@ -750,7 +970,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   };
 
-  const updateActiveWorkoutSet = (exerciseId: string, setIndex: number, field: 'weight' | 'reps', value: number) => {
+  const updateActiveWorkoutSet = (exerciseId: string, setIndex: number, field: 'weight' | 'reps' | 'time' | 'distance', value: number) => {
     if (!activeWorkout) return;
     const updatedExercises = activeWorkout.exercises.map(ex => {
       if (ex.exerciseId === exerciseId) {
@@ -773,8 +993,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setActiveWorkout(prev => prev ? { ...prev, exercises: updater(prev.exercises) } : null);
   };
 
-
-
   const triggerConfetti = () => {
     confetti({
       particleCount: 120,
@@ -787,6 +1005,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const toggleCompleteSet = (exerciseId: string, setIndex: number) => {
     if (!activeWorkout) return;
     let recordTriggered = false;
+    const exDetail = mockExercises.find(e => e.id === exerciseId);
+    const isCardio = isDistanceTimeExercise(exDetail);
+    const isIso = isTimeOnlyExercise(exDetail);
+    const isBodyweight = exDetail?.equipment === 'Niente';
 
     const updatedExercises = activeWorkout.exercises.map(ex => {
       if (ex.exerciseId === exerciseId) {
@@ -795,48 +1017,89 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         
         if (isCompleting) {
           const currentSet = updatedSets[setIndex];
-          const current1RM = currentSet.weight * (1 + currentSet.reps / 30);
-          const currentVol = currentSet.weight * currentSet.reps;
+
+          let is1RM = false;
+          let isMaxVolume = false;
+          let isMaxWeight = false;
+          let isMaxReps = false;
+          let isMaxDistance = false;
+          let isMaxTime = false;
 
           let historicalMax1RM = 0;
           let historicalMaxVol = 0;
           let historicalMaxWeight = 0;
+          let historicalMaxReps = 0;
+          let historicalMaxDistance = 0;
+          let historicalMaxTime = 0;
 
           workoutHistory.forEach(log => {
             const pastEx = log.exercises.find(pe => pe.exerciseId === exerciseId);
             if (pastEx) {
               pastEx.sets.forEach(ps => {
-                const past1RM = ps.weight * (1 + ps.reps / 30);
+                if (!ps.completed) return;
+                // Strength / Weight 1RM (with 1 rep fix)
+                const past1RM = ps.weight > 0 ? (ps.reps === 1 ? ps.weight : ps.weight * (1 + ps.reps / 30)) : 0;
                 const pastVol = ps.weight * ps.reps;
                 if (past1RM > historicalMax1RM) historicalMax1RM = past1RM;
                 if (pastVol > historicalMaxVol) historicalMaxVol = pastVol;
                 if (ps.weight > historicalMaxWeight) historicalMaxWeight = ps.weight;
+                if (ps.reps > historicalMaxReps) historicalMaxReps = ps.reps;
+                if ((ps.distance || 0) > historicalMaxDistance) historicalMaxDistance = ps.distance || 0;
+                if ((ps.time || 0) > historicalMaxTime) historicalMaxTime = ps.time || 0;
               });
             }
           });
 
-          const is1RM = current1RM > 0 && current1RM >= historicalMax1RM;
-          const isMaxVolume = currentVol > 0 && currentVol >= historicalMaxVol;
-          const isMaxWeight = currentSet.weight > 0 && currentSet.weight >= historicalMaxWeight;
+          if (isCardio) {
+            // Cardio: check distance and time
+            const curDist = currentSet.distance || 0;
+            const curTime = currentSet.time || 0;
+            isMaxDistance = curDist > 0 && curDist >= historicalMaxDistance;
+            isMaxTime = curTime > 0 && curTime >= historicalMaxTime;
+            if (isMaxDistance || isMaxTime) recordTriggered = true;
+          } else if (isIso) {
+            // Isometric: check time
+            const curTime = currentSet.time || 0;
+            isMaxTime = curTime > 0 && curTime >= historicalMaxTime;
+            if (isMaxTime) recordTriggered = true;
+          } else if (isBodyweight && currentSet.weight === 0) {
+            // Bodyweight reps record
+            isMaxReps = currentSet.reps > 0 && currentSet.reps >= historicalMaxReps;
+            if (isMaxReps) recordTriggered = true;
+          } else {
+            // Standard weightlifting (reps === 1 gives exact weight as 1RM)
+            const current1RM = currentSet.reps === 1 
+              ? currentSet.weight 
+              : currentSet.weight * (1 + currentSet.reps / 30);
+            const currentVol = currentSet.weight * currentSet.reps;
+
+            is1RM = current1RM > 0 && current1RM >= historicalMax1RM;
+            isMaxVolume = currentVol > 0 && currentVol >= historicalMaxVol;
+            isMaxWeight = currentSet.weight > 0 && currentSet.weight >= historicalMaxWeight;
+
+            if (is1RM || isMaxVolume || isMaxWeight) recordTriggered = true;
+          }
 
           updatedSets[setIndex] = {
             ...currentSet,
             completed: true,
             is1RM,
             isMaxVolume,
-            isMaxWeight
+            isMaxWeight,
+            isMaxReps,
+            isMaxDistance,
+            isMaxTime
           };
-
-          if (is1RM || isMaxVolume || isMaxWeight) {
-            recordTriggered = true;
-          }
         } else {
           updatedSets[setIndex] = {
             ...updatedSets[setIndex],
             completed: false,
             is1RM: false,
             isMaxVolume: false,
-            isMaxWeight: false
+            isMaxWeight: false,
+            isMaxReps: false,
+            isMaxDistance: false,
+            isMaxTime: false
           };
         }
         return { ...ex, sets: updatedSets };
@@ -851,20 +1114,38 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const addExerciseToActiveWorkout = (exerciseId: string) => {
+  const addExerciseToActiveWorkout = (exerciseId: string, restSeconds: number = 90) => {
     if (!activeWorkout) return;
     
     const exists = activeWorkout.exercises.some(e => e.exerciseId === exerciseId);
     if (exists) return;
 
+    const exDetail = mockExercises.find(e => e.id === exerciseId);
+    const isCardio = isDistanceTimeExercise(exDetail);
+    const isIso = isTimeOnlyExercise(exDetail);
     const prevSets = getPreviousPerformances(exerciseId);
-    const defaultSets = prevSets.length > 0
-      ? prevSets.map((ps, idx) => ({ id: `s-${Date.now()}-${idx}`, weight: ps.weight, reps: ps.reps, completed: false }))
-      : [{ id: `s-${Date.now()}-0`, weight: 0, reps: 0, completed: false }];
+
+    let defaultSets: SetLog[];
+    if (prevSets.length > 0) {
+      defaultSets = prevSets.map((ps, idx) => ({
+        id: `s-${Date.now()}-${idx}`,
+        weight: ps.weight,
+        reps: ps.reps,
+        time: ps.time,
+        distance: ps.distance,
+        completed: false
+      }));
+    } else if (isCardio) {
+      defaultSets = [{ id: `s-${Date.now()}-0`, weight: 0, reps: 0, time: 20, distance: 3.0, completed: false }];
+    } else if (isIso) {
+      defaultSets = [{ id: `s-${Date.now()}-0`, weight: 0, reps: 0, time: 60, completed: false }];
+    } else {
+      defaultSets = [{ id: `s-${Date.now()}-0`, weight: 0, reps: 10, completed: false }];
+    }
 
     setActiveWorkout({
       ...activeWorkout,
-      exercises: [...activeWorkout.exercises, { exerciseId, sets: defaultSets }]
+      exercises: [...activeWorkout.exercises, { exerciseId, restSeconds, sets: defaultSets }]
     });
   };
 
@@ -876,11 +1157,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     exerciseIds.forEach((exId, exIdx) => {
       if (!newExercises.some(e => e.exerciseId === exId)) {
+        const exDetail = mockExercises.find(e => e.id === exId);
+        const isCardio = isDistanceTimeExercise(exDetail);
+        const isIso = isTimeOnlyExercise(exDetail);
         const prevSets = getPreviousPerformances(exId);
-        const defaultSets = prevSets.length > 0
-          ? prevSets.map((ps, idx) => ({ id: `s-${Date.now()}-${exIdx}-${idx}`, weight: ps.weight, reps: ps.reps, completed: false }))
-          : [{ id: `s-${Date.now()}-${exIdx}-0`, weight: 0, reps: 0, completed: false }];
-        newExercises.push({ exerciseId: exId, sets: defaultSets });
+
+        let defaultSets: SetLog[];
+        if (prevSets.length > 0) {
+          defaultSets = prevSets.map((ps, idx) => ({
+            id: `s-${Date.now()}-${exIdx}-${idx}`,
+            weight: ps.weight,
+            reps: ps.reps,
+            time: ps.time,
+            distance: ps.distance,
+            completed: false
+          }));
+        } else if (isCardio) {
+          defaultSets = [{ id: `s-${Date.now()}-${exIdx}-0`, weight: 0, reps: 0, time: 20, distance: 3.0, completed: false }];
+        } else if (isIso) {
+          defaultSets = [{ id: `s-${Date.now()}-${exIdx}-0`, weight: 0, reps: 0, time: 60, completed: false }];
+        } else {
+          defaultSets = [{ id: `s-${Date.now()}-${exIdx}-0`, weight: 0, reps: 10, completed: false }];
+        }
+        newExercises.push({ exerciseId: exId, restSeconds: 90, sets: defaultSets });
         addedCount++;
       }
     });
@@ -903,12 +1202,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       .map(ex => ({ ...ex, sets: ex.sets.filter(s => s.completed) }))
       .filter(ex => ex.sets.length > 0);
 
-
     exercisesToSave.forEach(ex => {
+      const exDetail = mockExercises.find(e => e.id === ex.exerciseId);
+      const isCardio = isDistanceTimeExercise(exDetail);
+      const isIso = isTimeOnlyExercise(exDetail);
+
       ex.sets.forEach(s => {
         if (s.completed) {
-          totalVolume += s.weight * s.reps;
-          if (s.is1RM || s.isMaxVolume || s.isMaxWeight) {
+          if (!isCardio && !isIso) {
+            totalVolume += s.weight * s.reps;
+          }
+          if (s.is1RM || s.isMaxVolume || s.isMaxWeight || s.isMaxReps || s.isMaxDistance || s.isMaxTime) {
             recordsCount++;
           }
         }
@@ -1066,13 +1370,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       updateProfile,
       routines,
       addRoutine,
+      updateRoutine,
       deleteRoutine,
       workoutHistory,
+      updateWorkoutLog,
+      deleteWorkoutLog,
+      customExercises,
+      addCustomExercise,
+      deleteCustomExercise,
       activeWorkout,
       startWorkout,
       updateActiveWorkoutSet,
       updateActiveWorkoutExercises,
-
+      updateActiveWorkoutExerciseRest,
       toggleCompleteSet,
       addExerciseToActiveWorkout,
       addExercisesToActiveWorkout,
@@ -1095,7 +1405,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       supabaseUrl: supabaseConfig.url,
       supabaseAnonKey: supabaseConfig.anonKey,
       saveSupabaseConfig,
-      syncAllDataToCloud
+      syncAllDataToCloud,
+      syncAllDataFromCloud
     }}>
       {children}
     </AppContext.Provider>

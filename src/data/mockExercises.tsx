@@ -32,6 +32,8 @@ export type EquipmentType =
   | 'Kettlebell'
   | 'Altro';
 
+export type ExerciseTrackingType = 'weight_reps' | 'distance_time' | 'time_only';
+
 export interface Exercise {
   id: string;
   name: string;
@@ -40,6 +42,7 @@ export interface Exercise {
   equipment: EquipmentType;
   instructions: string;
   videoUrl: string;
+  trackingType?: ExerciseTrackingType;
 }
 
 export const mockExercises: Exercise[] = [
@@ -753,7 +756,8 @@ export const mockExercises: Exercise[] = [
     muscleGroup: 'Addominali',
     equipment: 'Niente',
     instructions: 'Poggiati sugli avambracci e sulle punte dei piedi. Mantieni il corpo rigido come una tavola stringendo glutei e addome.',
-    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-woman-performing-abdominal-crunches-at-home-40319-large.mp4'
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-woman-performing-abdominal-crunches-at-home-40319-large.mp4',
+    trackingType: 'time_only'
   },
   {
     id: 'ex-bicycle-crunch',
@@ -800,7 +804,8 @@ export const mockExercises: Exercise[] = [
     muscleGroup: 'Cardio',
     equipment: 'Macchina',
     instructions: 'Attività cardiovascolare aerobica. Mantieni una cadenza costante o sperimenta intervalli HIIT per massimizzare il consumo calorico.',
-    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-man-doing-bench-press-with-barbell-close-up-40321-large.mp4'
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-man-doing-bench-press-with-barbell-close-up-40321-large.mp4',
+    trackingType: 'distance_time'
   },
   {
     id: 'ex-cyclette',
@@ -809,7 +814,8 @@ export const mockExercises: Exercise[] = [
     muscleGroup: 'Cardio',
     equipment: 'Macchina',
     instructions: 'Pedala a ritmo sostenuto regolando la resistenza magnetica per stimolare la capacità polmonare e le gambe senza impatto sulle articolazioni.',
-    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-woman-doing-squats-with-a-barbell-40324-large.mp4'
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-woman-doing-squats-with-a-barbell-40324-large.mp4',
+    trackingType: 'distance_time'
   },
   {
     id: 'ex-vogatore',
@@ -818,7 +824,28 @@ export const mockExercises: Exercise[] = [
     muscleGroup: 'Cardio',
     equipment: 'Macchina',
     instructions: 'Spingi con le gambe, apri il bacino e poi tira con le braccia verso lo sterno. Coinvolge l\'85% dei muscoli corporei.',
-    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-man-exercising-on-lat-pull-down-machine-40336-large.mp4'
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-man-exercising-on-lat-pull-down-machine-40336-large.mp4',
+    trackingType: 'distance_time'
+  },
+  {
+    id: 'ex-ellittica',
+    name: 'Ellittica (Cross Trainer)',
+    category: 'Cardio',
+    muscleGroup: 'Cardio',
+    equipment: 'Macchina',
+    instructions: 'Movimento fluido combinato braccia-gambe a basso impatto articolare per resistenza e consumo calorico.',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-woman-doing-squats-with-a-barbell-40324-large.mp4',
+    trackingType: 'distance_time'
+  },
+  {
+    id: 'ex-corsa-outdoor',
+    name: 'Corsa / Camminata all\'Aperto',
+    category: 'Cardio',
+    muscleGroup: 'Cardio',
+    equipment: 'Niente',
+    instructions: 'Corsa continua all\'aperto per stimolo cardiovascolare e ossigenazione.',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-man-doing-bench-press-with-barbell-close-up-40321-large.mp4',
+    trackingType: 'distance_time'
   },
   {
     id: 'ex-kettlebell-swing',
@@ -836,9 +863,60 @@ export const mockExercises: Exercise[] = [
     muscleGroup: 'Cardio',
     equipment: 'Niente',
     instructions: 'Rimbalza sulla punta dei piedi facendo ruotare la corda solo con i polsi, ritmo e coordinazione continui.',
-    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-woman-doing-squats-with-a-barbell-40324-large.mp4'
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-woman-doing-squats-with-a-barbell-40324-large.mp4',
+    trackingType: 'time_only'
   }
 ];
+
+// Helper to check if an exercise tracks distance & time (e.g. treadmill, bike, rowing)
+export const isDistanceTimeExercise = (exercise?: Exercise | null): boolean => {
+  if (!exercise) return false;
+  if (exercise.trackingType === 'distance_time') return true;
+  if (exercise.trackingType === 'weight_reps' || exercise.trackingType === 'time_only') return false;
+
+  const id = exercise.id.toLowerCase();
+  const name = exercise.name.toLowerCase();
+  return (
+    id === 'ex-tapis-roulant' ||
+    id === 'ex-cyclette' ||
+    id === 'ex-vogatore' ||
+    id === 'ex-ellittica' ||
+    id === 'ex-corsa-outdoor' ||
+    name.includes('tapis') ||
+    name.includes('roulant') ||
+    name.includes('treadmill') ||
+    name.includes('cyclette') ||
+    name.includes('spin bike') ||
+    name.includes('vogatore') ||
+    name.includes('rowing') ||
+    name.includes('ellittica') ||
+    name.includes('corsa') ||
+    name.includes('running')
+  );
+};
+
+// Helper to check if an exercise is isometric / time only (e.g. plank, jump rope duration)
+export const isTimeOnlyExercise = (exercise?: Exercise | null): boolean => {
+  if (!exercise) return false;
+  if (exercise.trackingType === 'time_only') return true;
+  if (exercise.trackingType === 'weight_reps' || exercise.trackingType === 'distance_time') return false;
+
+  const id = exercise.id.toLowerCase();
+  const name = exercise.name.toLowerCase();
+  return (
+    id === 'ex-plank' ||
+    name.includes('plank') ||
+    name.includes('isometrico') ||
+    name.includes('tenuta') ||
+    name.includes('hollow')
+  );
+};
+
+// Helper to check if an exercise uses barbell plates (for Disc calculator icon)
+export const isPlateLoadedExercise = (exercise?: Exercise | null): boolean => {
+  if (!exercise) return false;
+  return exercise.equipment === 'Bilanciere' || exercise.equipment === 'Disco';
+};
 
 // Helper to render high definition inline SVG anatomical miniatures
 export const renderMuscleIcon = (muscle: MuscleGroup, size: number = 40, highlightColor?: string) => {

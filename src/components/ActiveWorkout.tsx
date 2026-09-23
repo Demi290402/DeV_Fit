@@ -3,15 +3,19 @@ import { Plus, Trash, Check, Clock, X, ChevronDown, Disc, Dumbbell } from 'lucid
 
 import { useApp } from '../context/AppContext';
 import type { SetLog } from '../context/AppContext';
-import { mockExercises, renderMuscleIcon } from '../data/mockExercises';
+import { mockExercises, renderMuscleIcon, isDistanceTimeExercise, isTimeOnlyExercise, isPlateLoadedExercise } from '../data/mockExercises';
 import { ExerciseBrowserModal } from './ExerciseBrowserModal';
 import { PlateAndOneRepModal } from './PlateAndOneRepModal';
+import { SwipeableSetRow } from './SwipeableSetRow';
+import { ExerciseDetailModal } from './ExerciseDetailModal';
 
 export const ActiveWorkout: React.FC = () => {
   const {
     activeWorkout,
     updateActiveWorkoutSet,
     updateActiveWorkoutExercises,
+    updateActiveWorkoutExerciseRest,
+    customExercises,
     toggleCompleteSet,
     addExerciseToActiveWorkout,
     addExercisesToActiveWorkout,
@@ -20,6 +24,8 @@ export const ActiveWorkout: React.FC = () => {
     workoutHistory,
     getPreviousPerformances
   } = useApp();
+
+  const allExercises = useMemo(() => [...customExercises, ...mockExercises], [customExercises]);
 
   const [elapsedTime, setElapsedTime] = useState(0);
   const [showAddExercise, setShowAddExercise] = useState(false);
@@ -118,9 +124,18 @@ export const ActiveWorkout: React.FC = () => {
       
       toggleCompleteSet(exId, setIdx);
 
-      // If completing (checking the box), launch rest timer
+      // If completing (checking the box), launch rest timer ONLY if not continuous cardio
       if (!isAlreadyCompleted) {
-        setRestTimeLeft(restTimeTotal);
+        const exDetail = allExercises.find(e => e.id === exId);
+        const isCardio = isDistanceTimeExercise(exDetail);
+        if (!isCardio) {
+          const restDuration = currentEx.restSeconds || 90;
+          setRestTimeTotal(restDuration);
+          setRestTimeLeft(restDuration);
+        } else {
+          playCompletionSound();
+          if (navigator.vibrate) navigator.vibrate([150, 80, 200]);
+        }
       }
     }
   };
@@ -140,11 +155,17 @@ export const ActiveWorkout: React.FC = () => {
   const handleAddSet = (exId: string) => {
     const currentEx = activeWorkout.exercises.find(e => e.exerciseId === exId);
     if (!currentEx) return;
+    const exDetail = allExercises.find(e => e.id === exId);
+    const isCardio = isDistanceTimeExercise(exDetail);
+    const isIso = isTimeOnlyExercise(exDetail);
     const lastSet = currentEx.sets[currentEx.sets.length - 1];
+
     const newSet: SetLog = {
       id: `s-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
-      weight: lastSet ? lastSet.weight : 0,
-      reps: lastSet ? lastSet.reps : 10,
+      weight: isCardio || isIso ? 0 : (lastSet ? lastSet.weight : 0),
+      reps: isCardio || isIso ? 0 : (lastSet ? lastSet.reps : 10),
+      time: isCardio ? (lastSet?.time || 20) : (isIso ? (lastSet?.time || 60) : undefined),
+      distance: isCardio ? (lastSet?.distance || 3.0) : undefined,
       completed: false
     };
     updateActiveWorkoutExercises(prev =>
@@ -163,15 +184,31 @@ export const ActiveWorkout: React.FC = () => {
     );
   };
 
-  // Calculate live volume
+  // Calculate live volume (excluding pure cardio or isometric exercises)
   const getLiveVolume = () => {
     let vol = 0;
     activeWorkout.exercises.forEach(ex => {
+      const exDetail = mockExercises.find(e => e.id === ex.exerciseId);
+      if (isDistanceTimeExercise(exDetail) || isTimeOnlyExercise(exDetail)) return;
       ex.sets.forEach(s => {
         if (s.completed) vol += s.weight * s.reps;
       });
     });
     return vol;
+  };
+
+  // Calculate live cardio distance
+  const getLiveCardioKm = () => {
+    let km = 0;
+    activeWorkout.exercises.forEach(ex => {
+      const exDetail = mockExercises.find(e => e.id === ex.exerciseId);
+      if (isDistanceTimeExercise(exDetail)) {
+        ex.sets.forEach(s => {
+          if (s.completed && s.distance) km += s.distance;
+        });
+      }
+    });
+    return km;
   };
 
   // Calculate total completed sets
@@ -190,7 +227,7 @@ export const ActiveWorkout: React.FC = () => {
 
   // Memoize previous performances per exercise to avoid expensive O(N*M) lookups on every 1-second timer tick
   const prevPerformancesMap = useMemo(() => {
-    const map: Record<string, { weight: number; reps: number }[]> = {};
+    const map: Record<string, { weight: number; reps: number; time?: number; distance?: number }[]> = {};
     if (!activeWorkout) return map;
     activeWorkout.exercises.forEach(e => {
       map[e.exerciseId] = getPreviousPerformances(e.exerciseId);
@@ -262,64 +299,7 @@ export const ActiveWorkout: React.FC = () => {
   const restProgress = restTimeLeft !== null ? (restTimeLeft / restTimeTotal) * 100 : 0;
   const restStrokeOffset = restCircumference - (restProgress / 100) * restCircumference;
 
-  // Render Exercise detail Drawer content
-  const selectedExercise = mockExercises.find(e => e.id === selectedDetailExerciseId);
-  const exerciseHistory = selectedDetailExerciseId
-    ? workoutHistory.flatMap(log => {
-        const match = log.exercises.find(e => e.exerciseId === selectedDetailExerciseId);
-        if (match) {
-          const maxWeight = Math.max(...match.sets.filter(s => s.completed).map(s => s.weight), 0);
-          return maxWeight > 0 ? [{ date: log.date, weight: maxWeight }] : [];
-        }
-        return [];
-      }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-    : [];
-
-  const renderSvgChart = () => {
-    if (exerciseHistory.length < 2) {
-      return (
-        <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-dark)', fontSize: '0.78rem' }}>
-          Registra almeno 2 allenamenti con questo esercizio per vedere il grafico storico dei carichi.
-        </div>
-      );
-    }
-
-    const width = 360;
-    const height = 100;
-    const paddingX = 30;
-    const paddingY = 15;
-
-    const weights = exerciseHistory.map(h => h.weight);
-    const minW = Math.min(...weights);
-    const maxW = Math.max(...weights);
-    const wRange = maxW - minW || 10;
-
-    const points = exerciseHistory.map((h, idx) => {
-      const x = paddingX + (idx / (exerciseHistory.length - 1)) * (width - 2 * paddingX);
-      const y = height - paddingY - ((h.weight - minW) / wRange) * (height - 2 * paddingY);
-      return { x, y, weight: h.weight, date: new Date(h.date).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' }) };
-    });
-
-    const pathD = `M ${points.map(p => `${p.x} ${p.y}`).join(' L ')}`;
-
-    return (
-      <div className="svg-chart-container" style={{ height: '140px' }}>
-        <svg className="chart-svg" viewBox={`0 0 ${width} ${height}`}>
-          <line x1={paddingX} y1={paddingY} x2={width - paddingX} y2={paddingY} stroke="rgba(255,255,255,0.03)" strokeWidth="1" />
-          <line x1={paddingX} y1={height/2} x2={width - paddingX} y2={height/2} stroke="rgba(255,255,255,0.03)" strokeWidth="1" />
-          <line x1={paddingX} y1={height - paddingY} x2={width - paddingX} y2={height - paddingY} stroke="rgba(255,255,255,0.03)" strokeWidth="1" />
-          <path d={pathD} fill="none" stroke="var(--color-primary)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-          {points.map((p, i) => (
-            <g key={i}>
-              <circle cx={p.x} cy={p.y} r="5" fill="var(--color-primary)" stroke="#09090b" strokeWidth="2" />
-              <text x={p.x} y={p.y - 10} fill="white" fontSize="10" fontWeight="bold" textAnchor="middle">{p.weight}kg</text>
-              <text x={p.x} y={height - 2} fill="var(--text-dark)" fontSize="8" textAnchor="middle">{p.date}</text>
-            </g>
-          ))}
-        </svg>
-      </div>
-    );
-  };
+  const selectedExerciseIds = useMemo(() => activeWorkout?.exercises.map(e => e.exerciseId) || [], [activeWorkout?.exercises]);
 
   return (
     <div className="animate-fade-in-up" style={{ paddingBottom: '50px' }}>
@@ -425,6 +405,15 @@ export const ActiveWorkout: React.FC = () => {
                 {completedSetsCount}
               </div>
             </div>
+
+            {getLiveCardioKm() > 0 && (
+              <div>
+                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted, #94a3b8)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Km Cardio</div>
+                <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#10b981', marginTop: '2px' }}>
+                  {getLiveCardioKm().toFixed(1)} km
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Front & Back Mini Anatomical Mannequins */}
@@ -537,116 +526,286 @@ export const ActiveWorkout: React.FC = () => {
         /* Exercises Log List */
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {activeWorkout.exercises.map((exLog) => {
-            const exDetail = mockExercises.find(e => e.id === exLog.exerciseId);
+            const exDetail = allExercises.find(e => e.id === exLog.exerciseId);
             if (!exDetail) return null;
 
             const prevSets = prevPerformancesMap[exLog.exerciseId] || [];
+            const isCardio = isDistanceTimeExercise(exDetail);
+            const isIso = isTimeOnlyExercise(exDetail);
+            const isPlate = isPlateLoadedExercise(exDetail);
 
             return (
               <div key={exLog.exerciseId} className="glass-card exercise-log-card">
-                <div className="flex-between exercise-header-clickable" onClick={() => setSelectedDetailExerciseId(exLog.exerciseId)}>
-                  <div className="exercise-title-row">
+                <div className="flex-between exercise-header-clickable">
+                  <div className="exercise-title-row" onClick={() => setSelectedDetailExerciseId(exLog.exerciseId)} style={{ flex: 1, cursor: 'pointer' }}>
                     <div className="exercise-icon" style={{ width: '42px', height: '42px', background: 'transparent', padding: 0 }}>
                       {renderMuscleIcon(exDetail.muscleGroup, 42, '#00a8ff')}
                     </div>
 
                     <div>
                       <h4 className="exercise-title">{exDetail.name}</h4>
-                      <span className="exercise-meta">{exDetail.muscleGroup} • {exDetail.equipment}</span>
+                      <span className="exercise-meta">
+                        {exDetail.muscleGroup} • {isCardio ? 'Cardio' : isIso ? 'Isometrico' : exDetail.equipment}
+                      </span>
                     </div>
                   </div>
-                  <ChevronDown size={18} color="var(--text-muted)" />
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    {!isCardio && (
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          background: 'rgba(255, 255, 255, 0.04)',
+                          border: '1px solid rgba(255, 255, 255, 0.08)',
+                          borderRadius: '8px',
+                          padding: '3px 8px'
+                        }}
+                        onClick={e => e.stopPropagation()}
+                        title="Tempo di recupero per questo esercizio"
+                      >
+                        <Clock size={12} color="#00a8ff" />
+                        <button
+                          type="button"
+                          className="rest-adjust-btn"
+                          style={{ width: '20px', height: '20px', fontSize: '0.62rem' }}
+                          onClick={() => updateActiveWorkoutExerciseRest(exLog.exerciseId, Math.max(10, (exLog.restSeconds || 90) - 15))}
+                        >
+                          -15
+                        </button>
+                        <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#00a8ff', minWidth: '30px', textAlign: 'center' }}>
+                          {exLog.restSeconds || 90}s
+                        </span>
+                        <button
+                          type="button"
+                          className="rest-adjust-btn"
+                          style={{ width: '20px', height: '20px', fontSize: '0.62rem' }}
+                          onClick={() => updateActiveWorkoutExerciseRest(exLog.exerciseId, (exLog.restSeconds || 90) + 15)}
+                        >
+                          +15
+                        </button>
+                      </div>
+                    )}
+                    <ChevronDown size={18} color="var(--text-muted)" onClick={() => setSelectedDetailExerciseId(exLog.exerciseId)} style={{ cursor: 'pointer' }} />
+                  </div>
                 </div>
 
-                {/* Sets Table */}
-                <table className="sets-table">
-                  <thead>
-                    <tr>
-                      <th style={{ width: '10%' }}>Set</th>
-                      <th style={{ width: '30%' }}>Ultima volta</th>
-                      <th style={{ width: '22%' }}>Kg</th>
-                      <th style={{ width: '22%' }}>Rep</th>
-                      <th style={{ width: '16%', textAlign: 'center' }}>OK</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {exLog.sets.map((set, idx) => {
-                      const prevSet = prevSets[idx];
-                      return (
-                        <tr key={set.id} className={`set-row ${set.completed ? 'completed' : ''}`}>
-                          <td className="set-index">{idx + 1}</td>
-                          <td className="prev-set-value">
-                            {prevSet ? `${prevSet.weight}kg x ${prevSet.reps}` : '—'}
-                          </td>
-                          <td>
-                            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                {/* Sets / Sessions Table */}
+                {isCardio ? (
+                  /* ================= CARDIO TABLE (Tempo & Distanza) ================= */
+                  <table className="sets-table">
+                    <thead>
+                      <tr>
+                        <th style={{ width: '12%' }}>Sess.</th>
+                        <th style={{ width: '32%' }}>Ultima volta</th>
+                        <th style={{ width: '22%' }}>Tempo (min)</th>
+                        <th style={{ width: '20%' }}>Km</th>
+                        <th style={{ width: '14%', textAlign: 'center' }}>OK</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {exLog.sets.map((set, idx) => {
+                        const prevSet = prevSets[idx];
+                        const prevText = prevSet && (prevSet.distance || prevSet.time)
+                          ? `${prevSet.distance ? `${prevSet.distance} km` : ''}${prevSet.distance && prevSet.time ? ' in ' : ''}${prevSet.time ? `${prevSet.time}m` : ''}`
+                          : '—';
+
+                        return (
+                          <SwipeableSetRow
+                            key={set.id}
+                            isCompleted={set.completed}
+                            canDelete={exLog.sets.length > 1}
+                            onDelete={() => handleRemoveSet(exLog.exerciseId, idx)}
+                          >
+                            <td className="set-index">{idx + 1}</td>
+                            <td className="prev-set-value">{prevText}</td>
+                            <td>
                               <input
                                 type="number"
                                 inputMode="decimal"
                                 step="any"
+                                placeholder="min"
                                 className="set-input"
-                                value={set.weight || ''}
-                                onChange={(e) => updateActiveWorkoutSet(exLog.exerciseId, idx, 'weight', parseFloat(e.target.value) || 0)}
+                                value={set.time !== undefined && set.time !== null && set.time > 0 ? set.time : ''}
+                                onChange={(e) => updateActiveWorkoutSet(exLog.exerciseId, idx, 'time', parseFloat(e.target.value) || 0)}
                                 disabled={set.completed}
-                                style={{ paddingRight: set.completed ? '8px' : '22px' }}
                               />
-                              {!set.completed && (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setPlateModalInitialWeight(set.weight || 60);
-                                    setPlateModalInitialReps(set.reps || 8);
-                                    setActiveTargetSet({ exId: exLog.exerciseId, setIdx: idx });
-                                    setShowPlateModal(true);
-                                  }}
-                                  style={{
-                                    position: 'absolute',
-                                    right: '4px',
-                                    background: 'none',
-                                    border: 'none',
-                                    color: 'var(--color-primary, #d4af37)',
-                                    cursor: 'pointer',
-                                    padding: '2px',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    opacity: 0.8
-                                  }}
-                                  title="Calcola dischi per questo peso"
-                                >
-                                  <Disc size={11} />
-                                </button>
-                              )}
-                            </div>
-                          </td>
-                          <td>
-                            <input
-                              type="number"
-                              inputMode="numeric"
-                              className="set-input"
-                              value={set.reps || ''}
-                              onChange={(e) => updateActiveWorkoutSet(exLog.exerciseId, idx, 'reps', parseInt(e.target.value) || 0)}
-                              disabled={set.completed}
-                            />
-                          </td>
-                          <td align="center">
-                            <button 
-                              className="btn-complete-set" 
-                              onClick={() => handleSetCheck(exLog.exerciseId, idx)}
-                            >
-                              <Check size={16} />
-                            </button>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                            </td>
+                            <td>
+                              <input
+                                type="number"
+                                inputMode="decimal"
+                                step="any"
+                                placeholder="km"
+                                className="set-input"
+                                value={set.distance !== undefined && set.distance !== null && set.distance > 0 ? set.distance : ''}
+                                onChange={(e) => updateActiveWorkoutSet(exLog.exerciseId, idx, 'distance', parseFloat(e.target.value) || 0)}
+                                disabled={set.completed}
+                              />
+                            </td>
+                            <td align="center">
+                              <button 
+                                className="btn-complete-set" 
+                                onClick={() => handleSetCheck(exLog.exerciseId, idx)}
+                              >
+                                <Check size={16} />
+                              </button>
+                            </td>
+                          </SwipeableSetRow>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                ) : isIso ? (
+                  /* ================= ISOMETRIC TABLE (Tempo Tenuta) ================= */
+                  <table className="sets-table">
+                    <thead>
+                      <tr>
+                        <th style={{ width: '12%' }}>Set</th>
+                        <th style={{ width: '38%' }}>Ultima volta</th>
+                        <th style={{ width: '36%' }}>Tempo Tenuta (sec)</th>
+                        <th style={{ width: '14%', textAlign: 'center' }}>OK</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {exLog.sets.map((set, idx) => {
+                        const prevSet = prevSets[idx];
+                        const prevText = prevSet && prevSet.time ? `${prevSet.time}s` : '—';
+
+                        return (
+                          <SwipeableSetRow
+                            key={set.id}
+                            isCompleted={set.completed}
+                            canDelete={exLog.sets.length > 1}
+                            onDelete={() => handleRemoveSet(exLog.exerciseId, idx)}
+                          >
+                            <td className="set-index">{idx + 1}</td>
+                            <td className="prev-set-value">{prevText}</td>
+                            <td>
+                              <input
+                                type="number"
+                                inputMode="numeric"
+                                placeholder="sec"
+                                className="set-input"
+                                style={{ width: '80px' }}
+                                value={set.time !== undefined && set.time !== null && set.time > 0 ? set.time : ''}
+                                onChange={(e) => updateActiveWorkoutSet(exLog.exerciseId, idx, 'time', parseInt(e.target.value) || 0)}
+                                disabled={set.completed}
+                              />
+                            </td>
+                            <td align="center">
+                              <button 
+                                className="btn-complete-set" 
+                                onClick={() => handleSetCheck(exLog.exerciseId, idx)}
+                              >
+                                <Check size={16} />
+                              </button>
+                            </td>
+                          </SwipeableSetRow>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                ) : (
+                  /* ================= STRENGTH / WEIGHTS TABLE ================= */
+                  <table className="sets-table">
+                    <thead>
+                      <tr>
+                        <th style={{ width: '10%' }}>Set</th>
+                        <th style={{ width: '30%' }}>Ultima volta</th>
+                        <th style={{ width: '22%' }}>Kg</th>
+                        <th style={{ width: '22%' }}>Rep</th>
+                        <th style={{ width: '16%', textAlign: 'center' }}>OK</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {exLog.sets.map((set, idx) => {
+                        const prevSet = prevSets[idx];
+                        return (
+                          <SwipeableSetRow
+                            key={set.id}
+                            isCompleted={set.completed}
+                            canDelete={exLog.sets.length > 1}
+                            onDelete={() => handleRemoveSet(exLog.exerciseId, idx)}
+                          >
+                            <td className="set-index">{idx + 1}</td>
+                            <td className="prev-set-value">
+                              {prevSet ? `${prevSet.weight}kg x ${prevSet.reps}` : '—'}
+                            </td>
+                            <td>
+                              <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                                <input
+                                  type="number"
+                                  inputMode="decimal"
+                                  step="any"
+                                  className="set-input"
+                                  value={set.weight !== undefined && set.weight !== null && set.weight > 0 ? set.weight : (set.weight === 0 ? '0' : '')}
+                                  onChange={(e) => updateActiveWorkoutSet(exLog.exerciseId, idx, 'weight', parseFloat(e.target.value) || 0)}
+                                  disabled={set.completed}
+                                  style={{ paddingRight: (!set.completed && isPlate) ? '22px' : '8px' }}
+                                />
+                                {!set.completed && isPlate && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setPlateModalInitialWeight(set.weight || 60);
+                                      setPlateModalInitialReps(set.reps || 8);
+                                      setActiveTargetSet({ exId: exLog.exerciseId, setIdx: idx });
+                                      setShowPlateModal(true);
+                                    }}
+                                    style={{
+                                      position: 'absolute',
+                                      right: '4px',
+                                      background: 'none',
+                                      border: 'none',
+                                      color: 'var(--color-primary, #d4af37)',
+                                      cursor: 'pointer',
+                                      padding: '2px',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      opacity: 0.8
+                                    }}
+                                    title="Calcola dischi per questo bilanciere"
+                                  >
+                                    <Disc size={11} />
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                            <td>
+                              <input
+                                type="number"
+                                inputMode="numeric"
+                                className="set-input"
+                                value={set.reps !== undefined && set.reps !== null && set.reps > 0 ? set.reps : ''}
+                                onChange={(e) => updateActiveWorkoutSet(exLog.exerciseId, idx, 'reps', parseInt(e.target.value) || 0)}
+                                disabled={set.completed}
+                              />
+                            </td>
+                            <td align="center">
+                              <button 
+                                className="btn-complete-set" 
+                                onClick={() => handleSetCheck(exLog.exerciseId, idx)}
+                              >
+                                <Check size={16} />
+                              </button>
+                            </td>
+                          </SwipeableSetRow>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                )}
 
                 {/* Badges / Achievements under the sets */}
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                   {exLog.sets.map((set, idx) => {
                     if (!set.completed) return null;
                     const badges = [];
+                    if (set.isMaxDistance) badges.push(<span key="dist" className="achievement-badge badge-1rm-glow">🏃 Distanza (S.{idx+1})</span>);
+                    if (set.isMaxTime) badges.push(<span key="time" className="achievement-badge badge-volume-glow">⏱ Tempo (S.{idx+1})</span>);
+                    if (set.isMaxReps) badges.push(<span key="reps" className="achievement-badge badge-1rm-glow">⭐ Record Rep ({set.reps} rep)</span>);
                     if (set.is1RM) badges.push(<span key="1rm" className="achievement-badge badge-1rm-glow">⭐ 1RM (S.{idx+1})</span>);
                     if (set.isMaxVolume) badges.push(<span key="vol" className="achievement-badge badge-volume-glow">🔥 Vol (S.{idx+1})</span>);
                     if (set.isMaxWeight) badges.push(<span key="wgt" className="achievement-badge badge-weight-glow">💪 Peso (S.{idx+1})</span>);
@@ -661,7 +820,7 @@ export const ActiveWorkout: React.FC = () => {
                     onClick={() => handleAddSet(exLog.exerciseId)}
                     style={{ flex: 1, padding: '8px', fontSize: '0.75rem' }}
                   >
-                    + Aggiungi Set
+                    {isCardio ? '+ Aggiungi Sessione' : '+ Aggiungi Set'}
                   </button>
                   {exLog.sets.length > 1 && (
                     <button 
@@ -773,66 +932,15 @@ export const ActiveWorkout: React.FC = () => {
           addExerciseToActiveWorkout(id);
           setShowAddExercise(false);
         }}
-        selectedIds={activeWorkout ? activeWorkout.exercises.map(e => e.exerciseId) : []}
+        selectedIds={selectedExerciseIds}
         isMultiSelect={true}
       />
 
-      {/* Exercise Details Drawer */}
-      {selectedDetailExerciseId && selectedExercise && (
-        <div className="drawer-backdrop" onClick={() => setSelectedDetailExerciseId(null)}>
-          <div className="drawer-content animate-fade-in-up" onClick={e => e.stopPropagation()}>
-            <div className="drawer-header">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ width: '40px', height: '40px' }}>
-                  {renderMuscleIcon(selectedExercise.muscleGroup, 40, '#00a8ff')}
-                </div>
-                <div>
-                  <h3 className="section-title" style={{ marginBottom: '2px', fontSize: '1.05rem' }}>{selectedExercise.name}</h3>
-                  <span className="recipe-type-tag tag-fit">{selectedExercise.muscleGroup} • {selectedExercise.equipment}</span>
-                </div>
-              </div>
-              <button className="drawer-close" onClick={() => setSelectedDetailExerciseId(null)}><X size={20} /></button>
-            </div>
-
-            {/* Video Loop (Muted) */}
-            <div className="video-container" style={{ marginTop: '16px' }}>
-              <video 
-                src={selectedExercise.videoUrl} 
-                className="video-demo" 
-                autoPlay 
-                loop 
-                muted 
-                playsInline 
-                onError={(e) => {
-                  const target = e.target as HTMLVideoElement;
-                  target.style.display = 'none';
-                  const parent = target.parentElement;
-                  if (parent) {
-                    const placeholder = parent.querySelector('.video-placeholder');
-                    if (placeholder) (placeholder as HTMLElement).style.display = 'block';
-                  }
-                }}
-              />
-              <div className="video-placeholder" style={{ display: 'none', padding: '20px', textAlign: 'center' }}>
-                <Clock size={32} color="var(--text-dark)" style={{ margin: '0 auto 8px' }} />
-                <span style={{ fontSize: '0.78rem' }}>Dimostrazione Video Loop Muto (Stock)</span>
-              </div>
-            </div>
-
-            {/* Instructions */}
-            <div style={{ marginBottom: '20px' }}>
-              <h4 style={{ fontSize: '0.85rem', color: 'var(--color-secondary)', fontWeight: 700, marginBottom: '6px' }}>ESECUZIONE CORRETTA</h4>
-              <p style={{ fontSize: '0.82rem', lineHeight: '1.5', color: '#e2e8f0' }}>{selectedExercise.instructions}</p>
-            </div>
-
-            {/* Linear Load Chart */}
-            <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '16px' }}>
-              <h4 style={{ fontSize: '0.85rem', color: 'var(--color-primary, #d4af37)', fontWeight: 700, marginBottom: '4px' }}>ANDAMENTO DEL CARICO MASSIMO</h4>
-              {renderSvgChart()}
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Fullscreen Exercise Details View */}
+      <ExerciseDetailModal
+        exerciseId={selectedDetailExerciseId}
+        onClose={() => setSelectedDetailExerciseId(null)}
+      />
     </div>
   );
 };

@@ -11,13 +11,26 @@ import { Profile } from './components/Profile';
 import { CycleTracker } from './components/CycleTracker';
 import { DeviceSyncHub } from './components/DeviceSyncHub';
 import { AuthScreen } from './components/AuthScreen';
-import { ShieldCheck, Info, ChevronLeft } from 'lucide-react';
+import { ShieldCheck, Info, ChevronLeft, WifiOff } from 'lucide-react';
 import { initAutoUpdater } from './utils/autoUpdater';
 
 const AppContent: React.FC = () => {
   const [currentTab, setCurrentTab] = useState('dashboard');
   const [dietSubTab, setDietSubTab] = useState<'diary' | 'recipes'>('diary');
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const { activeWorkout, user, signOut, hasConsented, setHasConsented } = useApp();
+
+  // Listener stato rete (online / offline)
+  useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   // Avvio controllo automatico aggiornamenti live (service worker & buildTime)
   useEffect(() => {
@@ -162,6 +175,30 @@ const AppContent: React.FC = () => {
   // 3. Normal App Shell
   return (
     <div className="app-container">
+      {isOffline && (
+        <div style={{
+          position: 'fixed',
+          top: '10px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          background: 'rgba(24, 24, 28, 0.95)',
+          border: '1px solid rgba(245, 158, 11, 0.35)',
+          color: '#fbbf24',
+          backdropFilter: 'blur(10px)',
+          padding: '6px 14px',
+          borderRadius: '99px',
+          fontSize: '0.72rem',
+          fontWeight: 700,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
+          zIndex: 99999,
+          boxShadow: '0 4px 16px rgba(0,0,0,0.6)'
+        }}>
+          <WifiOff size={13} />
+          <span>Modalità Palestra Offline • I tuoi dati sono salvati in locale</span>
+        </div>
+      )}
       <Navigation currentTab={currentTab} setCurrentTab={setCurrentTab} />
       <main className="app-content">
         {renderTabContent()}

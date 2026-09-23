@@ -3,6 +3,7 @@ import { User, Scale, Activity, Calendar as CalendarIcon, Check, Settings, LogOu
 
 import { useApp } from '../context/AppContext';
 import type { WorkoutLog } from '../context/AppContext';
+import { mockExercises, isDistanceTimeExercise } from '../data/mockExercises';
 import { CycleTracker } from './CycleTracker';
 import { DeviceSyncHub } from './DeviceSyncHub';
 
@@ -122,7 +123,7 @@ export const Profile: React.FC = () => {
 
   // Chart stats selector
   const [timeRange, setTimeRange] = useState<'7' | '30' | '90'>('7');
-  const [metricType, setMetricType] = useState<'volume' | 'duration' | 'reps'>('volume');
+  const [metricType, setMetricType] = useState<'volume' | 'duration' | 'distance' | 'reps'>('volume');
 
   const handleUploadImage = async (e: React.ChangeEvent<HTMLInputElement>, type: 'avatar' | 'banner') => {
     const file = e.target.files?.[0];
@@ -210,6 +211,16 @@ export const Profile: React.FC = () => {
         val = log.volume;
       } else if (metricType === 'duration') {
         val = Math.round(log.duration / 60); // minutes
+      } else if (metricType === 'distance') {
+        log.exercises.forEach(ex => {
+          const exDef = mockExercises.find(m => m.id === ex.exerciseId);
+          if (isDistanceTimeExercise(exDef)) {
+            ex.sets.forEach(s => {
+              if (s.completed && s.distance) val += s.distance;
+            });
+          }
+        });
+        val = Math.round(val * 10) / 10;
       } else if (metricType === 'reps') {
         log.exercises.forEach(ex => {
           ex.sets.forEach(s => {
@@ -265,7 +276,7 @@ export const Profile: React.FC = () => {
                   style={{ filter: 'drop-shadow(0px 2px 4px rgba(139, 92, 246, 0.15))' }}
                 />
                 <text x={x + barWidth/2} y={y - 5} fill="white" fontSize="7" fontWeight="700" textAnchor="middle">
-                  {d.value}
+                  {d.value}{metricType === 'distance' ? ' km' : ''}
                 </text>
                 <text x={x + barWidth/2} y={svgH - 5} fill="var(--text-muted)" fontSize="7" textAnchor="middle">
                   {d.label}
@@ -282,6 +293,10 @@ export const Profile: React.FC = () => {
             <linearGradient id="glowGrad-duration" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor="var(--color-secondary)" />
               <stop offset="100%" stopColor="#155e75" />
+            </linearGradient>
+            <linearGradient id="glowGrad-distance" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#10b981" />
+              <stop offset="100%" stopColor="#047857" />
             </linearGradient>
             <linearGradient id="glowGrad-reps" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor="#ec4899" stopOpacity="0.8" />
@@ -783,10 +798,11 @@ export const Profile: React.FC = () => {
             className="set-input" 
             value={metricType}
             onChange={e => setMetricType(e.target.value as any)}
-            style={{ height: '28px', fontSize: '0.68rem', padding: '0 4px', width: '90px' }}
+            style={{ height: '28px', fontSize: '0.68rem', padding: '0 4px', width: '96px' }}
           >
             <option value="volume">Volume (kg)</option>
             <option value="duration">Tempo (min)</option>
+            <option value="distance">Distanza (km)</option>
             <option value="reps">Ripetizioni</option>
           </select>
         </div>

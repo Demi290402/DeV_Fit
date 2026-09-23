@@ -5,6 +5,7 @@ import { mockExercises, renderMuscleIcon } from '../data/mockExercises';
 import type { MuscleGroup, EquipmentType, Exercise } from '../data/mockExercises';
 import { AnatomicalIcon } from './AnatomicalIcon';
 import { EquipmentIcon } from './EquipmentIcon';
+import { useApp } from '../context/AppContext';
 
 export interface ExerciseBrowserModalProps {
   isOpen: boolean;
@@ -23,6 +24,7 @@ export const ExerciseBrowserModal: React.FC<ExerciseBrowserModalProps> = ({
   selectedIds = [],
   isMultiSelect = true
 }) => {
+  const { customExercises, addCustomExercise } = useApp();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedMuscle, setSelectedMuscle] = useState<MuscleGroup | 'All'>('All');
   const [selectedEquipment, setSelectedEquipment] = useState<EquipmentType | 'All'>('All');
@@ -37,14 +39,6 @@ export const ExerciseBrowserModal: React.FC<ExerciseBrowserModalProps> = ({
   const [customName, setCustomName] = useState('');
   const [customMuscle, setCustomMuscle] = useState<MuscleGroup>('Pettorali');
   const [customEquip, setCustomEquip] = useState<EquipmentType>('Bilanciere');
-  const [customList, setCustomList] = useState<Exercise[]>(() => {
-    try {
-      const saved = localStorage.getItem('devfit_custom_exercises');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
 
   // Local selection state (array of IDs)
   const [localSelected, setLocalSelected] = useState<string[]>(selectedIds);
@@ -54,11 +48,12 @@ export const ExerciseBrowserModal: React.FC<ExerciseBrowserModalProps> = ({
       setLocalSelected(selectedIds);
       setSearchQuery('');
     }
-  }, [isOpen, selectedIds]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
-  const allExercises: Exercise[] = [...customList, ...mockExercises];
+  const allExercises: Exercise[] = [...customExercises, ...mockExercises];
 
   // Filter exercises
   const filteredExercises = allExercises.filter(ex => {
@@ -110,14 +105,7 @@ export const ExerciseBrowserModal: React.FC<ExerciseBrowserModalProps> = ({
       videoUrl: ''
     };
 
-    const updated = [newEx, ...customList];
-    setCustomList(updated);
-    try {
-      localStorage.setItem('devfit_custom_exercises', JSON.stringify(updated));
-    } catch {
-      // Storage error fallback
-    }
-
+    addCustomExercise(newEx);
     setLocalSelected(prev => [...prev, newEx.id]);
     setCustomName('');
     setShowCreateModal(false);
