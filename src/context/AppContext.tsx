@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useMemo, useCall
 import confetti from 'canvas-confetti';
 import { createClient } from '@supabase/supabase-js';
 import { mockExercises, isDistanceTimeExercise, isTimeOnlyExercise, type Exercise } from '../data/mockExercises';
+import { mockRecipes, type Recipe } from '../data/mockRecipes';
 import { calculateWorkoutCalories } from '../utils/calorieCalculator';
 
 // Supabase client configuration & initialization (reads from localStorage fallback or Vite .env)
@@ -213,6 +214,7 @@ interface AppContextType {
   saveSupabaseConfig: (url: string, anonKey: string) => { success: boolean; message: string };
   syncAllDataToCloud: () => Promise<{ success: boolean; message: string }>;
   syncAllDataFromCloud: (userId?: string) => Promise<{ success: boolean; message: string }>;
+  recipes: Recipe[];
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -308,6 +310,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     localStorage.setItem('devfit_custom_exercises', JSON.stringify(customExercises));
   }, [customExercises]);
+
+  const [recipes, setRecipes] = useState<Recipe[]>(() => {
+    try {
+      const saved = localStorage.getItem('df_recipes');
+      return saved ? JSON.parse(saved) : mockRecipes;
+    } catch {
+      return mockRecipes;
+    }
+  });
+
+  useEffect(() => {
+    if (recipes && recipes.length > 0) {
+      localStorage.setItem('df_recipes', JSON.stringify(recipes));
+    }
+  }, [recipes]);
 
 
   // --- PERSISTENCE ---
@@ -572,6 +589,37 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setCustomExercises(parsedCustom);
       }
 
+      // 6. Fetch Recipes from Supabase (if table exists)
+      try {
+        const { data: cloudRecipes, error: recErr } = await client
+          .from('recipes')
+          .select('*')
+          .order('type', { ascending: true });
+
+        if (!recErr && cloudRecipes && cloudRecipes.length > 0) {
+          const parsedRecipes: Recipe[] = cloudRecipes.map((r: any) => ({
+            id: r.id,
+            title: r.title,
+            type: r.type,
+            prepTime: r.prep_time || 15,
+            difficulty: r.difficulty || 'Facile',
+            equipment: Array.isArray(r.equipment) ? r.equipment : [],
+            ingredients: Array.isArray(r.ingredients) ? r.ingredients : [],
+            instructions: Array.isArray(r.instructions) ? r.instructions : [],
+            macros: {
+              calories: Number(r.calories) || 0,
+              protein: Number(r.protein) || 0,
+              carbs: Number(r.carbs) || 0,
+              fat: Number(r.fat) || 0
+            },
+            imageUrl: r.image_url || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80'
+          }));
+          setRecipes(parsedRecipes);
+        }
+      } catch (errRec) {
+        console.warn('Avviso caricamento ricette cloud:', errRec);
+      }
+
       return { success: true, message: 'Dati sincronizzati con successo dal cloud Supabase!' };
     } catch (err: any) {
       console.warn('Errore syncAllDataFromCloud:', err);
@@ -651,9 +699,33 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         await supabaseClient.from('food_logs').upsert(foodEntries, { onConflict: 'id' });
       }
 
+      // 5. Sync Recipes
+      if (recipes && recipes.length > 0) {
+        try {
+          const recipesPayload = recipes.map(r => ({
+            id: r.id,
+            title: r.title,
+            type: r.type,
+            prep_time: r.prepTime,
+            difficulty: r.difficulty,
+            equipment: r.equipment,
+            ingredients: r.ingredients,
+            instructions: r.instructions,
+            calories: r.macros.calories,
+            protein: r.macros.protein,
+            carbs: r.macros.carbs,
+            fat: r.macros.fat,
+            image_url: r.imageUrl
+          }));
+          await supabaseClient.from('recipes').upsert(recipesPayload, { onConflict: 'id' });
+        } catch (rErr) {
+          console.warn('Avviso: sincronizzazione ricette sul cloud:', rErr);
+        }
+      }
+
       return {
         success: true,
-        message: `Sincronizzazione completata! Profilo, ${routines.length} schede, ${workoutHistory.length} allenamenti e ${foodEntries.length} alimenti salvati sul cloud Supabase.`
+        message: `Sincronizzazione completata! Profilo, ${routines.length} schede, ${workoutHistory.length} allenamenti, ${foodEntries.length} alimenti e ${recipes.length} ricette salvati sul cloud Supabase.`
       };
     } catch (err: any) {
       return { success: false, message: `Errore durante la sincronizzazione: ${err.message}` };
@@ -1575,7 +1647,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       supabaseAnonKey: supabaseConfig.anonKey,
       saveSupabaseConfig,
       syncAllDataToCloud,
-      syncAllDataFromCloud
+      syncAllDataFromCloud,
+      recipes
     }}>
       {children}
     </AppContext.Provider>

@@ -6,7 +6,8 @@ import type { Recipe } from '../data/mockRecipes';
 
 
 export const RecipeBook: React.FC = () => {
-  const { addFoodLog, mealsList } = useApp();
+  const { addFoodLog, mealsList, recipes: contextRecipes } = useApp();
+  const allRecipes = contextRecipes && contextRecipes.length > 0 ? contextRecipes : mockRecipes;
   
   // Filter states
   const [selectedType, setSelectedType] = useState<'all' | 'fit' | 'sgarro'>('all');
@@ -18,7 +19,10 @@ export const RecipeBook: React.FC = () => {
   // Meal log assignment
   const [showMealSelector, setShowMealSelector] = useState(false);
 
-  const filteredRecipes = mockRecipes.filter(recipe => {
+  const fitCount = allRecipes.filter(r => r.type === 'fit').length;
+  const cheatCount = allRecipes.filter(r => r.type === 'sgarro').length;
+
+  const filteredRecipes = allRecipes.filter(recipe => {
     const matchesType = selectedType === 'all' || recipe.type === selectedType;
     const matchesDiff = selectedDiff === 'all' || recipe.difficulty === selectedDiff;
     
@@ -26,9 +30,11 @@ export const RecipeBook: React.FC = () => {
     if (selectedTime === '20') matchesTime = recipe.prepTime <= 20;
     else if (selectedTime === '60') matchesTime = recipe.prepTime <= 60;
 
-    const matchesSearch = recipe.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          recipe.ingredients.some(i => i.toLowerCase().includes(searchQuery.toLowerCase())) ||
-                          recipe.equipment.some(e => e.toLowerCase().includes(searchQuery.toLowerCase()));
+    const query = searchQuery.toLowerCase().trim();
+    const matchesSearch = !query || 
+                          recipe.title.toLowerCase().includes(query) || 
+                          recipe.ingredients.some(i => i.toLowerCase().includes(query)) ||
+                          recipe.equipment.some(e => e.toLowerCase().includes(query));
 
     return matchesType && matchesDiff && matchesTime && matchesSearch;
   });
@@ -61,7 +67,7 @@ export const RecipeBook: React.FC = () => {
           type="text" 
           className="set-input" 
           style={{ width: '100%', paddingLeft: '36px', textAlign: 'left', height: '42px' }}
-          placeholder="Cerca ingredienti o strumenti (es. forno)..."
+          placeholder="Cerca ingredienti o strumenti (es. avena, pollo, nutella)..."
           value={searchQuery}
           onChange={e => setSearchQuery(e.target.value)}
         />
@@ -71,9 +77,15 @@ export const RecipeBook: React.FC = () => {
       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
         {/* Type Filter */}
         <div className="recipes-filter-scroll">
-          <button className={`filter-badge ${selectedType === 'all' ? 'active' : ''}`} onClick={() => setSelectedType('all')}>Tutte le ricette</button>
-          <button className={`filter-badge ${selectedType === 'fit' ? 'active' : ''}`} onClick={() => setSelectedType('fit')}>Fit / Leggere</button>
-          <button className={`filter-badge ${selectedType === 'sgarro' ? 'active' : ''}`} onClick={() => setSelectedType('sgarro')}>Sgarro / Golose</button>
+          <button className={`filter-badge ${selectedType === 'all' ? 'active' : ''}`} onClick={() => setSelectedType('all')}>
+            Tutte ({allRecipes.length})
+          </button>
+          <button className={`filter-badge ${selectedType === 'fit' ? 'active' : ''}`} onClick={() => setSelectedType('fit')}>
+            Fit / Leggere ({fitCount})
+          </button>
+          <button className={`filter-badge ${selectedType === 'sgarro' ? 'active' : ''}`} onClick={() => setSelectedType('sgarro')}>
+            Sgarro / Golose ({cheatCount})
+          </button>
         </div>
 
         {/* Extra Filters Row */}
@@ -86,9 +98,9 @@ export const RecipeBook: React.FC = () => {
             onChange={e => setSelectedDiff(e.target.value as any)}
           >
             <option value="all">Tutte le difficoltà</option>
-            <option value="Facile">Facile</option>
-            <option value="Medio">Medio</option>
-            <option value="Difficile">Difficile</option>
+            <option value="Facile">Solo Facili</option>
+            <option value="Medio">Medie</option>
+            <option value="Difficile">Difficili</option>
           </select>
 
           {/* Time */}
@@ -102,6 +114,19 @@ export const RecipeBook: React.FC = () => {
             <option value="20">Veloci (≤ 20 min)</option>
             <option value="60">Medie (≤ 60 min)</option>
           </select>
+        </div>
+
+        {/* Results Counter */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 4px', fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+          <span>{filteredRecipes.length} ricette visualizzate</span>
+          {(searchQuery || selectedType !== 'all' || selectedDiff !== 'all' || selectedTime !== 'all') && (
+            <button 
+              onClick={() => { setSelectedType('all'); setSelectedDiff('all'); setSelectedTime('all'); setSearchQuery(''); }}
+              style={{ background: 'none', border: 'none', color: 'var(--color-primary)', cursor: 'pointer', fontSize: '0.72rem', textDecoration: 'underline' }}
+            >
+              Reimposta filtri
+            </button>
+          )}
         </div>
       </div>
 
@@ -118,9 +143,10 @@ export const RecipeBook: React.FC = () => {
               </span>
             </div>
             <h4 className="recipe-title">{recipe.title}</h4>
-            <div style={{ padding: '0 12px 12px 12px', display: 'flex', gap: '10px', fontSize: '0.68rem', color: 'var(--text-muted)' }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: '3px' }}><Clock size={10} /> {recipe.prepTime} min</span>
+            <div style={{ padding: '0 12px 12px 12px', display: 'flex', gap: '8px', fontSize: '0.68rem', color: 'var(--text-muted)', alignItems: 'center' }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '3px' }}><Clock size={10} /> {recipe.prepTime}m</span>
               <span style={{ display: 'flex', alignItems: 'center', gap: '3px' }}><ChefHat size={10} /> {recipe.difficulty}</span>
+              <span style={{ marginLeft: 'auto', fontWeight: 800, color: 'var(--color-primary)' }}>{recipe.macros.calories} kcal</span>
             </div>
           </div>
         ))}
