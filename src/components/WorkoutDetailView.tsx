@@ -863,32 +863,16 @@ export const WorkoutDetailView: React.FC<WorkoutDetailViewProps> = ({
       {/* COMMENTS MODAL */}
       {showCommentsModal && createPortal(
         <div 
-          className="modal-portal-backdrop" 
+          className="drawer-backdrop" 
           onClick={() => setShowCommentsModal(false)}
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 99999,
-            background: 'rgba(0, 0, 0, 0.82)',
-            backdropFilter: 'blur(8px)',
-            WebkitBackdropFilter: 'blur(8px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '16px'
-          }}
         >
           <div 
-            className="glass-card animate-scale-in" 
+            className="drawer-content animate-scale-in" 
             onClick={e => e.stopPropagation()} 
             style={{ 
-              maxHeight: '80vh', 
-              width: '100%',
               maxWidth: '480px',
-              borderRadius: '20px',
               background: '#121217',
-              border: '1px solid rgba(212, 175, 55, 0.35)',
-              padding: '20px'
+              border: '1px solid rgba(212, 175, 55, 0.35)'
             }}
           >
             <div className="drawer-header">
@@ -896,38 +880,42 @@ export const WorkoutDetailView: React.FC<WorkoutDetailViewProps> = ({
               <button className="drawer-close" onClick={() => setShowCommentsModal(false)}><X size={20} /></button>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '12px', maxHeight: '340px', overflowY: 'auto' }}>
+            <div className="drawer-body">
               {workout.comments.length === 0 ? (
                 <p style={{ fontSize: '0.8rem', color: '#71717a', textAlign: 'center', padding: '20px 0' }}>
                   Nessun commento finora. Sii il primo a congratularti!
                 </p>
               ) : (
-                workout.comments.map((c, i) => (
-                  <div key={i} style={{ background: '#121217', padding: '10px 12px', borderRadius: '10px' }}>
-                    <span style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--color-primary, #d4af37)', display: 'block', marginBottom: '2px' }}>
-                      {c.username}
-                    </span>
-                    <span style={{ fontSize: '0.82rem', color: '#ffffff' }}>
-                      {c.text}
-                    </span>
-                  </div>
-                ))
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {workout.comments.map((c, i) => (
+                    <div key={i} style={{ background: 'rgba(255, 255, 255, 0.04)', border: '1px solid rgba(255, 255, 255, 0.06)', padding: '10px 12px', borderRadius: '10px' }}>
+                      <span style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--color-primary, #d4af37)', display: 'block', marginBottom: '2px' }}>
+                        {c.username}
+                      </span>
+                      <span style={{ fontSize: '0.82rem', color: '#ffffff' }}>
+                        {c.text}
+                      </span>
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
 
-            <form onSubmit={handleCommentSubmit} style={{ display: 'flex', gap: '8px', marginTop: '14px' }}>
-              <input 
-                type="text"
-                placeholder="Aggiungi un commento..."
-                value={commentInput}
-                onChange={e => setCommentInput(e.target.value)}
-                className="set-input"
-                style={{ flex: 1, height: '38px', textAlign: 'left', padding: '0 12px' }}
-              />
-              <button type="submit" className="btn-primary" style={{ height: '38px', padding: '0 14px' }}>
-                <Send size={15} />
-              </button>
-            </form>
+            <div className="drawer-footer">
+              <form onSubmit={handleCommentSubmit} style={{ display: 'flex', gap: '8px' }}>
+                <input 
+                  type="text"
+                  placeholder="Aggiungi un commento..."
+                  value={commentInput}
+                  onChange={e => setCommentInput(e.target.value)}
+                  className="set-input"
+                  style={{ flex: 1, height: '38px', textAlign: 'left', padding: '0 12px' }}
+                />
+                <button type="submit" className="btn-primary" style={{ height: '38px', padding: '0 14px' }}>
+                  <Send size={15} />
+                </button>
+              </form>
+            </div>
           </div>
         </div>,
         document.body

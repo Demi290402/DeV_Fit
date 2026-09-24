@@ -996,13 +996,13 @@ export const Profile: React.FC = () => {
           {/* 1. SETTINGS / EDIT PROFILE MODAL */}
           {activeModal === 'settings' && (
         <div className="drawer-backdrop" onClick={() => setActiveModal(null)}>
-          <div className="drawer-content animate-fade-in-up" onClick={e => e.stopPropagation()} style={{ maxHeight: '88vh' }}>
+          <div className="drawer-content animate-fade-in-up" onClick={e => e.stopPropagation()}>
             <div className="drawer-header">
               <h3 className="section-title">Impostazioni Profilo & Account</h3>
               <button className="drawer-close" onClick={() => setActiveModal(null)}><X size={20} /></button>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '12px', overflowY: 'auto', paddingRight: '4px' }}>
+            <div className="drawer-body">
               
               {/* Avatar Upload */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '14px', background: '#121217', padding: '12px', borderRadius: '12px' }}>
@@ -1168,7 +1168,7 @@ export const Profile: React.FC = () => {
       {/* 2. STATISTICHE MODAL */}
       {activeModal === 'stats' && (
         <div className="drawer-backdrop" onClick={() => setActiveModal(null)}>
-          <div className="drawer-content animate-fade-in-up" onClick={e => e.stopPropagation()} style={{ maxHeight: '85vh' }}>
+          <div className="drawer-content animate-fade-in-up" onClick={e => e.stopPropagation()}>
             <div className="drawer-header">
               <h3 className="section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <BarChart2 size={20} color="var(--color-primary)" /> Statistiche Globali
@@ -1176,7 +1176,7 @@ export const Profile: React.FC = () => {
               <button className="drawer-close" onClick={() => setActiveModal(null)}><X size={20} /></button>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '14px', overflowY: 'auto' }}>
+            <div className="drawer-body">
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div style={{ background: '#111116', padding: '14px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.06)' }}>
                   <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Allenamenti Totali</span>
@@ -1221,7 +1221,9 @@ export const Profile: React.FC = () => {
                   </span>
                 </div>
               </div>
+            </div>
 
+            <div className="drawer-footer">
               <button className="btn-primary" onClick={() => setActiveModal(null)} style={{ width: '100%' }}>
                 Chiudi
               </button>
@@ -1233,7 +1235,7 @@ export const Profile: React.FC = () => {
       {/* 3. ESERCIZI MODAL (Exercise Library & 1RM Records) */}
       {activeModal === 'exercises' && (
         <div className="drawer-backdrop" onClick={() => setActiveModal(null)}>
-          <div className="drawer-content animate-fade-in-up" onClick={e => e.stopPropagation()} style={{ maxHeight: '88vh', display: 'flex', flexDirection: 'column' }}>
+          <div className="drawer-content animate-fade-in-up" onClick={e => e.stopPropagation()}>
             <div className="drawer-header">
               <h3 className="section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Dumbbell size={20} color="var(--color-primary)" /> Catalogo & Record 1RM
@@ -1241,37 +1243,38 @@ export const Profile: React.FC = () => {
               <button className="drawer-close" onClick={() => setActiveModal(null)}><X size={20} /></button>
             </div>
 
-            {/* Search and muscle filter */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', margin: '10px 0' }}>
-              <div style={{ position: 'relative' }}>
-                <Search size={15} style={{ position: 'absolute', left: '12px', top: '11px', color: 'var(--text-muted)' }} />
-                <input 
-                  type="text" 
-                  placeholder="Cerca esercizio..."
-                  className="set-input"
-                  value={exerciseSearch}
-                  onChange={e => setExerciseSearch(e.target.value)}
-                  style={{ width: '100%', height: '36px', paddingLeft: '34px', textAlign: 'left' }}
-                />
+            <div className="drawer-body">
+              {/* Search and muscle filter */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ position: 'relative' }}>
+                  <Search size={15} style={{ position: 'absolute', left: '12px', top: '11px', color: 'var(--text-muted)' }} />
+                  <input 
+                    type="text" 
+                    placeholder="Cerca esercizio..."
+                    className="set-input"
+                    value={exerciseSearch}
+                    onChange={e => setExerciseSearch(e.target.value)}
+                    style={{ width: '100%', height: '36px', paddingLeft: '34px', textAlign: 'left' }}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '4px' }}>
+                  {['all', 'Petto', 'Schiena', 'Gambe', 'Spalle', 'Braccia', 'Core', 'Cardio'].map(m => (
+                    <button
+                      key={m}
+                      className={`filter-badge ${exerciseMuscleFilter === m ? 'active' : ''}`}
+                      onClick={() => setExerciseMuscleFilter(m)}
+                      style={{ whiteSpace: 'nowrap', padding: '4px 10px', fontSize: '0.72rem' }}
+                    >
+                      {m === 'all' ? 'Tutti' : m}
+                    </button>
+                  ))}
+                </div>
               </div>
 
-              <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '4px' }}>
-                {['all', 'Petto', 'Schiena', 'Gambe', 'Spalle', 'Braccia', 'Core', 'Cardio'].map(m => (
-                  <button
-                    key={m}
-                    className={`filter-badge ${exerciseMuscleFilter === m ? 'active' : ''}`}
-                    onClick={() => setExerciseMuscleFilter(m)}
-                    style={{ whiteSpace: 'nowrap', padding: '4px 10px', fontSize: '0.72rem' }}
-                  >
-                    {m === 'all' ? 'Tutti' : m}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Exercises List with 1RM Records */}
-            <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px', paddingRight: '4px' }}>
-              {filteredCatalogExercises.map(ex => {
+              {/* Exercises List with 1RM Records */}
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {filteredCatalogExercises.map(ex => {
                 const pr = personalRecords[ex.id];
                 return (
                   <div 
@@ -1320,12 +1323,13 @@ export const Profile: React.FC = () => {
             </div>
           </div>
         </div>
-      )}
+      </div>
+    )}
 
       {/* 4. MISURAZIONI MODAL */}
       {activeModal === 'measurements' && (
         <div className="drawer-backdrop" onClick={() => setActiveModal(null)}>
-          <div className="drawer-content animate-fade-in-up" onClick={e => e.stopPropagation()} style={{ maxHeight: '85vh' }}>
+          <div className="drawer-content animate-fade-in-up" onClick={e => e.stopPropagation()}>
             <div className="drawer-header">
               <h3 className="section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Scale size={20} color="var(--color-primary)" /> Misure Corporee
@@ -1333,7 +1337,7 @@ export const Profile: React.FC = () => {
               <button className="drawer-close" onClick={() => setActiveModal(null)}><X size={20} /></button>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginTop: '14px' }}>
+            <div className="drawer-body">
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   <label style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Peso Corporeo (kg)</label>
@@ -1359,8 +1363,10 @@ export const Profile: React.FC = () => {
                   <input type="number" className="set-input" value={thighs} onChange={e => setThighs(e.target.value)} style={{ width: '100%', height: '36px' }} />
                 </div>
               </div>
+            </div>
 
-              <button className="btn-primary" onClick={handleSaveMeasurements} style={{ width: '100%', height: '42px', marginTop: '10px' }}>
+            <div className="drawer-footer">
+              <button className="btn-primary" onClick={handleSaveMeasurements} style={{ width: '100%', height: '42px' }}>
                 <Check size={16} /> Salva Misure
               </button>
             </div>
@@ -1371,7 +1377,7 @@ export const Profile: React.FC = () => {
       {/* 5. CALENDARIO MODAL (28-day consistency map & streak) */}
       {activeModal === 'calendar' && (
         <div className="drawer-backdrop" onClick={() => setActiveModal(null)}>
-          <div className="drawer-content animate-fade-in-up" onClick={e => e.stopPropagation()} style={{ maxHeight: '85vh' }}>
+          <div className="drawer-content animate-fade-in-up" onClick={e => e.stopPropagation()}>
             <div className="drawer-header">
               <h3 className="section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <CalendarIcon size={20} color="var(--color-primary)" /> Calendario di Costanza
@@ -1379,14 +1385,14 @@ export const Profile: React.FC = () => {
               <button className="drawer-close" onClick={() => setActiveModal(null)}><X size={20} /></button>
             </div>
 
-            <div style={{ marginTop: '14px' }}>
+            <div className="drawer-body">
               <span style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>
                 Attività registrata negli ultimi 28 giorni:
               </span>
 
               {render28DayGrid()}
 
-              <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap', fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '8px' }}>
+              <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap', fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '4px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <div style={{ width: '10px', height: '10px', borderRadius: '2px', background: 'var(--color-primary)' }} />
                   <span>Allenamento + Dieta</span>
@@ -1400,8 +1406,10 @@ export const Profile: React.FC = () => {
                   <span>Solo Dieta</span>
                 </div>
               </div>
+            </div>
 
-              <button className="btn-primary" onClick={() => setActiveModal(null)} style={{ width: '100%', marginTop: '20px' }}>
+            <div className="drawer-footer">
+              <button className="btn-primary" onClick={() => setActiveModal(null)} style={{ width: '100%' }}>
                 Chiudi
               </button>
             </div>
@@ -1412,13 +1420,13 @@ export const Profile: React.FC = () => {
       {/* 6. PRIVACY POLICY MODAL */}
       {activeModal === 'privacy' && (
         <div className="drawer-backdrop" onClick={() => setActiveModal(null)}>
-          <div className="drawer-content animate-fade-in-up" onClick={e => e.stopPropagation()} style={{ maxHeight: '85vh', paddingBottom: '24px' }}>
+          <div className="drawer-content animate-fade-in-up" onClick={e => e.stopPropagation()}>
             <div className="drawer-header">
               <h3 className="section-title">Informativa Privacy & GDPR</h3>
               <button className="drawer-close" onClick={() => setActiveModal(null)}><X size={20} /></button>
             </div>
 
-            <div style={{ fontSize: '0.78rem', lineHeight: '1.5', color: 'var(--text-primary)', display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '10px', maxHeight: '450px', overflowY: 'auto' }}>
+            <div className="drawer-body" style={{ fontSize: '0.78rem', lineHeight: '1.5', color: 'var(--text-primary)' }}>
               <p><strong>Ultimo aggiornamento: 23 Settembre 2026</strong></p>
               <p>La presente Informativa sulla Privacy descrive come raccogliamo, utilizziamo e proteggiamo i tuoi dati sensibili all'interno dell'applicazione DeV Fit, in piena conformità con il Regolamento Generale sulla Protezione dei Dati (GDPR) e i requisiti delle piattaforme Google Play e Apple Store.</p>
               
@@ -1432,9 +1440,11 @@ export const Profile: React.FC = () => {
               <p>Hai il diritto in qualsiasi momento di richiedere la rimozione immediata ed irreversibile del tuo account e di tutti i record di allenamento e salute tramite il pulsante "Elimina Account" nelle Impostazioni.</p>
             </div>
 
-            <button className="btn-primary" onClick={() => setActiveModal(null)} style={{ width: '100%', marginTop: '16px' }}>
-              Ho Capito
-            </button>
+            <div className="drawer-footer">
+              <button className="btn-primary" onClick={() => setActiveModal(null)} style={{ width: '100%' }}>
+                Ho Capito
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -1442,22 +1452,26 @@ export const Profile: React.FC = () => {
       {/* 7. RECUPERO MUSCOLARE & HEATMAP MODAL */}
       {activeModal === 'recovery' && (
         <div className="drawer-backdrop" onClick={() => setActiveModal(null)}>
-          <div className="drawer-content animate-fade-in-up" onClick={e => e.stopPropagation()} style={{ maxHeight: '90vh', overflowY: 'auto' }}>
-            <div className="drawer-header" style={{ marginBottom: '16px' }}>
+          <div className="drawer-content animate-fade-in-up" onClick={e => e.stopPropagation()}>
+            <div className="drawer-header">
               <h3 className="section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Activity size={20} color="var(--color-primary)" /> Manichino & Recupero Muscolare
               </h3>
               <button className="drawer-close" onClick={() => setActiveModal(null)}><X size={20} /></button>
             </div>
 
-            <MuscleHeatmap />
+            <div className="drawer-body">
+              <MuscleHeatmap isModal={true} />
+            </div>
 
-            <button className="btn-primary" onClick={() => setActiveModal(null)} style={{ width: '100%', marginTop: '20px' }}>
-              Chiudi
-            </button>
+            <div className="drawer-footer">
+              <button className="btn-primary" onClick={() => setActiveModal(null)} style={{ width: '100%' }}>
+                Chiudi
+              </button>
+            </div>
           </div>
         </div>
-          )}
+      )}
         </>,
         document.body
       )}

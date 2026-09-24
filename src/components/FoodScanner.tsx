@@ -539,132 +539,151 @@ export const FoodScanner: React.FC = () => {
       {/* ── Add Food Drawer ── */}
       {activeMealType && createPortal(
         <div 
-          className="modal-portal-backdrop" 
+          className="drawer-backdrop" 
           onClick={() => setActiveMealType(null)}
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 99999,
-            background: 'rgba(0, 0, 0, 0.82)',
-            backdropFilter: 'blur(8px)',
-            WebkitBackdropFilter: 'blur(8px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '16px'
-          }}
         >
           <div
-            className="glass-card animate-scale-in"
+            className="drawer-content animate-scale-in"
             onClick={e => e.stopPropagation()}
             style={{
-              maxHeight: '90vh',
-              width: '100%',
               maxWidth: '540px',
-              overflowY: 'auto',
-              borderRadius: '20px',
               background: 'linear-gradient(180deg, #141419 0%, #0d0d12 100%)',
               border: '1px solid rgba(212, 175, 55, 0.35)',
-              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.95), 0 0 35px rgba(212, 175, 55, 0.15)',
-              padding: '20px'
+              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.95), 0 0 35px rgba(212, 175, 55, 0.15)'
             }}
           >
             <div className="drawer-header">
               <div>
-                <span style={{ fontSize: '0.6rem', color: 'var(--color-primary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px' }}>Aggiungi a</span>
-                <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'white' }}>{activeMealType}</h3>
+                <span style={{ fontSize: '0.65rem', color: 'var(--color-primary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px' }}>Aggiungi a</span>
+                <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'white', margin: 0 }}>{activeMealType}</h3>
               </div>
               <button className="drawer-close" onClick={() => setActiveMealType(null)}><X size={20} /></button>
             </div>
 
-            {/* Search bar */}
-            <div style={{ display: 'flex', gap: '10px', margin: '14px 0' }}>
-              <div style={{ position: 'relative', flex: 1 }}>
-                <Search size={15} color="var(--text-dark)" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
+            <div className="drawer-body">
+              {/* Search bar */}
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <div style={{ position: 'relative', flex: 1 }}>
+                  <Search size={15} color="var(--text-dark)" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
+                  <input
+                    type="text" className="set-input"
+                    style={{ width: '100%', paddingLeft: '36px', textAlign: 'left', height: '44px' }}
+                    placeholder="Cerca un alimento (es. Barilla, Fage, Pollo)..."
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                  />
+                </div>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={startCameraScanner}
+                  title="Avvia fotocamera scanner barcode"
+                  style={{ width: '44px', height: '44px', padding: 0, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                >
+                  <Camera size={18} color="var(--color-primary)" />
+                </button>
+              </div>
+
+              {/* Weight selector */}
+              <div style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                background: 'rgba(212,175,55,0.04)', padding: '10px 14px',
+                borderRadius: 'var(--radius-sm)',
+                border: '1px solid var(--border-color)'
+              }}>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Quantità (grammi):</span>
                 <input
-                  type="text" className="set-input"
-                  style={{ width: '100%', paddingLeft: '36px', textAlign: 'left', height: '44px' }}
-                  placeholder="Cerca un alimento (es. Barilla, Fage, Pollo)..."
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
+                  type="number" 
+                  inputMode="decimal"
+                  className="set-input" 
+                  value={customWeight}
+                  onChange={e => setCustomWeight(e.target.value)}
+                  style={{ width: '80px', height: '34px' }}
                 />
               </div>
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={startCameraScanner}
-                title="Avvia fotocamera scanner barcode"
-                style={{ width: '44px', height: '44px', padding: 0, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-              >
-                <Camera size={18} color="var(--color-primary)" />
-              </button>
-            </div>
 
-            {/* Weight selector */}
-            <div style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              background: 'rgba(212,175,55,0.04)', padding: '10px 14px',
-              borderRadius: 'var(--radius-sm)',
-              border: '1px solid var(--border-color)',
-              marginBottom: '16px'
-            }}>
-              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Quantità (grammi):</span>
-              <input
-                type="number" 
-                inputMode="decimal"
-                className="set-input" 
-                value={customWeight}
-                onChange={e => setCustomWeight(e.target.value)}
-                style={{ width: '80px', height: '34px' }}
-              />
-            </div>
+              {/* Loading Open Food Facts Indicator */}
+              {isSearchingRemote && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.72rem', color: 'var(--color-primary)', padding: '2px 0' }}>
+                  <Loader2 size={13} className="animate-spin" />
+                  <span>Ricerca nel database ufficiale Open Food Facts...</span>
+                </div>
+              )}
 
-            {/* Loading Open Food Facts Indicator */}
-            {isSearchingRemote && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.72rem', color: 'var(--color-primary)', padding: '4px 0 8px 0' }}>
-                <Loader2 size={13} className="animate-spin" />
-                <span>Ricerca nel database ufficiale Open Food Facts...</span>
-              </div>
-            )}
+              {/* Results Container */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', paddingRight: '2px' }}>
+                {/* Remote Open Food Facts Results */}
+                {remoteSearchResults.length > 0 && (
+                  <div>
+                    <h4 style={{ fontSize: '0.68rem', color: 'var(--color-primary)', fontWeight: 800, letterSpacing: '1.2px', textTransform: 'uppercase', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                      <Globe size={12} /> Open Food Facts (Verificati)
+                    </h4>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      {remoteSearchResults.map((food, i) => (
+                        <div
+                          key={`${food.name}-${i}`}
+                          onClick={() => handleAddFood(food)}
+                          style={{
+                            padding: '12px 14px', cursor: 'pointer',
+                            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                            background: 'rgba(212,175,55,0.03)',
+                            border: '1px solid rgba(212,175,55,0.2)',
+                            borderRadius: 'var(--radius-md)',
+                            transition: 'background 0.15s, border-color 0.15s'
+                          }}
+                          onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = 'rgba(212,175,55,0.08)'; (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--color-primary)'; }}
+                          onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = 'rgba(212,175,55,0.03)'; (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(212,175,55,0.2)'; }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            {food.imageUrl ? (
+                              <img src={food.imageUrl} alt={food.name} style={{ width: '36px', height: '36px', objectFit: 'cover', borderRadius: '4px', border: '1px solid var(--border-color)' }} />
+                            ) : (
+                              <div style={{ width: '36px', height: '36px', borderRadius: '4px', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <Barcode size={16} color="var(--color-primary)" />
+                              </div>
+                            )}
+                            <div>
+                              <h5 style={{ fontSize: '0.84rem', fontWeight: 700, margin: 0 }}>{food.name}</h5>
+                              <span style={{ fontSize: '0.65rem', color: 'var(--text-dark)' }}>
+                                P:{food.protein}g · C:{food.carbs}g · G:{food.fat}g (100g)
+                              </span>
+                            </div>
+                          </div>
+                          <span style={{ fontSize: '0.9rem', fontWeight: 900, color: 'var(--color-secondary)', flexShrink: 0, marginLeft: '10px' }}>
+                            {food.calories} kcal
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
-            {/* Results Container */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', maxHeight: '300px', overflowY: 'auto', paddingRight: '4px' }}>
-              {/* Remote Open Food Facts Results */}
-              {remoteSearchResults.length > 0 && (
+                {/* Local Staples / Favorites */}
                 <div>
-                  <h4 style={{ fontSize: '0.68rem', color: 'var(--color-primary)', fontWeight: 800, letterSpacing: '1.2px', textTransform: 'uppercase', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                    <Globe size={12} /> Open Food Facts (Verificati)
+                  <h4 style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontWeight: 800, letterSpacing: '1.2px', textTransform: 'uppercase', marginBottom: '8px' }}>
+                    ✦ Alimenti Base & Preferiti
                   </h4>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {remoteSearchResults.map((food, i) => (
+                    {filteredStaples.map(food => (
                       <div
-                        key={`${food.name}-${i}`}
+                        key={food.name}
                         onClick={() => handleAddFood(food)}
                         style={{
                           padding: '12px 14px', cursor: 'pointer',
                           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                          background: 'rgba(212,175,55,0.03)',
-                          border: '1px solid rgba(212,175,55,0.2)',
+                          background: 'rgba(255,255,255,0.02)',
+                          border: '1px solid var(--border-color)',
                           borderRadius: 'var(--radius-md)',
                           transition: 'background 0.15s, border-color 0.15s'
                         }}
-                        onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = 'rgba(212,175,55,0.08)'; (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--color-primary)'; }}
-                        onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = 'rgba(212,175,55,0.03)'; (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(212,175,55,0.2)'; }}
+                        onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = 'rgba(212,175,55,0.06)'; (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--color-primary)'; }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = 'rgba(255,255,255,0.02)'; (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--border-color)'; }}
                       >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          {food.imageUrl ? (
-                            <img src={food.imageUrl} alt={food.name} style={{ width: '36px', height: '36px', objectFit: 'cover', borderRadius: '4px', border: '1px solid var(--border-color)' }} />
-                          ) : (
-                            <div style={{ width: '36px', height: '36px', borderRadius: '4px', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                              <Barcode size={16} color="var(--color-primary)" />
-                            </div>
-                          )}
-                          <div>
-                            <h5 style={{ fontSize: '0.84rem', fontWeight: 700, margin: 0 }}>{food.name}</h5>
-                            <span style={{ fontSize: '0.65rem', color: 'var(--text-dark)' }}>
-                              P:{food.protein}g · C:{food.carbs}g · G:{food.fat}g (100g)
-                            </span>
-                          </div>
+                        <div>
+                          <h5 style={{ fontSize: '0.85rem', fontWeight: 700 }}>{food.name}</h5>
+                          <span style={{ fontSize: '0.65rem', color: 'var(--text-dark)' }}>
+                            P:{food.protein}g · C:{food.carbs}g · G:{food.fat}g (100g)
+                          </span>
                         </div>
                         <span style={{ fontSize: '0.9rem', fontWeight: 900, color: 'var(--color-secondary)', flexShrink: 0, marginLeft: '10px' }}>
                           {food.calories} kcal
@@ -672,41 +691,6 @@ export const FoodScanner: React.FC = () => {
                       </div>
                     ))}
                   </div>
-                </div>
-              )}
-
-              {/* Local Staples / Favorites */}
-              <div>
-                <h4 style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontWeight: 800, letterSpacing: '1.2px', textTransform: 'uppercase', marginBottom: '8px' }}>
-                  ✦ Alimenti Base & Preferiti
-                </h4>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  {filteredStaples.map(food => (
-                    <div
-                      key={food.name}
-                      onClick={() => handleAddFood(food)}
-                      style={{
-                        padding: '12px 14px', cursor: 'pointer',
-                        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                        background: 'rgba(255,255,255,0.02)',
-                        border: '1px solid var(--border-color)',
-                        borderRadius: 'var(--radius-md)',
-                        transition: 'background 0.15s, border-color 0.15s'
-                      }}
-                      onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = 'rgba(212,175,55,0.06)'; (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--color-primary)'; }}
-                      onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = 'rgba(255,255,255,0.02)'; (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--border-color)'; }}
-                    >
-                      <div>
-                        <h5 style={{ fontSize: '0.85rem', fontWeight: 700 }}>{food.name}</h5>
-                        <span style={{ fontSize: '0.65rem', color: 'var(--text-dark)' }}>
-                          P:{food.protein}g · C:{food.carbs}g · G:{food.fat}g (100g)
-                        </span>
-                      </div>
-                      <span style={{ fontSize: '0.9rem', fontWeight: 900, color: 'var(--color-secondary)', flexShrink: 0, marginLeft: '10px' }}>
-                        {food.calories} kcal
-                      </span>
-                    </div>
-                  ))}
                 </div>
               </div>
             </div>

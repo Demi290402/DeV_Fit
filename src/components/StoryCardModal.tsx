@@ -187,21 +187,18 @@ export const StoryCardModal: React.FC<StoryCardModalProps> = ({ isOpen, onClose,
   };
 
   return createPortal(
-    <div className="modal-portal-backdrop modal-overlay animate-fade-in" style={{ zIndex: 99999 }}>
+    <div className="drawer-backdrop" onClick={onClose}>
       <div 
-        className="glass-card modal-container animate-scale-in"
+        className="drawer-content animate-scale-in"
+        onClick={e => e.stopPropagation()}
         style={{
-          maxWidth: '420px',
-          width: '94%',
-          maxHeight: '92vh',
-          overflowY: 'auto',
-          padding: '20px',
+          maxWidth: '440px',
           border: '1.5px solid rgba(212, 175, 55, 0.4)',
           boxShadow: '0 10px 45px rgba(0, 0, 0, 0.9), 0 0 30px rgba(212, 175, 55, 0.2)'
         }}
       >
         {/* Modal Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+        <div className="drawer-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Sparkles size={18} color="var(--color-primary)" />
             <h3 style={{ fontSize: '1rem', fontWeight: 800, margin: 0, color: 'white' }}>
@@ -210,12 +207,14 @@ export const StoryCardModal: React.FC<StoryCardModalProps> = ({ isOpen, onClose,
           </div>
           <button 
             type="button" 
+            className="drawer-close"
             onClick={onClose} 
-            style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
           >
-            <X size={20} />
+            <X size={18} />
           </button>
         </div>
+
+        <div className="drawer-body">
 
         {/* 9:16 Story Card Visual Preview */}
         <div 
@@ -357,9 +356,10 @@ export const StoryCardModal: React.FC<StoryCardModalProps> = ({ isOpen, onClose,
             ALLENATI PER L'ECCELLENZA • DEV FIT
           </div>
         </div>
+        </div>
 
-        {/* Action Buttons */}
-        <div style={{ display: 'flex', gap: '10px', marginTop: '16px' }}>
+        {/* Action Buttons Sticky Footer */}
+        <div className="drawer-footer" style={{ display: 'flex', gap: '10px' }}>
           <button
             type="button"
             className="btn-primary"

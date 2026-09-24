@@ -162,44 +162,20 @@ export const RecipeBook: React.FC = () => {
       {/* Recipe Detail Drawer */}
       {selectedRecipe && createPortal(
         <div 
-          className="modal-portal-backdrop" 
+          className="drawer-backdrop" 
           onClick={() => setSelectedRecipe(null)}
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 99999,
-            background: 'rgba(0, 0, 0, 0.82)',
-            backdropFilter: 'blur(8px)',
-            WebkitBackdropFilter: 'blur(8px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '16px'
-          }}
         >
           <div 
-            className="glass-card animate-scale-in" 
+            className="drawer-content animate-fade-in-up" 
             onClick={e => e.stopPropagation()} 
-            style={{ 
-              maxHeight: '90vh', 
-              width: '100%',
-              maxWidth: '520px', 
-              overflowY: 'auto',
-              borderRadius: '20px',
-              background: '#121217',
-              border: '1px solid rgba(212, 175, 55, 0.35)',
-              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.95), 0 0 35px rgba(212, 175, 55, 0.15)',
-              padding: '20px'
-            }}
           >
-            
             <div className="drawer-header">
               <div>
                 <span className={`recipe-type-tag ${selectedRecipe.type === 'fit' ? 'tag-fit' : 'tag-cheat'}`} style={{ position: 'static' }}>
                   {selectedRecipe.type === 'fit' ? 'Ricetta Fit' : 'Sgarro'}
                 </span>
-                <h3 className="section-title" style={{ marginTop: '8px', marginBottom: '2px' }}>{selectedRecipe.title}</h3>
-                <div style={{ display: 'flex', gap: '12px', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                <h3 className="section-title" style={{ marginTop: '6px', marginBottom: '2px', fontSize: '1rem' }}>{selectedRecipe.title}</h3>
+                <div style={{ display: 'flex', gap: '12px', fontSize: '0.74rem', color: 'var(--text-muted)' }}>
                   <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Clock size={12} /> {selectedRecipe.prepTime} min</span>
                   <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><ChefHat size={12} /> {selectedRecipe.difficulty}</span>
                 </div>
@@ -207,84 +183,88 @@ export const RecipeBook: React.FC = () => {
               <button className="drawer-close" onClick={() => setSelectedRecipe(null)}><X size={20} /></button>
             </div>
 
-            {/* Photo */}
-            <div style={{ width: '100%', height: '160px', borderRadius: 'var(--radius-md)', overflow: 'hidden', marginBottom: '18px', border: '1px solid var(--border-color)' }}>
-              <img src={selectedRecipe.imageUrl} alt={selectedRecipe.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            </div>
+            <div className="drawer-body">
+              {/* Photo */}
+              <div style={{ width: '100%', height: '160px', borderRadius: 'var(--radius-md)', overflow: 'hidden', border: '1px solid var(--border-color)', flexShrink: 0 }}>
+                <img src={selectedRecipe.imageUrl} alt={selectedRecipe.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              </div>
 
-            {/* Macros Card */}
-            <div className="glass-card" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', textAlign: 'center', padding: '12px', marginBottom: '20px', background: 'rgba(255,255,255,0.02)' }}>
-              <div>
-                <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Calorie</span>
-                <h4 style={{ fontSize: '0.95rem', fontWeight: 800 }}>{selectedRecipe.macros.calories} kcal</h4>
-              </div>
-              <div>
-                <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Pro</span>
-                <h4 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#3b82f6' }}>{selectedRecipe.macros.protein}g</h4>
-              </div>
-              <div>
-                <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Carb</span>
-                <h4 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#eab308' }}>{selectedRecipe.macros.carbs}g</h4>
-              </div>
-              <div>
-                <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Grass</span>
-                <h4 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#ef4444' }}>{selectedRecipe.macros.fat}g</h4>
-              </div>
-            </div>
-
-            {/* Tools and ingredients */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
-              <div>
-                <h4 style={{ fontSize: '0.8rem', color: 'var(--color-secondary)', fontWeight: 700, marginBottom: '6px' }}>INGREDIENTI</h4>
-                <ul style={{ paddingLeft: '16px', fontSize: '0.78rem', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  {selectedRecipe.ingredients.map((ing, i) => <li key={i}>{ing}</li>)}
-                </ul>
-              </div>
-              <div>
-                <h4 style={{ fontSize: '0.8rem', color: 'var(--color-secondary)', fontWeight: 700, marginBottom: '6px' }}>STRUMENTI</h4>
-                <ul style={{ paddingLeft: '16px', fontSize: '0.78rem', display: 'flex', flexDirection: 'column', gap: '4px', listStyleType: 'square' }}>
-                  {selectedRecipe.equipment.map((eq, i) => <li key={i}>{eq}</li>)}
-                </ul>
-              </div>
-            </div>
-
-            {/* Preparation */}
-            <div style={{ marginBottom: '24px' }}>
-              <h4 style={{ fontSize: '0.8rem', color: 'var(--color-primary)', fontWeight: 700, marginBottom: '8px' }}>PROCEDIMENTO</h4>
-              <ol style={{ paddingLeft: '16px', fontSize: '0.78rem', display: 'flex', flexDirection: 'column', gap: '8px', lineHeight: 1.4 }}>
-                {selectedRecipe.instructions.map((inst, i) => <li key={i}>{inst}</li>)}
-              </ol>
-            </div>
-
-            {/* Log Quick Button */}
-            {!showMealSelector ? (
-              <button 
-                className="btn-primary" 
-                onClick={() => setShowMealSelector(true)}
-                style={{ width: '100%', background: 'linear-gradient(135deg, var(--color-secondary) 0%, #0891b2 100%)', boxShadow: '0 4px 12px rgba(6, 182, 212, 0.3)' }}
-              >
-                Aggiungi al Diario
-              </button>
-            ) : (
-              <div className="glass-card animate-scale-in" style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '12px' }}>
-                <div className="flex-between">
-                  <span style={{ fontSize: '0.75rem', fontWeight: 'bold' }}>Seleziona il Pasto:</span>
-                  <button style={{ background: 'none', border: 'none', color: 'var(--text-dark)', cursor: 'pointer' }} onClick={() => setShowMealSelector(false)}><X size={14} /></button>
+              {/* Macros Card */}
+              <div className="glass-card" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', textAlign: 'center', padding: '10px', background: 'rgba(255,255,255,0.02)' }}>
+                <div>
+                  <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Calorie</span>
+                  <h4 style={{ fontSize: '0.92rem', fontWeight: 800, margin: '2px 0 0 0' }}>{selectedRecipe.macros.calories} kcal</h4>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(78px, 1fr))', gap: '6px' }}>
-                  {mealsList.map(type => (
-                    <button 
-                      key={type} 
-                      className="btn-secondary" 
-                      onClick={() => handleAddRecipeToDiary(type)}
-                      style={{ padding: '8px 2px', fontSize: '0.68rem' }}
-                    >
-                      {type}
-                    </button>
-                  ))}
+                <div>
+                  <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Pro</span>
+                  <h4 style={{ fontSize: '0.92rem', fontWeight: 800, color: '#3b82f6', margin: '2px 0 0 0' }}>{selectedRecipe.macros.protein}g</h4>
+                </div>
+                <div>
+                  <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Carb</span>
+                  <h4 style={{ fontSize: '0.92rem', fontWeight: 800, color: '#eab308', margin: '2px 0 0 0' }}>{selectedRecipe.macros.carbs}g</h4>
+                </div>
+                <div>
+                  <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Grass</span>
+                  <h4 style={{ fontSize: '0.92rem', fontWeight: 800, color: '#ef4444', margin: '2px 0 0 0' }}>{selectedRecipe.macros.fat}g</h4>
                 </div>
               </div>
-            )}
+
+              {/* Tools and ingredients */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                <div>
+                  <h4 style={{ fontSize: '0.78rem', color: 'var(--color-secondary)', fontWeight: 700, marginBottom: '6px' }}>INGREDIENTI</h4>
+                  <ul style={{ paddingLeft: '16px', fontSize: '0.76rem', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    {selectedRecipe.ingredients.map((ing, i) => <li key={i}>{ing}</li>)}
+                  </ul>
+                </div>
+                <div>
+                  <h4 style={{ fontSize: '0.78rem', color: 'var(--color-secondary)', fontWeight: 700, marginBottom: '6px' }}>STRUMENTI</h4>
+                  <ul style={{ paddingLeft: '16px', fontSize: '0.76rem', display: 'flex', flexDirection: 'column', gap: '4px', listStyleType: 'square' }}>
+                    {selectedRecipe.equipment.map((eq, i) => <li key={i}>{eq}</li>)}
+                  </ul>
+                </div>
+              </div>
+
+              {/* Preparation */}
+              <div style={{ marginBottom: '8px' }}>
+                <h4 style={{ fontSize: '0.78rem', color: 'var(--color-primary)', fontWeight: 700, marginBottom: '8px' }}>PROCEDIMENTO</h4>
+                <ol style={{ paddingLeft: '16px', fontSize: '0.76rem', display: 'flex', flexDirection: 'column', gap: '8px', lineHeight: 1.4 }}>
+                  {selectedRecipe.instructions.map((inst, i) => <li key={i}>{inst}</li>)}
+                </ol>
+              </div>
+            </div>
+
+            {/* Sticky Action Footer */}
+            <div className="drawer-footer">
+              {!showMealSelector ? (
+                <button 
+                  className="btn-primary" 
+                  onClick={() => setShowMealSelector(true)}
+                  style={{ width: '100%', height: '42px', background: 'linear-gradient(135deg, var(--color-secondary) 0%, #0891b2 100%)', boxShadow: '0 4px 12px rgba(6, 182, 212, 0.3)' }}
+                >
+                  Aggiungi al Diario
+                </button>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div className="flex-between">
+                    <span style={{ fontSize: '0.75rem', fontWeight: 'bold' }}>Seleziona il Pasto:</span>
+                    <button style={{ background: 'none', border: 'none', color: 'var(--text-dark)', cursor: 'pointer' }} onClick={() => setShowMealSelector(false)}><X size={14} /></button>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(78px, 1fr))', gap: '6px' }}>
+                    {mealsList.map(type => (
+                      <button 
+                        key={type} 
+                        className="btn-secondary" 
+                        onClick={() => handleAddRecipeToDiary(type)}
+                        style={{ padding: '8px 2px', fontSize: '0.68rem' }}
+                      >
+                        {type}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>,
         document.body

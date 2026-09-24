@@ -104,45 +104,19 @@ export const EditWorkoutLogModal: React.FC<EditWorkoutLogModalProps> = ({
 
   return createPortal(
     <div
-      className="modal-portal-backdrop"
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 99999,
-        backgroundColor: 'rgba(0, 0, 0, 0.85)',
-        backdropFilter: 'blur(8px)',
-        WebkitBackdropFilter: 'blur(8px)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '16px'
-      }}
+      className="drawer-backdrop"
       onClick={onClose}
     >
       <div
-        className="glass-card animate-scale-up"
+        className="drawer-content animate-scale-up"
         style={{
-          width: '100%',
           maxWidth: '560px',
-          maxHeight: '90vh',
-          display: 'flex',
-          flexDirection: 'column',
           background: '#12131a',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
-          borderRadius: '16px',
-          overflow: 'hidden',
-          boxShadow: '0 20px 50px rgba(0, 0, 0, 0.7)'
         }}
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '16px 20px',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.08)'
-        }}>
+        <div className="drawer-header">
           <div>
             <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'white', margin: 0 }}>
               Modifica Allenamento Salvato
@@ -153,26 +127,15 @@ export const EditWorkoutLogModal: React.FC<EditWorkoutLogModalProps> = ({
           </div>
           <button
             type="button"
+            className="drawer-close"
             onClick={onClose}
-            style={{
-              background: 'rgba(255, 255, 255, 0.06)',
-              border: 'none',
-              borderRadius: '50%',
-              width: '32px',
-              height: '32px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#94a3b8',
-              cursor: 'pointer'
-            }}
           >
             <X size={18} />
           </button>
         </div>
 
         {/* Body (scrollable) */}
-        <div style={{ padding: '20px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '18px' }}>
+        <div className="drawer-body">
           <div>
             <label style={{ fontSize: '0.74rem', color: '#94a3b8', fontWeight: 600, display: 'block', marginBottom: '6px' }}>
               Nome Allenamento
@@ -360,13 +323,11 @@ export const EditWorkoutLogModal: React.FC<EditWorkoutLogModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div style={{
+        <div className="drawer-footer" style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'flex-end',
-          gap: '10px',
-          padding: '14px 20px',
-          borderTop: '1px solid rgba(255, 255, 255, 0.08)'
+          gap: '10px'
         }}>
           <button
             type="button"

@@ -457,83 +457,160 @@
   border-color: var(--color-secondary);
 }
 
-/* EXERCISE DETAILS DRAWER & MODAL DIALOGS */
-.drawer-backdrop {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.82);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  z-index: 99999;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 16px;
-  box-sizing: border-box;
-}
+/* =========================================================================
+   UNIVERSAL MODAL & DRAWER SYSTEM (Mobile & Desktop Bulletproof)
+   ========================================================================= */
 
-.drawer-content {
-  background: #111116;
-  width: 100%;
-  max-width: 520px;
-  max-height: 88vh;
-  border-radius: var(--radius-lg);
-  border: 1px solid rgba(212, 175, 55, 0.3);
-  padding: 20px;
-  overflow-y: auto;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.95), 0 0 35px rgba(212, 175, 55, 0.15);
-  animation: scaleIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  box-sizing: border-box;
-}
-
-/* MODAL OVERLAY & MODAL CONTAINER (Centered Dialogs on Mobile & Desktop) */
+.drawer-backdrop,
+.modal-portal-backdrop,
 .modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.78);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 100000 !important;
+  background: rgba(0, 0, 0, 0.85) !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  padding: max(16px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom)) 16px !important;
+  box-sizing: border-box !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+}
+
+.drawer-content,
+.modal-portal-card,
+.modal-container {
+  position: relative !important;
+  background: #111116 !important;
+  width: 100% !important;
+  max-width: 520px !important;
+  max-height: min(88dvh, calc(100vh - 48px)) !important;
+  margin: auto !important;
+  border-radius: 20px !important;
+  border: 1px solid rgba(212, 175, 55, 0.35) !important;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.95), 0 0 35px rgba(212, 175, 55, 0.15) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+  padding: 0 !important;
+  animation: scaleIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.modal-portal-card.modal-fullscreen {
+  max-height: 100dvh !important;
+  height: 100dvh !important;
+  border-radius: 0 !important;
+  border: none !important;
+  margin: 0 auto !important;
+}
+
+/* Modal Sticky Header */
+.drawer-header {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 20 !important;
+  background: #141419 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 16px 20px !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  flex-shrink: 0 !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.drawer-header .section-title {
+  margin: 0 !important;
+  font-size: 1.05rem !important;
+  font-weight: 800 !important;
+  color: #ffffff !important;
+}
+
+/* Modal Scrollable Body */
+.drawer-body,
+.modal-scroll-body {
+  flex: 1 1 auto !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  padding: 18px 20px !important;
+  min-height: 0 !important;
+  box-sizing: border-box !important;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* Modal Sticky Footer */
+.drawer-footer {
+  position: sticky !important;
+  bottom: 0 !important;
+  z-index: 20 !important;
+  background: #141419 !important;
+  padding: 14px 20px max(14px, env(safe-area-inset-bottom)) 20px !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+  flex-shrink: 0 !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* Close icon button */
+.drawer-close {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-muted);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 16px;
-  z-index: 99999;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
 }
 
-.modal-container {
-  position: relative;
-  background: #0f0f13;
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--border-color);
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.85);
-  max-height: 90vh;
-  overflow-y: auto;
-  box-sizing: border-box;
+.drawer-close:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+}
+
+/* Responsive Heatmap Grid */
+.muscle-heatmap-grid {
+  display: grid;
+  grid-template-columns: minmax(140px, 1fr) 1.4fr;
+  gap: 16px;
+  align-items: center;
+}
+
+@media (max-width: 520px) {
+  .muscle-heatmap-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .muscle-silhouette-box {
+    min-height: 220px !important;
+    max-height: 240px !important;
+  }
 }
 
 /* Responsive Centered Drawers on Desktop */
 @media (min-width: 768px) {
   .drawer-backdrop {
-    align-items: center !important;
     padding: 24px !important;
   }
   .drawer-content {
-    border-radius: var(--radius-lg) !important;
-    border: 1px solid rgba(255, 255, 255, 0.12) !important;
     max-width: 520px !important;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.9) !important;
   }
   .modal-portal-backdrop {
     padding: 24px !important;
   }
   .modal-portal-card {
-    height: 85vh !important;
     max-height: 820px !important;
-    border-radius: 20px !important;
-    border: 1px solid rgba(255, 255, 255, 0.12) !important;
   }
   .drawer-desktop-center {
     align-items: center !important;

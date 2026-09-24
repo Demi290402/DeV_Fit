@@ -82,21 +82,18 @@ export const PlateAndOneRepModal: React.FC<PlateAndOneRepModalProps> = ({
   };
 
   return createPortal(
-    <div className="modal-portal-backdrop modal-overlay animate-fade-in" style={{ zIndex: 99999 }}>
+    <div className="drawer-backdrop" onClick={onClose}>
       <div 
-        className="glass-card modal-container animate-scale-in" 
+        className="drawer-content animate-scale-in" 
+        onClick={e => e.stopPropagation()}
         style={{ 
           maxWidth: '480px', 
-          width: '94%', 
-          maxHeight: '90vh', 
-          overflowY: 'auto',
-          padding: '20px',
           border: '1px solid rgba(212, 175, 55, 0.4)',
           boxShadow: '0 10px 40px rgba(0, 0, 0, 0.8), 0 0 25px rgba(212, 175, 55, 0.15)'
         }}
       >
         {/* Header with Tabs */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+        <div className="drawer-header" style={{ padding: '12px 16px' }}>
           <div style={{ display: 'flex', gap: '8px' }}>
             <button
               type="button"
@@ -141,15 +138,16 @@ export const PlateAndOneRepModal: React.FC<PlateAndOneRepModalProps> = ({
           </div>
           <button 
             type="button"
+            className="drawer-close"
             onClick={onClose} 
-            style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
           >
-            <X size={20} />
+            <X size={18} />
           </button>
         </div>
 
-        {/* --- TAB 1: PLATE CALCULATOR --- */}
-        {activeTab === 'plate' && (
+        <div className="drawer-body">
+          {/* --- TAB 1: PLATE CALCULATOR --- */}
+          {activeTab === 'plate' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {/* Target Weight Inputs */}
             <div>
@@ -527,6 +525,7 @@ export const PlateAndOneRepModal: React.FC<PlateAndOneRepModalProps> = ({
             </div>
           </div>
         )}
+        </div>
       </div>
     </div>,
     document.body

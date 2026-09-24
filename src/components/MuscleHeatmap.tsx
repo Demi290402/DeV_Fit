@@ -14,7 +14,11 @@ interface MuscleState {
   recentExercises: string[];
 }
 
-export const MuscleHeatmap: React.FC = () => {
+interface MuscleHeatmapProps {
+  isModal?: boolean;
+}
+
+export const MuscleHeatmap: React.FC<MuscleHeatmapProps> = ({ isModal = false }) => {
   const { workoutHistory } = useApp();
   const [selectedMuscle, setSelectedMuscle] = useState<MuscleGroup>('Pettorali');
   const [viewSide, setViewSide] = useState<'front' | 'back'>('front');
@@ -134,20 +138,38 @@ export const MuscleHeatmap: React.FC = () => {
   const isSelected = (mg: MuscleGroup) => selectedMuscle === mg;
 
   return (
-    <div className="glass-card animate-fade-in" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+    <div 
+      className={isModal ? 'animate-fade-in' : 'glass-card animate-fade-in'} 
+      style={{ 
+        padding: isModal ? '0' : '20px', 
+        display: 'flex', 
+        flexDirection: 'column', 
+        gap: '14px',
+        background: isModal ? 'transparent' : undefined,
+        border: isModal ? 'none' : undefined,
+        boxShadow: isModal ? 'none' : undefined
+      }}
+    >
       {/* Header & View Switcher */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Activity size={18} color="var(--color-primary)" />
-            <h3 style={{ fontSize: '1.05rem', fontWeight: 800, margin: 0 }}>
-              Mappa Muscolare & Recupero
-            </h3>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+        {!isModal && (
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Activity size={18} color="var(--color-primary)" />
+              <h3 style={{ fontSize: '1.05rem', fontWeight: 800, margin: 0 }}>
+                Mappa Muscolare & Recupero
+              </h3>
+            </div>
+            <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '2px', margin: 0 }}>
+              Stato scientifico di sintesi proteica e fatica (ultimi 7 giorni)
+            </p>
           </div>
-          <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '2px', margin: 0 }}>
-            Stato scientifico di sintesi proteica e fatica (ultimi 7 giorni)
+        )}
+        {isModal && (
+          <p style={{ fontSize: '0.74rem', color: 'var(--text-muted)', margin: 0 }}>
+            Sintesi proteica & fatica (ultimi 7 giorni)
           </p>
-        </div>
+        )}
 
         {/* View Toggle */}
         <div style={{
@@ -155,7 +177,8 @@ export const MuscleHeatmap: React.FC = () => {
           background: 'rgba(255, 255, 255, 0.05)',
           borderRadius: 'var(--radius-sm)',
           padding: '2px',
-          border: '1px solid rgba(255, 255, 255, 0.08)'
+          border: '1px solid rgba(255, 255, 255, 0.08)',
+          marginLeft: isModal ? 'auto' : undefined
         }}>
           <button
             type="button"
@@ -252,23 +275,26 @@ export const MuscleHeatmap: React.FC = () => {
       </div>
 
       {/* Interactive Anatomy Graphic and Details Panel */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(140px, 1fr) 1.4fr', gap: '16px', alignItems: 'center' }}>
+      <div className="muscle-heatmap-grid">
         {/* Anatomical Silhouette (SVG) */}
-        <div style={{
-          background: 'linear-gradient(180deg, #111114 0%, #09090b 100%)',
-          borderRadius: 'var(--radius-md)',
-          border: '1px solid rgba(255, 255, 255, 0.08)',
-          padding: '12px 8px',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          minHeight: '280px',
-          position: 'relative'
-        }}>
+        <div 
+          className="muscle-silhouette-box"
+          style={{
+            background: 'linear-gradient(180deg, #111114 0%, #09090b 100%)',
+            borderRadius: 'var(--radius-md)',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
+            padding: '8px',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            minHeight: '220px',
+            position: 'relative'
+          }}
+        >
           {viewSide === 'front' ? (
             /* FRONT VIEW SVG */
-            <svg viewBox="0 0 200 320" style={{ width: '100%', maxHeight: '270px' }}>
+            <svg viewBox="0 0 200 320" style={{ width: '100%', maxHeight: '220px' }}>
               {/* Head / Neck */}
               <circle cx="100" cy="28" r="16" fill="#18181b" stroke="#3f3f46" strokeWidth="1.5" />
               <path d="M94 44 L106 44 L108 58 L92 58 Z" fill="#18181b" stroke="#3f3f46" strokeWidth="1" />
@@ -397,7 +423,7 @@ export const MuscleHeatmap: React.FC = () => {
             </svg>
           ) : (
             /* BACK VIEW SVG */
-            <svg viewBox="0 0 200 320" style={{ width: '100%', maxHeight: '270px' }}>
+            <svg viewBox="0 0 200 320" style={{ width: '100%', maxHeight: '220px' }}>
               {/* Head Back */}
               <circle cx="100" cy="28" r="16" fill="#18181b" stroke="#3f3f46" strokeWidth="1.5" />
 

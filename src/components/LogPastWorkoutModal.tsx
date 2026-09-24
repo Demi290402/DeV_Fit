@@ -320,47 +320,21 @@ export const LogPastWorkoutModal: React.FC<LogPastWorkoutModalProps> = ({ isOpen
 
   return createPortal(
     <div 
-      className="modal-portal-backdrop" 
+      className="drawer-backdrop" 
       onClick={onClose} 
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 99999,
-        background: 'rgba(0, 0, 0, 0.82)',
-        backdropFilter: 'blur(8px)',
-        WebkitBackdropFilter: 'blur(8px)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '16px'
-      }}
     >
       <div 
-        className="glass-card animate-scale-in" 
+        className="drawer-content animate-scale-in" 
         onClick={e => e.stopPropagation()} 
         style={{ 
-          maxHeight: '90vh', 
-          width: '100%',
           maxWidth: '580px', 
-          display: 'flex',
-          flexDirection: 'column',
-          padding: 0,
-          overflow: 'hidden',
-          borderRadius: '20px',
           background: '#121217',
           border: '1px solid rgba(212, 175, 55, 0.35)',
           boxShadow: '0 20px 60px rgba(0, 0, 0, 0.95), 0 0 35px rgba(212, 175, 55, 0.15)'
         }}
       >
         {/* Sticky Header */}
-        <div style={{
-          padding: '16px 20px',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          background: '#16161c'
-        }}>
+        <div className="drawer-header" style={{ background: '#16161c' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Calendar size={22} color="var(--color-primary, #d4af37)" />
             <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#ffffff' }}>
@@ -369,26 +343,15 @@ export const LogPastWorkoutModal: React.FC<LogPastWorkoutModalProps> = ({ isOpen
           </div>
           <button 
             type="button"
+            className="drawer-close"
             onClick={onClose}
-            style={{
-              background: 'rgba(255, 255, 255, 0.06)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              borderRadius: '50%',
-              width: '32px',
-              height: '32px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#ffffff',
-              cursor: 'pointer'
-            }}
           >
             <X size={18} />
           </button>
         </div>
 
         {/* Scrollable Body */}
-        <div style={{ overflowY: 'auto', padding: '16px 20px 24px 20px', flex: 1 }}>
+        <div className="drawer-body">
 
         {/* 3-Mode Segmented Tabs */}
         <div style={{
@@ -865,15 +828,19 @@ export const LogPastWorkoutModal: React.FC<LogPastWorkoutModalProps> = ({ isOpen
           />
         </div>
 
-        {/* Save Button */}
-        <button
-          type="button"
-          className="btn-primary"
-          onClick={handleSavePastWorkout}
-          style={{ width: '100%', padding: '14px', fontSize: '0.96rem', marginTop: '20px' }}
-        >
-          <Check size={18} /> Salva Allenamento nella Cronologia
-        </button>
+        </div>
+
+        {/* Sticky Footer */}
+        <div className="drawer-footer">
+          <button
+            type="button"
+            className="btn-primary"
+            onClick={handleSavePastWorkout}
+            style={{ width: '100%', padding: '14px', fontSize: '0.96rem' }}
+          >
+            <Check size={18} /> Salva Allenamento nella Cronologia
+          </button>
+        </div>
 
         {/* Exercise Browser Modal for Custom Mode */}
         {isBrowserOpen && (
@@ -884,7 +851,6 @@ export const LogPastWorkoutModal: React.FC<LogPastWorkoutModalProps> = ({ isOpen
             isMultiSelect={false}
           />
         )}
-        </div>
       </div>
     </div>,
     document.body

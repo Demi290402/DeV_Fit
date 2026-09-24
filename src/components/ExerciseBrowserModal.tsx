@@ -154,20 +154,12 @@ export const ExerciseBrowserModal: React.FC<ExerciseBrowserModalProps> = ({
     <div 
       className="modal-portal-backdrop"
       style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 99999,
-        background: 'rgba(0, 0, 0, 0.78)',
-        backdropFilter: 'blur(8px)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
         padding: 0
       }}
       onClick={onClose}
     >
       <div 
-        className="modal-portal-card"
+        className="modal-portal-card modal-fullscreen"
         onClick={e => e.stopPropagation()}
         style={{
           background: '#09090b',
