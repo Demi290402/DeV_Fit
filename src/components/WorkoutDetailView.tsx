@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   ChevronLeft, MoreHorizontal, ThumbsUp, MessageSquare, Share2, 
   Heart, Flame, Trophy, Edit3, Trash2, ChevronRight, Users,
@@ -860,9 +861,36 @@ export const WorkoutDetailView: React.FC<WorkoutDetailViewProps> = ({
       </div>
 
       {/* COMMENTS MODAL */}
-      {showCommentsModal && (
-        <div className="drawer-backdrop" onClick={() => setShowCommentsModal(false)}>
-          <div className="drawer-content animate-fade-in-up" onClick={e => e.stopPropagation()} style={{ maxHeight: '70vh' }}>
+      {showCommentsModal && createPortal(
+        <div 
+          className="modal-portal-backdrop" 
+          onClick={() => setShowCommentsModal(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 99999,
+            background: 'rgba(0, 0, 0, 0.82)',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '16px'
+          }}
+        >
+          <div 
+            className="glass-card animate-scale-in" 
+            onClick={e => e.stopPropagation()} 
+            style={{ 
+              maxHeight: '80vh', 
+              width: '100%',
+              maxWidth: '480px',
+              borderRadius: '20px',
+              background: '#121217',
+              border: '1px solid rgba(212, 175, 55, 0.35)',
+              padding: '20px'
+            }}
+          >
             <div className="drawer-header">
               <h3 className="section-title">Commenti ({workout.comments.length})</h3>
               <button className="drawer-close" onClick={() => setShowCommentsModal(false)}><X size={20} /></button>
@@ -901,7 +929,8 @@ export const WorkoutDetailView: React.FC<WorkoutDetailViewProps> = ({
               </button>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* EDIT WORKOUT MODAL (If user's workout) */}

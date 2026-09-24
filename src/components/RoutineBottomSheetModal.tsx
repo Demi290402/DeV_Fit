@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Share2, Copy, Edit3, Trash2 } from 'lucide-react';
 import type { Routine } from '../context/AppContext';
 
@@ -38,17 +39,17 @@ export const RoutineBottomSheetModal: React.FC<RoutineBottomSheetModalProps> = (
 
   if (!isOpen || !routine) return null;
 
-  return (
+  return createPortal(
     <div
       style={{
         position: 'fixed',
         inset: 0,
-        zIndex: 9999,
+        zIndex: 99999,
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'flex-end',
         alignItems: 'center',
-        background: 'rgba(0, 0, 0, 0.72)',
+        background: 'rgba(0, 0, 0, 0.75)',
         backdropFilter: 'blur(6px)',
         WebkitBackdropFilter: 'blur(6px)',
         animation: 'fadeIn 0.2s ease-out'
@@ -64,7 +65,7 @@ export const RoutineBottomSheetModal: React.FC<RoutineBottomSheetModalProps> = (
           borderTop: '1px solid rgba(255, 255, 255, 0.1)',
           borderTopLeftRadius: '22px',
           borderTopRightRadius: '22px',
-          padding: '12px 18px 28px 18px',
+          padding: '12px 18px max(24px, env(safe-area-inset-bottom)) 18px',
           display: 'flex',
           flexDirection: 'column',
           gap: '12px',
@@ -147,6 +148,7 @@ export const RoutineBottomSheetModal: React.FC<RoutineBottomSheetModalProps> = (
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

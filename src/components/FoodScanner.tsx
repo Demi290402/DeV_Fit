@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Plus, Trash2, Camera, Search, X, ChevronLeft, ChevronRight, Barcode, Sliders, Globe, Loader2 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { fetchProductByBarcode, searchProductsByName } from '../services/openFoodFacts';
@@ -536,15 +537,36 @@ export const FoodScanner: React.FC = () => {
       </div>
 
       {/* ── Add Food Drawer ── */}
-      {activeMealType && (
-        <div className="drawer-backdrop" onClick={() => setActiveMealType(null)}>
+      {activeMealType && createPortal(
+        <div 
+          className="modal-portal-backdrop" 
+          onClick={() => setActiveMealType(null)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 99999,
+            background: 'rgba(0, 0, 0, 0.82)',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '16px'
+          }}
+        >
           <div
-            className="drawer-content animate-fade-in-up"
+            className="glass-card animate-scale-in"
             onClick={e => e.stopPropagation()}
             style={{
-              maxHeight: '82vh',
-              background: 'linear-gradient(180deg, rgba(14,14,17,0.98) 0%, #050506 100%)',
-              borderTop: '2px solid var(--color-primary)'
+              maxHeight: '90vh',
+              width: '100%',
+              maxWidth: '540px',
+              overflowY: 'auto',
+              borderRadius: '20px',
+              background: 'linear-gradient(180deg, #141419 0%, #0d0d12 100%)',
+              border: '1px solid rgba(212, 175, 55, 0.35)',
+              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.95), 0 0 35px rgba(212, 175, 55, 0.15)',
+              padding: '20px'
             }}
           >
             <div className="drawer-header">
@@ -689,12 +711,13 @@ export const FoodScanner: React.FC = () => {
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ── Real Camera Barcode Scanner Modal ── */}
-      {isScanning && (
-        <div className="scanner-modal-overlay animate-fade-in" style={{ zIndex: 1100 }}>
+      {isScanning && createPortal(
+        <div className="scanner-modal-overlay animate-fade-in" style={{ zIndex: 99999 }}>
           <div className="flex-between" style={{ width: '100%', maxWidth: '420px' }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.9rem', fontWeight: 800, color: 'var(--color-primary)' }}>
               <Barcode size={18} /> Scanner Barcode Reale
@@ -798,7 +821,8 @@ export const FoodScanner: React.FC = () => {
               </div>
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Disc, Award } from 'lucide-react';
 
 interface PlateAndOneRepModalProps {
@@ -80,8 +81,8 @@ export const PlateAndOneRepModal: React.FC<PlateAndOneRepModalProps> = ({
     }
   };
 
-  return (
-    <div className="modal-overlay animate-fade-in" style={{ zIndex: 1000 }}>
+  return createPortal(
+    <div className="modal-portal-backdrop modal-overlay animate-fade-in" style={{ zIndex: 99999 }}>
       <div 
         className="glass-card modal-container animate-scale-in" 
         style={{ 
@@ -527,6 +528,7 @@ export const PlateAndOneRepModal: React.FC<PlateAndOneRepModalProps> = ({
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

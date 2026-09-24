@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { Plus, Check, Clock, X, ChevronDown, Disc, Dumbbell, MoreVertical, Info, ArrowLeftRight, Trash2, Heart, Bluetooth, Watch } from 'lucide-react';
 
 import { useApp } from '../context/AppContext';
@@ -1220,28 +1221,39 @@ export const ActiveWorkout: React.FC = () => {
       )}
 
       {/* Exercise Action Bottom Sheet Modal (Hevy Screenshot 2 style for exercise) */}
-      {activeExerciseMenuId && (
+      {activeExerciseMenuId && createPortal(
         <div 
           style={{
             position: 'fixed',
             inset: 0,
-            zIndex: 1000,
-            background: 'rgba(0, 0, 0, 0.7)',
-            backdropFilter: 'blur(4px)',
+            zIndex: 99999,
+            background: 'rgba(0, 0, 0, 0.75)',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
             display: 'flex',
             alignItems: 'flex-end',
-            justifyContent: 'center'
+            justifyContent: 'center',
+            padding: '0 0 max(24px, env(safe-area-inset-bottom)) 0'
           }}
           onClick={() => setActiveExerciseMenuId(null)}
         >
           <div 
             className="hevy-bottom-sheet"
             onClick={(e) => e.stopPropagation()}
-            style={{ width: '100%', maxWidth: '480px' }}
+            style={{ 
+              width: '100%', 
+              maxWidth: '480px',
+              background: '#16161a',
+              borderRadius: '24px 24px 0 0',
+              borderTop: '1px solid rgba(212, 175, 55, 0.35)',
+              boxShadow: '0 -10px 40px rgba(0, 0, 0, 0.8), 0 0 25px rgba(212, 175, 55, 0.1)',
+              padding: '16px 18px max(24px, env(safe-area-inset-bottom)) 18px',
+              animation: 'slideUpSheet 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards'
+            }}
           >
-            <div className="bottom-sheet-drag-handle" />
+            <div className="bottom-sheet-drag-handle" style={{ width: '40px', height: '4px', background: 'rgba(255,255,255,0.2)', borderRadius: '2px', margin: '0 auto 14px auto' }} />
 
-            <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: 'white', textAlign: 'center', margin: '0 0 16px 0' }}>
+            <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'white', textAlign: 'center', margin: '0 0 16px 0' }}>
               {allExercises.find(e => e.id === activeExerciseMenuId)?.name || 'Opzioni Esercizio'}
             </h3>
 
@@ -1277,7 +1289,8 @@ export const ActiveWorkout: React.FC = () => {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Plate Calculator and 1RM Modal */}

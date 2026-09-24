@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Bluetooth, Smartphone, ShieldCheck, Heart, Scale, Moon, Download, Upload, Check, AlertCircle, Cloud, RefreshCw, Settings, Database, Key, X } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
@@ -459,11 +460,11 @@ export const DeviceSyncHub: React.FC = () => {
       </div>
 
       {/* Supabase In-App Configuration Modal */}
-      {showConfigModal && (
+      {showConfigModal && createPortal(
         <div 
           className="modal-overlay" 
           onClick={() => setShowConfigModal(false)}
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '20px' }}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 99999, padding: '20px' }}
         >
           <div 
             className="glass-card animate-scale-in" 
@@ -564,7 +565,8 @@ export const DeviceSyncHub: React.FC = () => {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

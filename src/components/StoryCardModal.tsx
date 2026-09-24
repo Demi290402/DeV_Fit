@@ -1,4 +1,5 @@
 import React, { useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Download, Share2, Sparkles, Award, Dumbbell, Clock } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
@@ -185,8 +186,8 @@ export const StoryCardModal: React.FC<StoryCardModalProps> = ({ isOpen, onClose,
     }
   };
 
-  return (
-    <div className="modal-overlay animate-fade-in" style={{ zIndex: 1200 }}>
+  return createPortal(
+    <div className="modal-portal-backdrop modal-overlay animate-fade-in" style={{ zIndex: 99999 }}>
       <div 
         className="glass-card modal-container animate-scale-in"
         style={{
@@ -377,6 +378,7 @@ export const StoryCardModal: React.FC<StoryCardModalProps> = ({ isOpen, onClose,
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

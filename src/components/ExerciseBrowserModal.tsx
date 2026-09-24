@@ -665,7 +665,7 @@ export const ExerciseBrowserModal: React.FC<ExerciseBrowserModalProps> = ({
 
             {/* Bottom action bar: Cancella filtri | Mostra risultati */}
             <div style={{ 
-              padding: '12px 16px', 
+              padding: '12px 16px max(20px, env(safe-area-inset-bottom)) 16px', 
               borderTop: '1px solid rgba(255,255,255,0.06)', 
               background: '#0d0d11',
               display: 'flex', 
@@ -799,7 +799,7 @@ export const ExerciseBrowserModal: React.FC<ExerciseBrowserModalProps> = ({
 
             {/* Bottom action bar: Cancella filtri | Mostra risultati */}
             <div style={{ 
-              padding: '12px 16px', 
+              padding: '12px 16px max(20px, env(safe-area-inset-bottom)) 16px', 
               borderTop: '1px solid rgba(255,255,255,0.06)', 
               background: '#0d0d11',
               display: 'flex', 

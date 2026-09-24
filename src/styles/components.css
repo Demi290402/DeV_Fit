@@ -457,31 +457,36 @@
   border-color: var(--color-secondary);
 }
 
-/* EXERCISE DETAILS DRAWER */
+/* EXERCISE DETAILS DRAWER & MODAL DIALOGS */
 .drawer-backdrop {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.75);
-  z-index: 2000;
+  background: rgba(0, 0, 0, 0.82);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 99999;
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: center;
+  padding: 16px;
+  box-sizing: border-box;
 }
 
 .drawer-content {
-  background: #0f0f13;
+  background: #111116;
   width: 100%;
-  max-width: 480px;
-  max-height: 85vh;
-  border-top-left-radius: var(--radius-lg);
-  border-top-right-radius: var(--radius-lg);
-  border-top: 1px solid var(--border-color);
-  padding: 24px;
+  max-width: 520px;
+  max-height: 88vh;
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  padding: 20px;
   overflow-y: auto;
-  animation: fadeInUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.95), 0 0 35px rgba(212, 175, 55, 0.15);
+  animation: scaleIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  box-sizing: border-box;
 }
 
 /* MODAL OVERLAY & MODAL CONTAINER (Centered Dialogs on Mobile & Desktop) */
@@ -495,7 +500,7 @@
   align-items: center;
   justify-content: center;
   padding: 16px;
-  z-index: 2000;
+  z-index: 99999;
 }
 
 .modal-container {

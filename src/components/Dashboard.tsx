@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Flame, Droplet, Dumbbell, Scale, Check, Download, Moon, Heart, Info, Plus, Zap, Activity } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { Flame, Droplet, Dumbbell, Scale, Download, Moon, Heart, Info, Plus, Zap, Activity, X } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
 import { TipWidget } from './TipWidget';
@@ -882,12 +883,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ setCurrentTab }) => {
 
 
       {/* Weight Modal */}
-      {showWeightModal && (
+      {showWeightModal && createPortal(
         <div className="drawer-backdrop" onClick={() => setShowWeightModal(false)}>
           <div className="drawer-content animate-fade-in-up" onClick={e => e.stopPropagation()}>
             <div className="drawer-header">
               <h3 className="section-title">Aggiorna Peso Corporeo</h3>
-              <button className="drawer-close" onClick={() => setShowWeightModal(false)}><Check size={20} /></button>
+              <button className="drawer-close" onClick={() => setShowWeightModal(false)}><X size={20} /></button>
             </div>
             <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
               <input 
@@ -903,16 +904,17 @@ export const Dashboard: React.FC<DashboardProps> = ({ setCurrentTab }) => {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Sleep Modal */}
-      {showSleepModal && (
+      {showSleepModal && createPortal(
         <div className="drawer-backdrop" onClick={() => setShowSleepModal(false)}>
           <div className="drawer-content animate-fade-in-up" onClick={e => e.stopPropagation()}>
             <div className="drawer-header">
               <h3 className="section-title">Registra Ore di Sonno</h3>
-              <button className="drawer-close" onClick={() => setShowSleepModal(false)}><Check size={20} /></button>
+              <button className="drawer-close" onClick={() => setShowSleepModal(false)}><X size={20} /></button>
             </div>
             <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
               Inserisci i dati rilevati dal tuo smartwatch (Galaxy Watch, Apple Watch) o stimati per oggi:
@@ -949,16 +951,17 @@ export const Dashboard: React.FC<DashboardProps> = ({ setCurrentTab }) => {
               Salva Sonno
             </button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* BPM Modal */}
-      {showBpmModal && (
+      {showBpmModal && createPortal(
         <div className="drawer-backdrop" onClick={() => setShowBpmModal(false)}>
           <div className="drawer-content animate-fade-in-up" onClick={e => e.stopPropagation()}>
             <div className="drawer-header">
               <h3 className="section-title">Registra Battito a Riposo</h3>
-              <button className="drawer-close" onClick={() => setShowBpmModal(false)}><Check size={20} /></button>
+              <button className="drawer-close" onClick={() => setShowBpmModal(false)}><X size={20} /></button>
             </div>
             <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
               Inserisci la frequenza cardiaca a riposo (BPM) misurata dal tuo orologio:
@@ -979,7 +982,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ setCurrentTab }) => {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
     </div>

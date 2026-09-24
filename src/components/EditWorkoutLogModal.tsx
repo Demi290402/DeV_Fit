@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Check, Plus, Trash2, Dumbbell } from 'lucide-react';
 import type { WorkoutLog, ExerciseLog, SetLog } from '../context/AppContext';
 import { mockExercises, renderMuscleIcon, isDistanceTimeExercise, isTimeOnlyExercise } from '../data/mockExercises';
@@ -101,18 +102,16 @@ export const EditWorkoutLogModal: React.FC<EditWorkoutLogModalProps> = ({
     onClose();
   };
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-[5000] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in"
+      className="modal-portal-backdrop"
       style={{
         position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        zIndex: 5000,
+        inset: 0,
+        zIndex: 99999,
         backgroundColor: 'rgba(0, 0, 0, 0.85)',
         backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -387,6 +386,7 @@ export const EditWorkoutLogModal: React.FC<EditWorkoutLogModalProps> = ({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

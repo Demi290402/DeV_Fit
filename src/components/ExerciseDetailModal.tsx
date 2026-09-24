@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { ArrowLeft, X, Award, Calendar, Dumbbell, Zap } from 'lucide-react';
 import { mockExercises, renderMuscleIcon, isDistanceTimeExercise, isTimeOnlyExercise } from '../data/mockExercises';
 import { useApp } from '../context/AppContext';
@@ -105,16 +106,16 @@ export const ExerciseDetailModal: React.FC<ExerciseDetailModalProps> = ({ exerci
 
   if (!exerciseId || !exercise) return null;
 
-  return (
+  return createPortal(
     <div 
-      className="fixed inset-0 z-[5000] flex flex-col bg-[#0b0c10] text-white overflow-y-auto animate-fade-in"
+      className="modal-portal-backdrop flex flex-col bg-[#0b0c10] text-white overflow-y-auto animate-fade-in"
       style={{
         position: 'fixed',
         top: 0,
         left: 0,
         right: 0,
         bottom: 0,
-        zIndex: 5000,
+        zIndex: 99999,
         backgroundColor: '#0b0c10',
         overflowY: 'auto',
         WebkitOverflowScrolling: 'touch'
@@ -511,6 +512,7 @@ export const ExerciseDetailModal: React.FC<ExerciseDetailModalProps> = ({ exerci
           100% { left: calc(100% - 60px); }
         }
       `}</style>
-    </div>
+    </div>,
+    document.body
   );
 };

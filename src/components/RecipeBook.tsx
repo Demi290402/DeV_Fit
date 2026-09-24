@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Search, Clock, ChefHat, X } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { mockRecipes } from '../data/mockRecipes';
@@ -159,9 +160,38 @@ export const RecipeBook: React.FC = () => {
       )}
 
       {/* Recipe Detail Drawer */}
-      {selectedRecipe && (
-        <div className="drawer-backdrop" onClick={() => setSelectedRecipe(null)}>
-          <div className="drawer-content animate-fade-in-up" onClick={e => e.stopPropagation()} style={{ maxHeight: '85vh' }}>
+      {selectedRecipe && createPortal(
+        <div 
+          className="modal-portal-backdrop" 
+          onClick={() => setSelectedRecipe(null)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 99999,
+            background: 'rgba(0, 0, 0, 0.82)',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '16px'
+          }}
+        >
+          <div 
+            className="glass-card animate-scale-in" 
+            onClick={e => e.stopPropagation()} 
+            style={{ 
+              maxHeight: '90vh', 
+              width: '100%',
+              maxWidth: '520px', 
+              overflowY: 'auto',
+              borderRadius: '20px',
+              background: '#121217',
+              border: '1px solid rgba(212, 175, 55, 0.35)',
+              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.95), 0 0 35px rgba(212, 175, 55, 0.15)',
+              padding: '20px'
+            }}
+          >
             
             <div className="drawer-header">
               <div>
@@ -256,7 +286,8 @@ export const RecipeBook: React.FC = () => {
               </div>
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

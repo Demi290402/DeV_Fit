@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   User, Scale, Calendar as CalendarIcon, Check, Settings, LogOut, 
   Trash2, ShieldAlert, Camera, Share2, Dumbbell, BarChart2, 
@@ -990,8 +991,10 @@ export const Profile: React.FC = () => {
           MODALS & DRAWERS
           ========================================================================= */}
 
-      {/* 1. SETTINGS / EDIT PROFILE MODAL */}
-      {activeModal === 'settings' && (
+      {activeModal && createPortal(
+        <>
+          {/* 1. SETTINGS / EDIT PROFILE MODAL */}
+          {activeModal === 'settings' && (
         <div className="drawer-backdrop" onClick={() => setActiveModal(null)}>
           <div className="drawer-content animate-fade-in-up" onClick={e => e.stopPropagation()} style={{ maxHeight: '88vh' }}>
             <div className="drawer-header">
@@ -1454,6 +1457,9 @@ export const Profile: React.FC = () => {
             </button>
           </div>
         </div>
+          )}
+        </>,
+        document.body
       )}
 
     </div>
