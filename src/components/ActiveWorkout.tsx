@@ -111,13 +111,13 @@ export const ActiveWorkout: React.FC = () => {
     setLiveBpm(null);
   };
 
-  const handleFinishWorkout = () => {
+  const handleFinishWorkout = async () => {
     let avgHr: number | undefined = undefined;
     if (hrSamples.length > 0) {
       const sum = hrSamples.reduce((acc, s) => acc + s.bpm, 0);
       avgHr = Math.round(sum / hrSamples.length);
     }
-    saveActiveWorkout(undefined, {
+    await saveActiveWorkout(undefined, {
       avgHeartRate: avgHr,
       heartRateSamples: hrSamples.length > 0 ? hrSamples : undefined,
       deviceSource: bleDeviceName || undefined

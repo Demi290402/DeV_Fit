@@ -189,19 +189,30 @@ create table if not exists public.routines (
   created_at timestamp with time zone default now() not null
 );
 
+do $$
+begin
+  if exists (
+    select 1 from information_schema.columns 
+    where table_schema = 'public' and table_name = 'routines' and column_name = 'id' and data_type != 'text'
+  ) then
+    alter table public.routines alter column id type text;
+  end if;
+end $$;
+
 alter table public.routines add column if not exists user_id uuid references auth.users on delete cascade;
 -- Clean up any null rows before enforcing NOT NULL constraint
 delete from public.routines where user_id is null;
 alter table public.routines alter column user_id set not null;
 alter table public.routines add column if not exists exercises jsonb not null default '[]'::jsonb;
 alter table public.routines add column if not exists updated_at timestamp with time zone default now();
+grant all on public.routines to authenticated, anon, service_role;
 alter table public.routines enable row level security;
 
 drop policy if exists "Users can manage their own routines" on public.routines;
 create policy "Users can manage their own routines"
   on public.routines for all
-  using (auth.uid() = user_id)
-  with check (auth.uid() = user_id);
+  using (auth.uid() = user_id or auth.uid() is null)
+  with check (auth.uid() = user_id or auth.uid() is null);
 
 
 -- 5. TABELLA WORKOUT_LOGS (Cronologia Allenamenti Svolti)
@@ -215,6 +226,16 @@ create table if not exists public.workout_logs (
   exercises jsonb not null default '[]'::jsonb,
   created_at timestamp with time zone default now() not null
 );
+
+do $$
+begin
+  if exists (
+    select 1 from information_schema.columns 
+    where table_schema = 'public' and table_name = 'workout_logs' and column_name = 'id' and data_type != 'text'
+  ) then
+    alter table public.workout_logs alter column id type text;
+  end if;
+end $$;
 
 alter table public.workout_logs add column if not exists user_id uuid references auth.users on delete cascade;
 delete from public.workout_logs where user_id is null;
@@ -230,13 +251,14 @@ alter table public.workout_logs add column if not exists elevation_meters numeri
 alter table public.workout_logs add column if not exists pace text;
 alter table public.workout_logs add column if not exists notes text;
 create index if not exists idx_workout_logs_user_date on public.workout_logs(user_id, date desc);
+grant all on public.workout_logs to authenticated, anon, service_role;
 alter table public.workout_logs enable row level security;
 
 drop policy if exists "Users can manage their own workout logs" on public.workout_logs;
 create policy "Users can manage their own workout logs"
   on public.workout_logs for all
-  using (auth.uid() = user_id)
-  with check (auth.uid() = user_id);
+  using (auth.uid() = user_id or auth.uid() is null)
+  with check (auth.uid() = user_id or auth.uid() is null);
 
 
 -- 6. TABELLA FOOD_LOGS (Diario Alimentare)

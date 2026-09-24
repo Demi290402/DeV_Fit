@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { 
   X, Calendar, Plus, Trash2, 
-  Check, ChevronDown, Compass
+  Check, ChevronDown, Compass, AlertCircle, RefreshCw
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import type { WorkoutLog, ExerciseLog, SetLog } from '../context/AppContext';
@@ -22,6 +22,9 @@ export const LogPastWorkoutModal: React.FC<LogPastWorkoutModalProps> = ({ isOpen
     addPastWorkoutLog, 
     profile
   } = useApp();
+
+  const [isSaving, setIsSaving] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<{ success: boolean; message: string } | null>(null);
 
   const allExercises = useMemo(() => [...customExercises, ...mockExercises], [customExercises]);
 
@@ -183,137 +186,167 @@ export const LogPastWorkoutModal: React.FC<LogPastWorkoutModalProps> = ({ isOpen
   };
 
   // Save past workout handler
-  const handleSavePastWorkout = () => {
+  const handleSavePastWorkout = async () => {
     const parsedHr = avgHeartRate ? parseInt(avgHeartRate) : undefined;
     const dateIso = new Date(workoutDate).toISOString();
+    setSyncStatus(null);
+    setIsSaving(true);
 
-    if (activeTab === 'running') {
-      if (parsedRunDistance <= 0 || runTotalSeconds <= 0) {
-        alert('Inserisci una distanza e una durata valide per la corsa.');
+    try {
+      if (activeTab === 'running') {
+        if (parsedRunDistance <= 0 || runTotalSeconds <= 0) {
+          alert('Inserisci una distanza e una durata valide per la corsa.');
+          setIsSaving(false);
+          return;
+        }
+
+        const runningCalories = calculateWorkoutCalories(
+          { weightKg: profile.weight, gender: profile.gender },
+          {
+            durationSeconds: runTotalSeconds,
+            activityType: 'running',
+            distanceKm: parsedRunDistance,
+            avgHeartRate: parsedHr
+          }
+        );
+
+        const runLog: WorkoutLog = {
+          id: `past-run-${Date.now()}`,
+          name: 'Corsa Outdoor',
+          date: dateIso,
+          duration: runTotalSeconds,
+          volume: 0,
+          activityType: 'running',
+          distanceKm: parsedRunDistance,
+          elevationMeters: parseFloat(runElevation) || 0,
+          pace: runningPaceInfo.paceString,
+          notes: notes || undefined,
+          avgHeartRate: parsedHr && parsedHr > 0 ? parsedHr : undefined,
+          caloriesBurned: runningCalories,
+          deviceSource: parsedHr ? 'Cardiofrequenzimetro' : undefined,
+          exercises: [
+            {
+              exerciseId: 'ex-corsa-outdoor',
+              sets: [
+                {
+                  id: `s-run-${Date.now()}`,
+                  weight: 0,
+                  reps: 0,
+                  distance: parsedRunDistance,
+                  time: Math.round(runTotalSeconds / 60),
+                  completed: true
+                }
+              ]
+            }
+          ]
+        };
+
+        const res = await addPastWorkoutLog(runLog);
+        if (res.cloudSynced) {
+          setSyncStatus({ success: true, message: 'Corsa salvata e sincronizzata sul cloud Supabase!' });
+          setTimeout(() => onClose(), 800);
+        } else {
+          setSyncStatus({
+            success: false,
+            message: res.error 
+              ? `Salvata sul dispositivo, ma sincronizzazione Supabase fallita: ${res.error}` 
+              : 'Salvata solo sul dispositivo locale (Supabase non connesso).'
+          });
+        }
         return;
       }
 
-      const runningCalories = calculateWorkoutCalories(
+      // Routine or Custom Resistance Workout
+      const targetExercises = activeTab === 'routine' ? routineExercises : customExercisesList;
+      const name = activeTab === 'routine' 
+        ? (routineCustomName || routines.find(r => r.id === selectedRoutineId)?.name || 'Allenamento Passato')
+        : (customWorkoutName || 'Allenamento Personalizzato');
+
+      if (targetExercises.length === 0) {
+        alert('Aggiungi almeno un esercizio al tuo allenamento.');
+        setIsSaving(false);
+        return;
+      }
+
+      let totalVolume = 0;
+      let completedSetsCount = 0;
+
+      // Apply Single-Trophy Rule across each exercise
+      const processedExercises: ExerciseLog[] = targetExercises.map(ex => {
+        let max1RM = 0;
+        let best1RMIdx = -1;
+        let maxVol = 0;
+        let bestVolIdx = -1;
+
+        ex.sets.forEach((s, sIdx) => {
+          if (!s.completed) return;
+          completedSetsCount++;
+          const vol = (s.weight || 0) * (s.reps || 0);
+          totalVolume += vol;
+          const oneRm = s.reps === 1 ? s.weight : s.weight * (1 + s.reps / 30);
+          if (oneRm > max1RM) {
+            max1RM = oneRm;
+            best1RMIdx = sIdx;
+          }
+          if (vol > maxVol) {
+            maxVol = vol;
+            bestVolIdx = sIdx;
+          }
+        });
+
+        return {
+          ...ex,
+          sets: ex.sets.map((s, sIdx) => ({
+            ...s,
+            is1RM: sIdx === best1RMIdx && best1RMIdx !== -1,
+            isMaxVolume: sIdx === bestVolIdx && bestVolIdx !== -1
+          }))
+        };
+      });
+
+      const totalSeconds = durationMinutes * 60;
+      const computedCalories = calculateWorkoutCalories(
         { weightKg: profile.weight, gender: profile.gender },
         {
-          durationSeconds: runTotalSeconds,
-          activityType: 'running',
-          distanceKm: parsedRunDistance,
+          durationSeconds: totalSeconds,
+          totalVolumeKg: totalVolume,
+          completedSetsCount,
+          activityType: 'strength',
           avgHeartRate: parsedHr
         }
       );
 
-      const runLog: WorkoutLog = {
-        id: `past-run-${Date.now()}`,
-        name: 'Corsa Outdoor',
+      const pastLog: WorkoutLog = {
+        id: `past-log-${Date.now()}`,
+        name,
         date: dateIso,
-        duration: runTotalSeconds,
-        volume: 0,
-        activityType: 'running',
-        distanceKm: parsedRunDistance,
-        elevationMeters: parseFloat(runElevation) || 0,
-        pace: runningPaceInfo.paceString,
-        notes: notes || undefined,
+        duration: totalSeconds,
+        volume: totalVolume,
+        exercises: processedExercises,
         avgHeartRate: parsedHr && parsedHr > 0 ? parsedHr : undefined,
-        caloriesBurned: runningCalories,
+        caloriesBurned: computedCalories,
         deviceSource: parsedHr ? 'Cardiofrequenzimetro' : undefined,
-        exercises: [
-          {
-            exerciseId: 'ex-corsa-outdoor',
-            sets: [
-              {
-                id: `s-run-${Date.now()}`,
-                weight: 0,
-                reps: 0,
-                distance: parsedRunDistance,
-                time: Math.round(runTotalSeconds / 60),
-                completed: true
-              }
-            ]
-          }
-        ]
-      };
-
-      addPastWorkoutLog(runLog);
-      onClose();
-      return;
-    }
-
-    // Routine or Custom Resistance Workout
-    const targetExercises = activeTab === 'routine' ? routineExercises : customExercisesList;
-    const name = activeTab === 'routine' 
-      ? (routineCustomName || routines.find(r => r.id === selectedRoutineId)?.name || 'Allenamento Passato')
-      : (customWorkoutName || 'Allenamento Personalizzato');
-
-    if (targetExercises.length === 0) {
-      alert('Aggiungi almeno un esercizio al tuo allenamento.');
-      return;
-    }
-
-    let totalVolume = 0;
-    let completedSetsCount = 0;
-
-    // Apply Single-Trophy Rule across each exercise
-    const processedExercises: ExerciseLog[] = targetExercises.map(ex => {
-      let max1RM = 0;
-      let best1RMIdx = -1;
-      let maxVol = 0;
-      let bestVolIdx = -1;
-
-      ex.sets.forEach((s, sIdx) => {
-        if (!s.completed) return;
-        completedSetsCount++;
-        const vol = (s.weight || 0) * (s.reps || 0);
-        totalVolume += vol;
-        const oneRm = s.reps === 1 ? s.weight : s.weight * (1 + s.reps / 30);
-        if (oneRm > max1RM) {
-          max1RM = oneRm;
-          best1RMIdx = sIdx;
-        }
-        if (vol > maxVol) {
-          maxVol = vol;
-          bestVolIdx = sIdx;
-        }
-      });
-
-      return {
-        ...ex,
-        sets: ex.sets.map((s, sIdx) => ({
-          ...s,
-          is1RM: sIdx === best1RMIdx && best1RMIdx !== -1,
-          isMaxVolume: sIdx === bestVolIdx && bestVolIdx !== -1
-        }))
-      };
-    });
-
-    const totalSeconds = durationMinutes * 60;
-    const computedCalories = calculateWorkoutCalories(
-      { weightKg: profile.weight, gender: profile.gender },
-      {
-        durationSeconds: totalSeconds,
-        totalVolumeKg: totalVolume,
-        completedSetsCount,
         activityType: 'strength',
-        avgHeartRate: parsedHr
+        notes: notes || undefined
+      };
+
+      const res = await addPastWorkoutLog(pastLog);
+      if (res.cloudSynced) {
+        setSyncStatus({ success: true, message: 'Allenamento salvato e sincronizzato sul cloud Supabase!' });
+        setTimeout(() => onClose(), 800);
+      } else {
+        setSyncStatus({
+          success: false,
+          message: res.error 
+            ? `Salvato sul dispositivo, ma sincronizzazione Supabase fallita: ${res.error}` 
+            : 'Salvato solo sul dispositivo locale (Supabase non connesso).'
+        });
       }
-    );
-
-    const pastLog: WorkoutLog = {
-      id: `past-log-${Date.now()}`,
-      name,
-      date: dateIso,
-      duration: totalSeconds,
-      volume: totalVolume,
-      exercises: processedExercises,
-      avgHeartRate: parsedHr && parsedHr > 0 ? parsedHr : undefined,
-      caloriesBurned: computedCalories,
-      deviceSource: parsedHr ? 'Cardiofrequenzimetro' : undefined,
-      activityType: 'strength',
-      notes: notes || undefined
-    };
-
-    addPastWorkoutLog(pastLog);
-    onClose();
+    } catch (err: any) {
+      setSyncStatus({ success: false, message: err.message || 'Errore durante il salvataggio.' });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -831,14 +864,56 @@ export const LogPastWorkoutModal: React.FC<LogPastWorkoutModalProps> = ({ isOpen
         </div>
 
         {/* Sticky Footer */}
-        <div className="drawer-footer">
+        <div className="drawer-footer" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {syncStatus && (
+            <div style={{
+              padding: '10px 14px',
+              borderRadius: 'var(--radius-sm)',
+              fontSize: '0.78rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              background: syncStatus.success ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+              border: `1px solid ${syncStatus.success ? 'rgba(16, 185, 129, 0.35)' : 'rgba(239, 68, 68, 0.35)'}`,
+              color: syncStatus.success ? '#34d399' : '#f87171'
+            }}>
+              {syncStatus.success ? <Check size={16} /> : <AlertCircle size={16} />}
+              <span style={{ flex: 1 }}>{syncStatus.message}</span>
+              {!syncStatus.success && (
+                <button
+                  type="button"
+                  onClick={onClose}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    color: 'white',
+                    fontSize: '0.72rem',
+                    cursor: 'pointer',
+                    textDecoration: 'underline'
+                  }}
+                >
+                  Chiudi comunque
+                </button>
+              )}
+            </div>
+          )}
+
           <button
             type="button"
             className="btn-primary"
             onClick={handleSavePastWorkout}
-            style={{ width: '100%', padding: '14px', fontSize: '0.96rem' }}
+            disabled={isSaving}
+            style={{ width: '100%', padding: '14px', fontSize: '0.96rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
           >
-            <Check size={18} /> Salva Allenamento nella Cronologia
+            {isSaving ? (
+              <>
+                <RefreshCw size={18} className="animate-spin" /> Salvataggio e sincronizzazione in corso...
+              </>
+            ) : (
+              <>
+                <Check size={18} /> Salva Allenamento nella Cronologia
+              </>
+            )}
           </button>
         </div>
 

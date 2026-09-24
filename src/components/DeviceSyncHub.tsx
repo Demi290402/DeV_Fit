@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Bluetooth, Smartphone, ShieldCheck, Heart, Scale, Moon, Download, Upload, Check, AlertCircle, Cloud, RefreshCw, Settings, Database, Key, X } from 'lucide-react';
+import { Bluetooth, Smartphone, ShieldCheck, Heart, Scale, Moon, Download, Upload, Check, AlertCircle, Cloud, RefreshCw, Settings, Database, Key, X, Copy, CloudDownload } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
 export const DeviceSyncHub: React.FC = () => {
@@ -10,12 +10,14 @@ export const DeviceSyncHub: React.FC = () => {
     supabaseUrl,
     supabaseAnonKey,
     saveSupabaseConfig,
-    syncAllDataToCloud
+    syncAllDataToCloud,
+    syncAllDataFromCloud
   } = useApp();
 
   // Cloud Sync state
   const [isCloudSyncing, setIsCloudSyncing] = useState(false);
   const [cloudSyncFeedback, setCloudSyncFeedback] = useState<{ success: boolean; message: string } | null>(null);
+  const [pairingCopied, setPairingCopied] = useState(false);
   const [showConfigModal, setShowConfigModal] = useState(false);
   const [inputUrl, setInputUrl] = useState(supabaseUrl);
   const [inputKey, setInputKey] = useState(supabaseAnonKey);
@@ -142,12 +144,34 @@ export const DeviceSyncHub: React.FC = () => {
     try {
       const res = await syncAllDataToCloud();
       setCloudSyncFeedback(res);
-      setTimeout(() => setCloudSyncFeedback(null), 5000);
+      setTimeout(() => setCloudSyncFeedback(null), 6000);
     } catch (err: any) {
       setCloudSyncFeedback({ success: false, message: err.message || 'Errore durante la sincronizzazione.' });
     } finally {
       setIsCloudSyncing(false);
     }
+  };
+
+  const handleDownloadFromCloud = async () => {
+    setCloudSyncFeedback(null);
+    setIsCloudSyncing(true);
+    try {
+      const res = await syncAllDataFromCloud();
+      setCloudSyncFeedback(res);
+      setTimeout(() => setCloudSyncFeedback(null), 6000);
+    } catch (err: any) {
+      setCloudSyncFeedback({ success: false, message: err.message || 'Errore durante il download dal cloud.' });
+    } finally {
+      setIsCloudSyncing(false);
+    }
+  };
+
+  const handleCopyPairingLink = () => {
+    if (!supabaseUrl || !supabaseAnonKey) return;
+    const pairingUrl = `${window.location.origin}${window.location.pathname}?sb_url=${encodeURIComponent(supabaseUrl)}&sb_key=${encodeURIComponent(supabaseAnonKey)}`;
+    navigator.clipboard.writeText(pairingUrl);
+    setPairingCopied(true);
+    setTimeout(() => setPairingCopied(false), 4000);
   };
 
   const handleSaveConfig = (e: React.FormEvent) => {
@@ -385,25 +409,68 @@ export const DeviceSyncHub: React.FC = () => {
           </div>
         )}
 
-        {/* Sync Trigger Button */}
-        {user && isSupabaseConfigured && (
+        {/* Multi-Device Pairing Link */}
+        {isSupabaseConfigured && (
           <button
             type="button"
-            className="btn-primary"
-            onClick={handleCloudSync}
-            disabled={isCloudSyncing}
+            className="btn-secondary"
+            onClick={handleCopyPairingLink}
             style={{
-              height: '42px',
-              fontSize: '0.78rem',
+              fontSize: '0.74rem',
+              padding: '10px 14px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '8px'
+              gap: '8px',
+              width: '100%',
+              borderColor: pairingCopied ? '#10b981' : 'rgba(212, 175, 55, 0.35)',
+              color: pairingCopied ? '#34d399' : 'var(--color-primary)'
             }}
           >
-            <RefreshCw size={15} className={isCloudSyncing ? 'animate-spin' : ''} />
-            {isCloudSyncing ? 'Sincronizzazione in corso...' : 'Sincronizza Tutti i Dati sul Cloud Supabase'}
+            {pairingCopied ? <Check size={16} /> : <Copy size={16} />}
+            {pairingCopied ? 'Link copiato! Aprilo sull\'altro dispositivo per connetterlo subito' : 'Copia Link 1-Click per Configurare il 2° Dispositivo'}
           </button>
+        )}
+
+        {/* Sync Trigger Buttons */}
+        {user && isSupabaseConfigured && (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={handleCloudSync}
+              disabled={isCloudSyncing}
+              style={{
+                height: '42px',
+                fontSize: '0.74rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px'
+              }}
+            >
+              <RefreshCw size={14} className={isCloudSyncing ? 'animate-spin' : ''} />
+              {isCloudSyncing ? 'Invio...' : 'Carica su Cloud'}
+            </button>
+
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={handleDownloadFromCloud}
+              disabled={isCloudSyncing}
+              style={{
+                height: '42px',
+                fontSize: '0.74rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px'
+              }}
+            >
+              <CloudDownload size={14} />
+              {isCloudSyncing ? 'Scaricamento...' : 'Scarica da Cloud'}
+            </button>
+          </div>
         )}
       </div>
 
