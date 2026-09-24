@@ -1,4 +1,4 @@
-﻿-- ==============================================================================
+-- ==============================================================================
 -- DEV FIT - SCRIPT MASTER DI MIGRAZIONE COMPLETO PER SUPABASE
 -- Esegui questo script nel SQL Editor di Supabase (icona '>_' nel menu a sinistra)
 -- ==============================================================================
@@ -190,7 +190,10 @@ create table if not exists public.routines (
 );
 
 alter table public.routines add column if not exists user_id uuid references auth.users on delete cascade;
+-- Enforce NOT NULL on user_id (critical for RLS to work — rows with user_id IS NULL are never accessible)
+alter table public.routines alter column user_id set not null;
 alter table public.routines add column if not exists exercises jsonb not null default '[]'::jsonb;
+alter table public.routines add column if not exists updated_at timestamp with time zone default now();
 alter table public.routines enable row level security;
 
 drop policy if exists "Users can manage their own routines" on public.routines;

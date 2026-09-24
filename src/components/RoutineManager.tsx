@@ -105,16 +105,20 @@ export const RoutineManager: React.FC = () => {
     setIsCreating(true);
   };
 
-  const handleDuplicateRoutine = (rot: Routine) => {
+  const handleDuplicateRoutine = async (rot: Routine) => {
     const cloned: Routine = {
       id: `rot-${Date.now()}`,
       name: `${rot.name} (Copia)`,
       description: rot.description || '',
       exercises: JSON.parse(JSON.stringify(rot.exercises))
     };
-    addRoutine(cloned);
+    const res = await addRoutine(cloned);
     setMenuRoutine(null);
-    setSyncNotice(`Routine "${cloned.name}" duplicata con successo!`);
+    if (res.cloudSynced) {
+      setSyncNotice(`✅ Routine "${cloned.name}" duplicata e sincronizzata!`);
+    } else {
+      setSyncNotice(`💾 Routine "${cloned.name}" duplicata (solo locale).`);
+    }
     setTimeout(() => setSyncNotice(null), 3000);
   };
 
@@ -166,7 +170,7 @@ export const RoutineManager: React.FC = () => {
     setTimeout(() => setSyncNotice(null), 3500);
   };
 
-  const handleSaveRoutine = () => {
+  const handleSaveRoutine = async () => {
     if (!newRoutineName.trim()) return;
     if (selectedExercises.length === 0) {
       alert('Aggiungi almeno un esercizio per salvare la routine!');
@@ -196,21 +200,31 @@ export const RoutineManager: React.FC = () => {
       };
     });
 
+    let result: { cloudSynced: boolean; error?: string };
     if (editingRoutineId) {
-      updateRoutine({
+      result = await updateRoutine({
         id: editingRoutineId,
         name: newRoutineName.trim(),
         description: newRoutineDesc.trim(),
         exercises: builtExercises
       });
     } else {
-      addRoutine({
+      result = await addRoutine({
         id: `rot-${Date.now()}`,
         name: newRoutineName.trim(),
         description: newRoutineDesc.trim(),
         exercises: builtExercises
       });
     }
+
+    if (result.cloudSynced) {
+      setSyncNotice('✅ Routine salvata e sincronizzata sul cloud!');
+    } else if (result.error) {
+      setSyncNotice(`⚠️ Routine salvata localmente. Errore cloud: ${result.error}`);
+    } else {
+      setSyncNotice('💾 Routine salvata localmente (Supabase non configurato).');
+    }
+    setTimeout(() => setSyncNotice(null), 4000);
 
     setIsCreating(false);
     setEditingRoutineId(null);

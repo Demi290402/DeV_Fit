@@ -172,8 +172,8 @@ interface AppContextType {
   updateMealsList: (list: string[]) => void;
   updateProfile: (data: Partial<ProfileData>) => void;
   routines: Routine[];
-  addRoutine: (routine: Routine) => void;
-  updateRoutine: (routine: Routine) => void;
+  addRoutine: (routine: Routine) => Promise<{ cloudSynced: boolean; error?: string }>;
+  updateRoutine: (routine: Routine) => Promise<{ cloudSynced: boolean; error?: string }>;
   deleteRoutine: (id: string) => void;
   workoutHistory: WorkoutLog[];
   updateWorkoutLog: (updatedLog: WorkoutLog) => void;
@@ -502,12 +502,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
 
       // 2. Fetch Routines
-      const { data: routinesData } = await client
+      const { data: routinesData, error: routinesError } = await client
         .from('routines')
         .select('*')
         .eq('user_id', targetId);
 
-      if (routinesData && routinesData.length > 0) {
+      if (routinesError) {
+        console.warn('Errore fetch routines dal cloud:', routinesError);
+      } else if (routinesData && routinesData.length > 0) {
         const parsedRoutines: Routine[] = routinesData.map((r: any) => ({
           id: r.id,
           name: r.name,
@@ -515,6 +517,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           exercises: Array.isArray(r.exercises) ? r.exercises : []
         }));
         setRoutines(parsedRoutines);
+      } else if (routinesData !== null && routinesData.length === 0) {
+        // Cloud is empty — push any local routines so they survive multi-device login
+        const localRoutines: Routine[] = JSON.parse(localStorage.getItem('df_routines') || '[]');
+        if (localRoutines.length > 0) {
+          const payload = localRoutines.map((r: Routine) => ({
+            id: r.id,
+            user_id: targetId,
+            name: r.name,
+            description: r.description || '',
+            exercises: r.exercises
+          }));
+          const { error: pushError } = await client
+            .from('routines')
+            .upsert(payload, { onConflict: 'id' });
+          if (pushError) {
+            console.warn('Errore push routine locali al cloud:', pushError);
+          }
+        }
       }
 
       // 3. Fetch Workout Logs
@@ -950,34 +970,42 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   };
 
-  const addRoutine = (routine: Routine) => {
+  const addRoutine = async (routine: Routine): Promise<{ cloudSynced: boolean; error?: string }> => {
     setRoutines(prev => [routine, ...prev]);
     if (user && supabaseClient) {
-      supabaseClient.from('routines').upsert({
+      const { error } = await supabaseClient.from('routines').upsert({
         id: routine.id,
         user_id: user.id,
         name: routine.name,
-        description: routine.description,
+        description: routine.description || '',
         exercises: routine.exercises
-      }, { onConflict: 'id' }).then(({ error }) => {
-        if (error) console.warn('Errore sync routine cloud:', error);
-      });
+      }, { onConflict: 'id' });
+      if (error) {
+        console.warn('Errore sync routine cloud:', error);
+        return { cloudSynced: false, error: error.message };
+      }
+      return { cloudSynced: true };
     }
+    return { cloudSynced: false };
   };
 
-  const updateRoutine = (routine: Routine) => {
+  const updateRoutine = async (routine: Routine): Promise<{ cloudSynced: boolean; error?: string }> => {
     setRoutines(prev => prev.map(r => r.id === routine.id ? routine : r));
     if (user && supabaseClient) {
-      supabaseClient.from('routines').upsert({
+      const { error } = await supabaseClient.from('routines').upsert({
         id: routine.id,
         user_id: user.id,
         name: routine.name,
-        description: routine.description,
+        description: routine.description || '',
         exercises: routine.exercises
-      }, { onConflict: 'id' }).then(({ error }) => {
-        if (error) console.warn('Errore update routine cloud:', error);
-      });
+      }, { onConflict: 'id' });
+      if (error) {
+        console.warn('Errore update routine cloud:', error);
+        return { cloudSynced: false, error: error.message };
+      }
+      return { cloudSynced: true };
     }
+    return { cloudSynced: false };
   };
 
   const deleteRoutine = (id: string) => {
