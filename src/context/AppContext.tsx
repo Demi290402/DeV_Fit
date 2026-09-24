@@ -965,9 +965,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       handleSession(session, shouldSync);
     });
 
+    // 3. Multi-device reactive auto-sync on app refocus / visibility change
+    const onVisibilityOrFocus = () => {
+      if (document.visibilityState === 'visible' && userRef.current?.id && !isSyncingRef.current) {
+        syncAllDataRef.current(userRef.current.id, supabaseClient);
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibilityOrFocus);
+    window.addEventListener('focus', onVisibilityOrFocus);
+
     return () => {
       isMounted = false;
       subscription.unsubscribe();
+      document.removeEventListener('visibilitychange', onVisibilityOrFocus);
+      window.removeEventListener('focus', onVisibilityOrFocus);
     };
   }, [supabaseClient]);
 
@@ -1132,7 +1143,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (supabaseClient) {
       const targetId = await resolveSupabaseUserId(supabaseClient, userRef.current?.id);
       if (!targetId) {
-        return { cloudSynced: false, error: 'Sessione Supabase non attiva. Effettua il login.' };
+        return { cloudSynced: false, error: 'Sessione Supabase non attiva. Effettua il login dall\'app.' };
       }
       const { error } = await supabaseClient.from('routines').upsert({
         id: routine.id,
@@ -1143,7 +1154,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }, { onConflict: 'id' });
       if (error) {
         console.warn('Errore sync routine cloud:', error);
-        return { cloudSynced: false, error: error.message };
+        const errMsg = (error.message || '').toLowerCase();
+        let userError = error.message;
+        if (error.code === '42501' || errMsg.includes('row-level security') || errMsg.includes('policy')) {
+          userError = 'Permesso negato da Supabase (RLS): esegui lo script supabase_fix_routines_and_workouts.sql nel pannello SQL.';
+        } else if (error.code === '22P02' || errMsg.includes('uuid')) {
+          userError = 'Incompatibilità colonna ID su Supabase (richiesto TEXT anziché UUID). Esegui lo script supabase_fix_routines_and_workouts.sql.';
+        } else if (error.code === '23503' || errMsg.includes('foreign key')) {
+          userError = 'Vincolo utente violato su Supabase. Esegui lo script supabase_fix_routines_and_workouts.sql.';
+        }
+        return { cloudSynced: false, error: userError };
       }
       return { cloudSynced: true };
     }
@@ -1155,7 +1175,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (supabaseClient) {
       const targetId = await resolveSupabaseUserId(supabaseClient, userRef.current?.id);
       if (!targetId) {
-        return { cloudSynced: false, error: 'Sessione Supabase non attiva. Effettua il login.' };
+        return { cloudSynced: false, error: 'Sessione Supabase non attiva. Effettua il login dall\'app.' };
       }
       const { error } = await supabaseClient.from('routines').upsert({
         id: routine.id,
@@ -1166,7 +1186,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }, { onConflict: 'id' });
       if (error) {
         console.warn('Errore update routine cloud:', error);
-        return { cloudSynced: false, error: error.message };
+        const errMsg = (error.message || '').toLowerCase();
+        let userError = error.message;
+        if (error.code === '42501' || errMsg.includes('row-level security') || errMsg.includes('policy')) {
+          userError = 'Permesso negato da Supabase (RLS): esegui lo script supabase_fix_routines_and_workouts.sql.';
+        } else if (error.code === '22P02' || errMsg.includes('uuid')) {
+          userError = 'Incompatibilità colonna ID su Supabase (richiesto TEXT anziché UUID). Esegui lo script supabase_fix_routines_and_workouts.sql.';
+        } else if (error.code === '23503' || errMsg.includes('foreign key')) {
+          userError = 'Vincolo utente violato su Supabase. Esegui lo script supabase_fix_routines_and_workouts.sql.';
+        }
+        return { cloudSynced: false, error: userError };
       }
       return { cloudSynced: true };
     }
