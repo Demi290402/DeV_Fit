@@ -190,7 +190,7 @@ export const RoutineDetailView: React.FC<RoutineDetailViewProps> = ({
           {routine.name}
         </h1>
         <span style={{ fontSize: '0.85rem', color: '#8e8e93' }}>
-          Creato da {profile?.name || 'demi02'}
+          Creato da {profile?.name || 'Te'}
         </span>
       </div>
 

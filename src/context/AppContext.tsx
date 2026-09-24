@@ -236,8 +236,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     targetProtein: 110,
     targetCarbs: 190,
     targetFat: 50,
-    streak: 1,
-    lastLoggedDate: new Date().toISOString().split('T')[0]
+    streak: 0,
+    lastLoggedDate: ''
   };
 
   // --- STATE ---
@@ -427,6 +427,45 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // --- CLOUD SYNC HELPERS ---
+  const resolveSupabaseUserId = useCallback(async (client = supabaseClient, fallbackId?: string): Promise<string | null> => {
+    if (!client) return null;
+    try {
+      const { data: { user: authUser } } = await client.auth.getUser();
+      if (authUser?.id) return authUser.id;
+    } catch (e) {
+      console.warn('Errore verifica utente auth Supabase:', e);
+    }
+    return fallbackId || userRef.current?.id || null;
+  }, [supabaseClient]);
+
+  const upsertWorkoutLogSafely = useCallback(async (client: any, logPayload: any): Promise<{ success: boolean; error?: string }> => {
+    if (!client || !logPayload) return { success: false, error: 'Client o dati non validi' };
+
+    // 1. First attempt: upsert with all extended columns (bpm, samples, calories, device, notes, etc.)
+    const { error } = await client.from('workout_logs').upsert(logPayload, { onConflict: 'id' });
+    if (!error) return { success: true };
+
+    // 2. If table in Supabase doesn't have extended columns yet (e.g. column "avg_heart_rate" does not exist)
+    const errMsg = (error.message || '').toLowerCase();
+    if (errMsg.includes('does not exist') || error.code === '42703' || errMsg.includes('column')) {
+      console.warn('Colonne estese non presenti in workout_logs, salvataggio con campi base...', error.message);
+      const basePayload = {
+        id: logPayload.id,
+        user_id: logPayload.user_id,
+        name: logPayload.name,
+        date: logPayload.date,
+        duration: logPayload.duration,
+        volume: logPayload.volume,
+        exercises: logPayload.exercises
+      };
+      const { error: baseError } = await client.from('workout_logs').upsert(basePayload, { onConflict: 'id' });
+      if (!baseError) return { success: true };
+      return { success: false, error: baseError.message };
+    }
+
+    return { success: false, error: error.message };
+  }, []);
+
   const syncProfileToCloud = useCallback(async (userId: string, prof: ProfileData, client = supabaseClient) => {
     if (!client || !userId) return;
     try {
@@ -563,6 +602,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           notes: w.notes || undefined
         }));
         setWorkoutHistory(parsedWorkouts);
+      } else if (workoutsData !== null && workoutsData.length === 0) {
+        // Cloud has 0 workouts — push local workouts up to Supabase
+        const localHistory: WorkoutLog[] = JSON.parse(localStorage.getItem('df_history') || '[]');
+        if (localHistory.length > 0) {
+          for (const w of localHistory) {
+            await upsertWorkoutLogSafely(client, {
+              id: w.id,
+              user_id: targetId,
+              name: w.name,
+              date: w.date,
+              duration: w.duration,
+              volume: w.volume,
+              exercises: w.exercises,
+              avg_heart_rate: w.avgHeartRate ?? null,
+              heart_rate_samples: w.heartRateSamples ? JSON.stringify(w.heartRateSamples) : null,
+              calories_burned: w.caloriesBurned ?? null,
+              device_source: w.deviceSource ?? null,
+              activity_type: w.activityType ?? 'strength',
+              distance_km: w.distanceKm ?? null,
+              elevation_meters: w.elevationMeters ?? null,
+              pace: w.pace ?? null,
+              notes: w.notes ?? null
+            });
+          }
+        }
       }
 
       // 4. Fetch Food Logs
@@ -653,48 +717,52 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!supabaseClient) {
       return { success: false, message: 'Supabase non è configurato. Inserisci URL e Anon Key prima di sincronizzare.' };
     }
-    const targetUser = userRef.current;
-    if (!targetUser) {
+    const resolvedId = await resolveSupabaseUserId(supabaseClient, userRef.current?.id);
+    if (!resolvedId) {
       return { success: false, message: 'Devi aver effettuato l\'accesso con un account per sincronizzare i dati su Supabase.' };
     }
 
     try {
       // 1. Sync Profile
-      await syncProfileToCloud(targetUser.id, profileRef.current, supabaseClient);
+      await syncProfileToCloud(resolvedId, profileRef.current, supabaseClient);
 
       // 2. Sync Routines
       if (routines.length > 0) {
         const routinesPayload = routines.map(r => ({
           id: r.id,
-          user_id: targetUser.id,
+          user_id: resolvedId,
           name: r.name,
-          description: r.description,
+          description: r.description || '',
           exercises: r.exercises
         }));
-        await supabaseClient.from('routines').upsert(routinesPayload, { onConflict: 'id' });
+        const { error: routErr } = await supabaseClient.from('routines').upsert(routinesPayload, { onConflict: 'id' });
+        if (routErr) {
+          console.warn('Avviso: sincronizzazione routine cloud:', routErr);
+        }
       }
 
-      // 3. Sync Workout Logs
+      // 3. Sync Workout Logs (resilient to missing columns)
       if (workoutHistory.length > 0) {
-        const historyPayload = workoutHistory.map(w => ({
-          id: w.id,
-          user_id: targetUser.id,
-          name: w.name,
-          date: w.date,
-          duration: w.duration,
-          volume: w.volume,
-          exercises: w.exercises,
-          avg_heart_rate: w.avgHeartRate ?? null,
-          heart_rate_samples: w.heartRateSamples ? JSON.stringify(w.heartRateSamples) : null,
-          calories_burned: w.caloriesBurned ?? null,
-          device_source: w.deviceSource ?? null,
-          activity_type: w.activityType ?? 'strength',
-          distance_km: w.distanceKm ?? null,
-          elevation_meters: w.elevationMeters ?? null,
-          pace: w.pace ?? null,
-          notes: w.notes ?? null
-        }));
-        await supabaseClient.from('workout_logs').upsert(historyPayload, { onConflict: 'id' });
+        for (const w of workoutHistory) {
+          await upsertWorkoutLogSafely(supabaseClient, {
+            id: w.id,
+            user_id: resolvedId,
+            name: w.name,
+            date: w.date,
+            duration: w.duration,
+            volume: w.volume,
+            exercises: w.exercises,
+            avg_heart_rate: w.avgHeartRate ?? null,
+            heart_rate_samples: w.heartRateSamples ? JSON.stringify(w.heartRateSamples) : null,
+            calories_burned: w.caloriesBurned ?? null,
+            device_source: w.deviceSource ?? null,
+            activity_type: w.activityType ?? 'strength',
+            distance_km: w.distanceKm ?? null,
+            elevation_meters: w.elevationMeters ?? null,
+            pace: w.pace ?? null,
+            notes: w.notes ?? null
+          });
+        }
       }
 
       // 4. Sync Food Logs
@@ -703,7 +771,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         items.forEach(item => {
           foodEntries.push({
             id: item.id,
-            user_id: targetUser.id,
+            user_id: resolvedId,
             date,
             name: item.name,
             meal_type: item.mealType,
@@ -870,14 +938,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       });
       if (error) throw error;
     } else {
-      // Mock OAuth Login
-      const mockUser = {
-        id: `oauth-${provider}-${Date.now()}`,
-        email: `${provider}-user@example.com`,
-        name: `${provider === 'google' ? 'Google' : 'Facebook'} User`
-      };
-      setUser(mockUser);
-      setProfile(prev => ({ ...prev, name: mockUser.name }));
+      throw new Error('Supabase non è configurato. Inserisci URL e Anon Key per accedere.');
     }
   };
 
@@ -972,10 +1033,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const addRoutine = async (routine: Routine): Promise<{ cloudSynced: boolean; error?: string }> => {
     setRoutines(prev => [routine, ...prev]);
-    if (user && supabaseClient) {
+    if (supabaseClient) {
+      const targetId = await resolveSupabaseUserId(supabaseClient, userRef.current?.id);
+      if (!targetId) {
+        return { cloudSynced: false, error: 'Sessione Supabase non attiva. Effettua il login.' };
+      }
       const { error } = await supabaseClient.from('routines').upsert({
         id: routine.id,
-        user_id: user.id,
+        user_id: targetId,
         name: routine.name,
         description: routine.description || '',
         exercises: routine.exercises
@@ -991,10 +1056,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const updateRoutine = async (routine: Routine): Promise<{ cloudSynced: boolean; error?: string }> => {
     setRoutines(prev => prev.map(r => r.id === routine.id ? routine : r));
-    if (user && supabaseClient) {
+    if (supabaseClient) {
+      const targetId = await resolveSupabaseUserId(supabaseClient, userRef.current?.id);
+      if (!targetId) {
+        return { cloudSynced: false, error: 'Sessione Supabase non attiva. Effettua il login.' };
+      }
       const { error } = await supabaseClient.from('routines').upsert({
         id: routine.id,
-        user_id: user.id,
+        user_id: targetId,
         name: routine.name,
         description: routine.description || '',
         exercises: routine.exercises
@@ -1010,44 +1079,53 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const deleteRoutine = (id: string) => {
     setRoutines(prev => prev.filter(r => r.id !== id));
-    if (user && supabaseClient) {
-      supabaseClient.from('routines').delete().eq('id', id).then(({ error }) => {
-        if (error) console.warn('Errore delete routine cloud:', error);
+    if (supabaseClient) {
+      resolveSupabaseUserId(supabaseClient, userRef.current?.id).then(targetId => {
+        if (targetId) {
+          supabaseClient.from('routines').delete().eq('id', id).then(({ error }) => {
+            if (error) console.warn('Errore delete routine cloud:', error);
+          });
+        }
       });
     }
   };
 
-  const updateWorkoutLog = (updatedLog: WorkoutLog) => {
+  const updateWorkoutLog = async (updatedLog: WorkoutLog) => {
     setWorkoutHistory(prev => prev.map(w => w.id === updatedLog.id ? updatedLog : w));
-    if (user && supabaseClient) {
-      supabaseClient.from('workout_logs').upsert({
-        id: updatedLog.id,
-        user_id: user.id,
-        name: updatedLog.name,
-        date: updatedLog.date,
-        duration: updatedLog.duration,
-        volume: updatedLog.volume,
-        exercises: updatedLog.exercises,
-        avg_heart_rate: updatedLog.avgHeartRate ?? null,
-        heart_rate_samples: updatedLog.heartRateSamples ? JSON.stringify(updatedLog.heartRateSamples) : null,
-        calories_burned: updatedLog.caloriesBurned ?? null,
-        device_source: updatedLog.deviceSource ?? null,
-        activity_type: updatedLog.activityType ?? 'strength',
-        distance_km: updatedLog.distanceKm ?? null,
-        elevation_meters: updatedLog.elevationMeters ?? null,
-        pace: updatedLog.pace ?? null,
-        notes: updatedLog.notes ?? null
-      }, { onConflict: 'id' }).then(({ error }) => {
-        if (error) console.warn('Errore update workout cloud:', error);
-      });
+    if (supabaseClient) {
+      const targetId = await resolveSupabaseUserId(supabaseClient, userRef.current?.id);
+      if (targetId) {
+        await upsertWorkoutLogSafely(supabaseClient, {
+          id: updatedLog.id,
+          user_id: targetId,
+          name: updatedLog.name,
+          date: updatedLog.date,
+          duration: updatedLog.duration,
+          volume: updatedLog.volume,
+          exercises: updatedLog.exercises,
+          avg_heart_rate: updatedLog.avgHeartRate ?? null,
+          heart_rate_samples: updatedLog.heartRateSamples ? JSON.stringify(updatedLog.heartRateSamples) : null,
+          calories_burned: updatedLog.caloriesBurned ?? null,
+          device_source: updatedLog.deviceSource ?? null,
+          activity_type: updatedLog.activityType ?? 'strength',
+          distance_km: updatedLog.distanceKm ?? null,
+          elevation_meters: updatedLog.elevationMeters ?? null,
+          pace: updatedLog.pace ?? null,
+          notes: updatedLog.notes ?? null
+        });
+      }
     }
   };
 
   const deleteWorkoutLog = (id: string) => {
     setWorkoutHistory(prev => prev.filter(w => w.id !== id));
-    if (user && supabaseClient) {
-      supabaseClient.from('workout_logs').delete().eq('id', id).then(({ error }) => {
-        if (error) console.warn('Errore delete workout cloud:', error);
+    if (supabaseClient) {
+      resolveSupabaseUserId(supabaseClient, userRef.current?.id).then(targetId => {
+        if (targetId) {
+          supabaseClient.from('workout_logs').delete().eq('id', id).then(({ error }) => {
+            if (error) console.warn('Errore delete workout cloud:', error);
+          });
+        }
       });
     }
   };
@@ -1461,22 +1539,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     setWorkoutHistory(prev => [newLog, ...prev]);
 
-    if (user && supabaseClient) {
-      supabaseClient.from('workout_logs').upsert({
-        id: newLog.id,
-        user_id: user.id,
-        name: newLog.name,
-        date: newLog.date,
-        duration: newLog.duration,
-        volume: newLog.volume,
-        exercises: newLog.exercises,
-        avg_heart_rate: newLog.avgHeartRate ?? null,
-        heart_rate_samples: newLog.heartRateSamples ? JSON.stringify(newLog.heartRateSamples) : null,
-        calories_burned: newLog.caloriesBurned ?? null,
-        device_source: newLog.deviceSource ?? null,
-        activity_type: newLog.activityType ?? 'strength'
-      }, { onConflict: 'id' }).then(({ error }) => {
-        if (error) console.warn('Errore salvataggio workout cloud:', error);
+    if (supabaseClient) {
+      resolveSupabaseUserId(supabaseClient, userRef.current?.id).then(targetId => {
+        if (targetId) {
+          upsertWorkoutLogSafely(supabaseClient, {
+            id: newLog.id,
+            user_id: targetId,
+            name: newLog.name,
+            date: newLog.date,
+            duration: newLog.duration,
+            volume: newLog.volume,
+            exercises: newLog.exercises,
+            avg_heart_rate: newLog.avgHeartRate ?? null,
+            heart_rate_samples: newLog.heartRateSamples ? JSON.stringify(newLog.heartRateSamples) : null,
+            calories_burned: newLog.caloriesBurned ?? null,
+            device_source: newLog.deviceSource ?? null,
+            activity_type: newLog.activityType ?? 'strength'
+          }).then(res => {
+            if (!res.success) {
+              console.warn('Errore salvataggio workout cloud:', res.error);
+            }
+          });
+        }
       });
     }
 
@@ -1504,26 +1588,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return merged.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     });
 
-    if (user && supabaseClient) {
-      supabaseClient.from('workout_logs').upsert({
-        id: pastLog.id,
-        user_id: user.id,
-        name: pastLog.name,
-        date: pastLog.date,
-        duration: pastLog.duration,
-        volume: pastLog.volume,
-        exercises: pastLog.exercises,
-        avg_heart_rate: pastLog.avgHeartRate ?? null,
-        heart_rate_samples: pastLog.heartRateSamples ? JSON.stringify(pastLog.heartRateSamples) : null,
-        calories_burned: pastLog.caloriesBurned ?? null,
-        device_source: pastLog.deviceSource ?? null,
-        activity_type: pastLog.activityType ?? 'strength',
-        distance_km: pastLog.distanceKm ?? null,
-        elevation_meters: pastLog.elevationMeters ?? null,
-        pace: pastLog.pace ?? null,
-        notes: pastLog.notes ?? null
-      }, { onConflict: 'id' }).then(({ error }) => {
-        if (error) console.warn('Errore salvataggio past workout cloud:', error);
+    if (supabaseClient) {
+      resolveSupabaseUserId(supabaseClient, userRef.current?.id).then(targetId => {
+        if (targetId) {
+          upsertWorkoutLogSafely(supabaseClient, {
+            id: pastLog.id,
+            user_id: targetId,
+            name: pastLog.name,
+            date: pastLog.date,
+            duration: pastLog.duration,
+            volume: pastLog.volume,
+            exercises: pastLog.exercises,
+            avg_heart_rate: pastLog.avgHeartRate ?? null,
+            heart_rate_samples: pastLog.heartRateSamples ? JSON.stringify(pastLog.heartRateSamples) : null,
+            calories_burned: pastLog.caloriesBurned ?? null,
+            device_source: pastLog.deviceSource ?? null,
+            activity_type: pastLog.activityType ?? 'strength',
+            distance_km: pastLog.distanceKm ?? null,
+            elevation_meters: pastLog.elevationMeters ?? null,
+            pace: pastLog.pace ?? null,
+            notes: pastLog.notes ?? null
+          }).then(res => {
+            if (!res.success) {
+              console.warn('Errore salvataggio past workout cloud:', res.error);
+            }
+          });
+        }
       });
     }
 
@@ -1548,20 +1638,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       };
     });
 
-    if (user && supabaseClient) {
-      supabaseClient.from('food_logs').upsert({
-        id: newItem.id,
-        user_id: user.id,
-        date: dateStr,
-        name: newItem.name,
-        meal_type: newItem.mealType,
-        calories: newItem.calories,
-        protein: newItem.protein,
-        carbs: newItem.carbs,
-        fat: newItem.fat,
-        weight: newItem.weight
-      }, { onConflict: 'id' }).then(({ error }) => {
-        if (error) console.warn('Errore salvataggio alimento cloud:', error);
+    if (supabaseClient) {
+      resolveSupabaseUserId(supabaseClient, userRef.current?.id).then(targetId => {
+        if (targetId) {
+          supabaseClient.from('food_logs').upsert({
+            id: newItem.id,
+            user_id: targetId,
+            date: dateStr,
+            name: newItem.name,
+            meal_type: newItem.mealType,
+            calories: newItem.calories,
+            protein: newItem.protein,
+            carbs: newItem.carbs,
+            fat: newItem.fat,
+            weight: newItem.weight
+          }, { onConflict: 'id' }).then(({ error }) => {
+            if (error) console.warn('Errore salvataggio alimento cloud:', error);
+          });
+        }
       });
     }
 

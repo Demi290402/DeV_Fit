@@ -53,264 +53,6 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ setCurrentTab }) => {
     }
   };
 
-  // Pre-configured rich workouts matching the attached screenshots
-  const curatedCommunityWorkouts: DetailedWorkout[] = useMemo(() => {
-    return [
-      // 1. demi02's "Allenamento serale 🏋️" matching Screenshot 2 & 3
-      {
-        id: 'curated-demi-evening',
-        isUserPost: true,
-        username: profile.name.toLowerCase().replace(/\s+/g, '') || 'demi02',
-        userAvatar: profile.avatarUrl || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-        date: 'Ieri',
-        rawDate: '2026-09-23T19:10:00.000Z',
-        workoutName: 'Allenamento serale 🏋️',
-        durationMinutes: 48,
-        volume: 6181,
-        totalSets: 13,
-        recordsCount: 2,
-        avgHeartRate: 117,
-        calories: 388,
-        deviceSynced: 'WearOS Watch',
-        muscleSplit: [
-          { muscle: 'Schiena', percentage: 46 },
-          { muscle: 'Braccia', percentage: 43 },
-          { muscle: 'Spalle', percentage: 11 }
-        ],
-        exercises: [
-          {
-            exerciseId: 'ex-rematore-macchina',
-            name: 'Rematore Alto Convergente (Macchina)',
-            muscleGroup: 'Dorsali',
-            category: 'Schiena',
-            sets: [
-              { setNumber: 'W', type: 'warmup', weight: 30, reps: 10, completed: true },
-              { setNumber: 1, type: 'normal', weight: 40, reps: 10, completed: true },
-              { setNumber: 2, type: 'normal', weight: 45, reps: 8, completed: true }
-            ]
-          },
-          {
-            exerciseId: 'ex-lat-pulldown-dritte',
-            name: 'Lat Pulldown Braccia Dritte (Cavo)',
-            muscleGroup: 'Dorsali',
-            category: 'Schiena',
-            sets: [
-              { setNumber: 1, type: 'normal', weight: 50, reps: 10, completed: true },
-              { setNumber: 2, type: 'normal', weight: 50, reps: 10, completed: true }
-            ]
-          },
-          {
-            exerciseId: 'ex-lat-pulldown-cavo',
-            name: 'Lat Pulldown (Cavo)',
-            muscleGroup: 'Dorsali',
-            category: 'Schiena',
-            sets: [
-              { setNumber: 1, type: 'normal', weight: 60, reps: 10, completed: true },
-              { setNumber: 2, type: 'normal', weight: 65, reps: 10, completed: true }
-            ]
-          },
-          {
-            exerciseId: 'ex-croci-deltoide-post',
-            name: 'Croci Inverse Deltoide Posteriore (Macchina)',
-            muscleGroup: 'Spalle',
-            category: 'Spalle',
-            sets: [
-              { setNumber: 1, type: 'normal', weight: 80, reps: 20, isMaxVolume: true, is1RM: true, completed: true },
-              { setNumber: 2, type: 'normal', weight: 60, reps: 20, completed: true }
-            ]
-          },
-          {
-            exerciseId: 'ex-skullcrusher-man',
-            name: 'Skullcrusher (Manubrio)',
-            muscleGroup: 'Tricipiti',
-            category: 'Braccia',
-            sets: [
-              { setNumber: 1, type: 'normal', weight: 12.5, reps: 10, completed: true },
-              { setNumber: 2, type: 'normal', weight: 12.5, reps: 8, completed: true }
-            ]
-          },
-          {
-            exerciseId: 'ex-curl-scott-man',
-            name: 'Curl su Panca Scott (Manubrio)',
-            muscleGroup: 'Bicipiti',
-            category: 'Braccia',
-            notes: 'Ultime prima di cedimento a Martello',
-            sets: [
-              { setNumber: 1, type: 'normal', weight: 10, reps: 15, completed: true },
-              { setNumber: 2, type: 'normal', weight: 12, reps: 8, completed: true }
-            ]
-          }
-        ],
-        likes: ['valeriaadream', 'christiantroia'],
-        comments: [
-          { username: 'valeriaadream', text: 'Ottimo volume dorso e tricipiti! 🔥' }
-        ]
-      },
-
-      // 2. valeriaadream's "Legs, gluteus and abs" matching Screenshot 1
-      {
-        id: 'curated-valeria-legs',
-        isUserPost: false,
-        username: 'valeriaadream',
-        userAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-        date: 'Ieri',
-        rawDate: '2026-09-23T21:53:00.000Z',
-        workoutName: 'Legs, gluteus and abs',
-        durationMinutes: 61,
-        volume: 11655,
-        totalSets: 19,
-        recordsCount: 0,
-        avgHeartRate: 115,
-        calories: 243,
-        muscleSplit: [
-          { muscle: 'Gambe', percentage: 83 },
-          { muscle: 'Addome', percentage: 17 }
-        ],
-        exercises: [
-          {
-            exerciseId: 'ex-tapis-roulant',
-            name: 'Tapis Roulant',
-            muscleGroup: 'Cardio',
-            category: 'Cardio',
-            trackingType: 'distance_time',
-            sets: [
-              { setNumber: 1, distance: 0, timeSeconds: 600, completed: true }
-            ]
-          },
-          {
-            exerciseId: 'ex-leg-press-orizzontale',
-            name: 'Leg Press Orizzontale (Macchina)',
-            muscleGroup: 'Quadricipiti',
-            category: 'Gambe',
-            sets: [
-              { setNumber: 1, weight: 93, reps: 20, completed: true },
-              { setNumber: 2, weight: 101, reps: 15, completed: true },
-              { setNumber: 3, weight: 109, reps: 15, completed: true }
-            ]
-          },
-          {
-            exerciseId: 'ex-leg-curl-sdraiato',
-            name: 'Leg Curl Sdraiato (Macchina)',
-            muscleGroup: 'Femorali',
-            category: 'Gambe',
-            sets: [
-              { setNumber: 1, weight: 25, reps: 15, completed: true },
-              { setNumber: 2, weight: 25, reps: 13, completed: true },
-              { setNumber: 3, weight: 25, reps: 6, completed: true }
-            ]
-          },
-          {
-            exerciseId: 'ex-leg-extension',
-            name: 'Leg Extension (Macchina)',
-            muscleGroup: 'Quadricipiti',
-            category: 'Gambe',
-            sets: [
-              { setNumber: 1, weight: 30, reps: 15, completed: true },
-              { setNumber: 2, weight: 30, reps: 15, completed: true },
-              { setNumber: 3, weight: 35, reps: 15, completed: true }
-            ]
-          },
-          {
-            exerciseId: 'ex-abduzione-anche',
-            name: 'Abduzione Anche (Macchina)',
-            muscleGroup: 'Glutei',
-            category: 'Gambe',
-            sets: [
-              { setNumber: 1, weight: 60, reps: 15, completed: true },
-              { setNumber: 2, weight: 60, reps: 15, completed: true },
-              { setNumber: 3, weight: 60, reps: 14, completed: true }
-            ]
-          },
-          {
-            exerciseId: 'ex-adduzione-anche',
-            name: 'Adduzione Anche (Macchina)',
-            muscleGroup: 'Adduttori',
-            category: 'Gambe',
-            sets: [
-              { setNumber: 1, weight: 50, reps: 4, completed: true },
-              { setNumber: 2, weight: 45, reps: 20, completed: true },
-              { setNumber: 3, weight: 45, reps: 14, completed: true }
-            ]
-          },
-          {
-            exerciseId: 'ex-crunch',
-            name: 'Crunch',
-            muscleGroup: 'Addominali',
-            category: 'Addome',
-            trackingType: 'time_only',
-            sets: [
-              { setNumber: 1, reps: 15, completed: true },
-              { setNumber: 2, reps: 8, completed: true },
-              { setNumber: 3, reps: 7, completed: true }
-            ]
-          }
-        ],
-        likes: ['demi02'],
-        comments: [
-          { username: 'demi02', text: '11.600 kg di volume gambe! Impressionante 💪' }
-        ]
-      },
-
-      // 3. valeriaadream's "Upper Body + cardio"
-      {
-        id: 'curated-valeria-upper',
-        isUserPost: false,
-        username: 'valeriaadream',
-        userAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-        date: '2 giorni fa',
-        rawDate: '2026-09-22T17:40:00.000Z',
-        workoutName: 'Upper Body + cardio',
-        durationMinutes: 57,
-        volume: 3385,
-        totalSets: 12,
-        recordsCount: 1,
-        avgHeartRate: 121,
-        calories: 310,
-        muscleSplit: [
-          { muscle: 'Schiena', percentage: 40 },
-          { muscle: 'Petto', percentage: 35 },
-          { muscle: 'Cardio', percentage: 25 }
-        ],
-        exercises: [
-          {
-            exerciseId: 'ex-1',
-            name: 'Tapis Roulant',
-            muscleGroup: 'Cardio',
-            category: 'Cardio',
-            trackingType: 'distance_time',
-            sets: [
-              { setNumber: 1, distance: 1.5, timeSeconds: 600, completed: true }
-            ]
-          },
-          {
-            exerciseId: 'ex-3',
-            name: 'Lat Pulldown (Cavo)',
-            muscleGroup: 'Dorsali',
-            category: 'Schiena',
-            sets: [
-              { setNumber: 1, weight: 45, reps: 12, completed: true },
-              { setNumber: 2, weight: 50, reps: 10, completed: true },
-              { setNumber: 3, weight: 50, reps: 10, completed: true }
-            ]
-          },
-          {
-            exerciseId: 'ex-2',
-            name: 'Chest Press (Macchina)',
-            muscleGroup: 'Pettorali',
-            category: 'Petto',
-            sets: [
-              { setNumber: 1, weight: 35, reps: 12, completed: true },
-              { setNumber: 2, weight: 40, reps: 10, is1RM: true, completed: true },
-              { setNumber: 3, weight: 40, reps: 8, completed: true }
-            ]
-          }
-        ],
-        likes: ['demi02', 'stronglife'],
-        comments: []
-      }
-    ];
-  }, [profile]);
-
   // Convert user's personal workoutHistory into DetailedWorkout format
   const userWorkoutsDetailed: DetailedWorkout[] = useMemo(() => {
     return workoutHistory.map(w => {
@@ -351,7 +93,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ setCurrentTab }) => {
       return {
         id: `user-w-${w.id}`,
         isUserPost: true,
-        username: profile.name.toLowerCase().replace(/\s+/g, '') || 'demi02',
+        username: profile.name.trim().toLowerCase().replace(/[^a-z0-9]/g, '') || 'atleta',
         userAvatar: profile.avatarUrl || '',
         date: formatRelativeDate(w.date),
         rawDate: w.date,
@@ -372,18 +114,9 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ setCurrentTab }) => {
     });
   }, [workoutHistory, profile]);
 
-  // Combined and filtered feed items
+  // Combined and filtered feed items (strictly real workouts only)
   const feedItems = useMemo(() => {
-    // If user already has real history, merge with curated community workouts
     let all = [...userWorkoutsDetailed];
-    
-    // Add curated friend workouts, avoiding duplicate demi02 evening workout if user has logged their own
-    curatedCommunityWorkouts.forEach(cw => {
-      const alreadyHas = all.some(uw => uw.workoutName === cw.workoutName);
-      if (!alreadyHas) {
-        all.push(cw);
-      }
-    });
 
     if (feedFilter === 'me') {
       all = all.filter(p => p.isUserPost);
@@ -400,7 +133,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ setCurrentTab }) => {
     }
 
     return all;
-  }, [userWorkoutsDetailed, curatedCommunityWorkouts, feedFilter, searchQuery]);
+  }, [userWorkoutsDetailed, feedFilter, searchQuery]);
 
   // Handle Like
   const handleLike = (workoutId: string) => {
@@ -611,7 +344,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ setCurrentTab }) => {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           {feedItems.map(post => {
-            const hasLiked = post.likes.includes(profile.name) || post.likes.includes('demi02');
+            const hasLiked = post.likes.includes(profile.name);
             const visibleExercises = post.exercises.slice(0, 3);
             const remainingCount = post.exercises.length - 3;
 

@@ -140,7 +140,7 @@ export const Profile: React.FC = () => {
     setSelectedDetailedWorkout({
       id: `user-w-${log.id}`,
       isUserPost: true,
-      username: profile.name.toLowerCase().replace(/\s+/g, '') || 'demi02',
+      username: profile.name.trim().toLowerCase().replace(/[^a-z0-9]/g, '') || 'atleta',
       userAvatar: profile.avatarUrl || '',
       date: new Date(log.date).toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'short' }),
       rawDate: log.date,
@@ -212,7 +212,7 @@ export const Profile: React.FC = () => {
   // Username generator
   const username = useMemo(() => {
     const raw = profile.name.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
-    return raw ? raw : 'demi02';
+    return raw ? raw : 'atleta';
   }, [profile.name]);
 
   // Image Upload handler
@@ -635,14 +635,14 @@ export const Profile: React.FC = () => {
             <img src={profile.avatarUrl} alt="Avatar" />
           ) : (
             <span style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--color-primary)' }}>
-              {profile.name.charAt(0).toUpperCase() || 'D'}
+              {profile.name ? profile.name.charAt(0).toUpperCase() : 'U'}
             </span>
           )}
         </div>
 
         {/* Name and Stats */}
         <div className="hevy-profile-identity-col">
-          <h2 className="hevy-profile-display-name">{profile.name || 'Demi'}</h2>
+          <h2 className="hevy-profile-display-name">{profile.name || 'Atleta'}</h2>
           
           <div className="hevy-profile-stats-row">
             <div className="hevy-profile-stat-item">
@@ -650,11 +650,11 @@ export const Profile: React.FC = () => {
               <span className="hevy-profile-stat-label">Allenamenti</span>
             </div>
             <div className="hevy-profile-stat-item">
-              <span className="hevy-profile-stat-value">1</span>
+              <span className="hevy-profile-stat-value">0</span>
               <span className="hevy-profile-stat-label">Seguaci</span>
             </div>
             <div className="hevy-profile-stat-item">
-              <span className="hevy-profile-stat-value">1</span>
+              <span className="hevy-profile-stat-value">0</span>
               <span className="hevy-profile-stat-label">Seguendo</span>
             </div>
           </div>

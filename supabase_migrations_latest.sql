@@ -190,7 +190,8 @@ create table if not exists public.routines (
 );
 
 alter table public.routines add column if not exists user_id uuid references auth.users on delete cascade;
--- Enforce NOT NULL on user_id (critical for RLS to work — rows with user_id IS NULL are never accessible)
+-- Clean up any null rows before enforcing NOT NULL constraint
+delete from public.routines where user_id is null;
 alter table public.routines alter column user_id set not null;
 alter table public.routines add column if not exists exercises jsonb not null default '[]'::jsonb;
 alter table public.routines add column if not exists updated_at timestamp with time zone default now();
@@ -216,7 +217,19 @@ create table if not exists public.workout_logs (
 );
 
 alter table public.workout_logs add column if not exists user_id uuid references auth.users on delete cascade;
+delete from public.workout_logs where user_id is null;
+alter table public.workout_logs alter column user_id set not null;
 alter table public.workout_logs add column if not exists exercises jsonb not null default '[]'::jsonb;
+alter table public.workout_logs add column if not exists avg_heart_rate numeric;
+alter table public.workout_logs add column if not exists heart_rate_samples jsonb;
+alter table public.workout_logs add column if not exists calories_burned numeric;
+alter table public.workout_logs add column if not exists device_source text;
+alter table public.workout_logs add column if not exists activity_type text default 'strength';
+alter table public.workout_logs add column if not exists distance_km numeric;
+alter table public.workout_logs add column if not exists elevation_meters numeric;
+alter table public.workout_logs add column if not exists pace text;
+alter table public.workout_logs add column if not exists notes text;
+create index if not exists idx_workout_logs_user_date on public.workout_logs(user_id, date desc);
 alter table public.workout_logs enable row level security;
 
 drop policy if exists "Users can manage their own workout logs" on public.workout_logs;

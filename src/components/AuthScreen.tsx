@@ -305,7 +305,7 @@ export const AuthScreen: React.FC = () => {
 
               <div style={{ background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.05)', borderRadius: 'var(--radius-sm)', padding: '8px 10px', marginTop: '2px', textAlign: 'center' }}>
                 <p style={{ fontSize: '0.67rem', color: 'var(--text-dark)', margin: 0, lineHeight: '1.4' }}>
-                  💡 <strong>Consiglio rapido:</strong> Per te e Valeria, la registrazione con <strong>Email e Password</strong> qui sopra funziona all'istante senza richiedere autorizzazioni o account Google Cloud.
+                  💡 <strong>Consiglio rapido:</strong> La registrazione con <strong>Email e Password</strong> qui sopra funziona all'istante senza richiedere autorizzazioni esterne o account Google Cloud.
                 </p>
               </div>
             </div>

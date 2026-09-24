@@ -422,7 +422,7 @@ export const DeviceSyncHub: React.FC = () => {
             Salvataggio & Sincronizzazione Locale (Backup Personale)
           </h4>
           <p style={{ fontSize: '0.7rem', color: 'var(--text-dark)', marginTop: '2px' }}>
-            Salva tutti i dati tuoi o di Valeria (schede, allenamenti, pasti, foto) su un file sicuro sul telefono o ripristinali su un altro dispositivo.
+            Salva tutti i tuoi dati personali (schede, allenamenti, pasti, foto) su un file sicuro sul telefono o ripristinali su un altro dispositivo.
           </p>
         </div>
 
