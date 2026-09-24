@@ -10,6 +10,7 @@ import type { WorkoutLog } from '../context/AppContext';
 import { mockExercises, renderMuscleIcon, type MuscleGroup } from '../data/mockExercises';
 import { CycleTracker } from './CycleTracker';
 import { DeviceSyncHub } from './DeviceSyncHub';
+import { WorkoutDetailView, type DetailedWorkout, type DetailedWorkoutExercise } from './WorkoutDetailView';
 
 const compressImage = (file: File, maxWidth: number, maxHeight: number): Promise<string> => {
   return new Promise((resolve, reject) => {
@@ -86,6 +87,7 @@ export const Profile: React.FC = () => {
     updateProfile, 
     workoutHistory, 
     foodLogs, 
+    updateWorkoutLog,
     deleteWorkoutLog,
     signOut, 
     deleteAccountAndData 
@@ -93,11 +95,67 @@ export const Profile: React.FC = () => {
 
   // Active Modals state
   const [activeModal, setActiveModal] = useState<
-    'settings' | 'stats' | 'exercises' | 'measurements' | 'calendar' | 'privacy' | 'workout_detail' | null
+    'settings' | 'stats' | 'exercises' | 'measurements' | 'calendar' | 'privacy' | null
   >(null);
   
-  // Selected Workout for detailed inspection / edit
-  const [selectedWorkout, setSelectedWorkout] = useState<WorkoutLog | null>(null);
+  // Selected Workout for full detailed view
+  const [selectedDetailedWorkout, setSelectedDetailedWorkout] = useState<DetailedWorkout | null>(null);
+
+  const openWorkoutDetail = (log: WorkoutLog) => {
+    const totalVolume = log.volume || log.exercises.reduce((acc, ex) => {
+      return acc + ex.sets.reduce((sAcc, s) => sAcc + ((s.weight || 0) * (s.reps || 0)), 0);
+    }, 0);
+    const totalSets = log.exercises.reduce((acc, ex) => acc + ex.sets.filter(s => s.completed).length, 0);
+    const recordsCount = log.exercises.reduce((acc, ex) => acc + ex.sets.filter(s => s.is1RM || s.isMaxVolume || s.isMaxWeight).length, 0);
+
+    const exercisesDetailed: DetailedWorkoutExercise[] = log.exercises.map(ex => {
+      const detail = mockExercises.find(m => m.id === ex.exerciseId);
+      const name = detail ? detail.name : 'Esercizio';
+      const muscleGroup: MuscleGroup = detail ? detail.muscleGroup : 'Pettorali';
+      const category = detail ? detail.category : 'Schiena';
+
+      return {
+        exerciseId: ex.exerciseId,
+        name,
+        muscleGroup,
+        category,
+        notes: ex.notes,
+        sets: ex.sets.map((s, idx) => ({
+          setNumber: idx + 1,
+          type: 'normal',
+          weight: s.weight,
+          reps: s.reps,
+          distance: s.distance,
+          timeSeconds: s.time,
+          is1RM: s.is1RM,
+          isMaxVolume: s.isMaxVolume,
+          isMaxWeight: s.isMaxWeight,
+          completed: s.completed
+        }))
+      };
+    });
+
+    setSelectedDetailedWorkout({
+      id: `user-w-${log.id}`,
+      isUserPost: true,
+      username: profile.name.toLowerCase().replace(/\s+/g, '') || 'demi02',
+      userAvatar: profile.avatarUrl || '',
+      date: new Date(log.date).toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'short' }),
+      rawDate: log.date,
+      workoutName: log.name || 'Allenamento',
+      durationMinutes: Math.max(1, Math.round(log.duration / 60)),
+      volume: totalVolume,
+      totalSets,
+      recordsCount,
+      avgHeartRate: 117,
+      calories: Math.round((log.duration / 60) * 7.8),
+      deviceSynced: 'WearOS Watch',
+      exercises: exercisesDetailed,
+      likes: [],
+      comments: [],
+      originalWorkoutLog: log
+    });
+  };
 
   // Profile Form state
   const [name, setName] = useState(profile.name);
@@ -512,6 +570,21 @@ export const Profile: React.FC = () => {
     );
   };
 
+  if (selectedDetailedWorkout) {
+    return (
+      <WorkoutDetailView
+        workout={selectedDetailedWorkout}
+        onBack={() => setSelectedDetailedWorkout(null)}
+        onEditWorkout={updateWorkoutLog}
+        onDeleteWorkout={(id) => {
+          const rawId = id.replace('user-w-', '');
+          deleteWorkoutLog(rawId);
+          setSelectedDetailedWorkout(null);
+        }}
+      />
+    );
+  }
+
   return (
     <div className="animate-fade-in-up" style={{ paddingBottom: '70px', maxWidth: '640px', margin: '0 auto' }}>
       
@@ -760,7 +833,12 @@ export const Profile: React.FC = () => {
               const totalSetsCount = log.exercises.reduce((acc, ex) => acc + ex.sets.filter(s => s.completed).length, 0);
 
               return (
-                <div key={log.id} className="hevy-workout-history-card">
+                <div 
+                  key={log.id} 
+                  className="hevy-workout-history-card"
+                  onClick={() => openWorkoutDetail(log)}
+                  style={{ cursor: 'pointer' }}
+                >
                   {/* Card Header: Routine Title + Menu */}
                   <div className="flex-between" style={{ marginBottom: '8px' }}>
                     <div>
@@ -775,7 +853,10 @@ export const Profile: React.FC = () => {
                     <div style={{ position: 'relative' }}>
                       <button 
                         className="icon-btn"
-                        onClick={() => setActiveMenuWorkoutId(activeMenuWorkoutId === log.id ? null : log.id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveMenuWorkoutId(activeMenuWorkoutId === log.id ? null : log.id);
+                        }}
                         style={{ width: '32px', height: '32px' }}
                       >
                         <MoreHorizontal size={18} />
@@ -798,9 +879,9 @@ export const Profile: React.FC = () => {
                           }}
                         >
                           <button
-                            onClick={() => {
-                              setSelectedWorkout(log);
-                              setActiveModal('workout_detail');
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openWorkoutDetail(log);
                               setActiveMenuWorkoutId(null);
                             }}
                             style={{
@@ -822,7 +903,8 @@ export const Profile: React.FC = () => {
                           </button>
                           
                           <button
-                            onClick={() => {
+                            onClick={(e) => {
+                              e.stopPropagation();
                               if (window.confirm("Eliminare definitivamente questo allenamento dalla cronologia?")) {
                                 deleteWorkoutLog(log.id);
                               }
@@ -1312,85 +1394,7 @@ export const Profile: React.FC = () => {
         </div>
       )}
 
-      {/* 6. WORKOUT DETAIL MODAL */}
-      {activeModal === 'workout_detail' && selectedWorkout && (
-        <div className="drawer-backdrop" onClick={() => setActiveModal(null)}>
-          <div className="drawer-content animate-fade-in-up" onClick={e => e.stopPropagation()} style={{ maxHeight: '88vh', display: 'flex', flexDirection: 'column' }}>
-            <div className="drawer-header">
-              <div>
-                <h3 className="section-title" style={{ margin: 0 }}>
-                  {selectedWorkout.name || 'Allenamento'}
-                </h3>
-                <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
-                  {new Date(selectedWorkout.date).toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-                </span>
-              </div>
-              <button className="drawer-close" onClick={() => setActiveModal(null)}><X size={20} /></button>
-            </div>
-
-            <div style={{ display: 'flex', gap: '16px', margin: '14px 0', padding: '12px', background: '#111116', borderRadius: '12px' }}>
-              <div>
-                <span style={{ fontSize: '0.66rem', color: 'var(--text-muted)' }}>DURATA</span>
-                <p style={{ fontSize: '1rem', fontWeight: 800, color: '#ffffff', margin: 0 }}>
-                  {Math.round(selectedWorkout.duration / 60)} min
-                </p>
-              </div>
-              <div>
-                <span style={{ fontSize: '0.66rem', color: 'var(--text-muted)' }}>VOLUME</span>
-                <p style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--color-primary)', margin: 0 }}>
-                  {selectedWorkout.volume.toLocaleString('it-IT')} kg
-                </p>
-              </div>
-              <div>
-                <span style={{ fontSize: '0.66rem', color: 'var(--text-muted)' }}>ESERCIZI</span>
-                <p style={{ fontSize: '1rem', fontWeight: 800, color: '#ffffff', margin: 0 }}>
-                  {selectedWorkout.exercises.length}
-                </p>
-              </div>
-            </div>
-
-            {/* Exercise sets details */}
-            <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '14px', paddingRight: '4px' }}>
-              {selectedWorkout.exercises.map((ex, idx) => {
-                const exDetail = mockExercises.find(m => m.id === ex.exerciseId);
-                const exName = exDetail ? exDetail.name : 'Esercizio';
-                const exMuscleGroup: MuscleGroup = exDetail ? exDetail.muscleGroup : 'Pettorali';
-                return (
-                  <div key={idx} style={{ background: '#111116', padding: '12px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.06)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
-                      <div className="hevy-exercise-icon-avatar">
-                        {renderMuscleIcon(exMuscleGroup, 32)}
-                      </div>
-                      <span style={{ fontSize: '0.92rem', fontWeight: 800, color: '#ffffff' }}>
-                        {exName}
-                      </span>
-                    </div>
-
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    {ex.sets.map((s, sIdx) => (
-                      <div key={sIdx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', color: '#a1a1aa', padding: '4px 0', borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
-                        <span>Serie {sIdx + 1}</span>
-                        {s.distance ? (
-                          <span style={{ color: '#ffffff', fontWeight: 700 }}>{s.distance} km • {Math.round((s.time || 0) / 60)} min</span>
-                        ) : (
-                          <span style={{ color: '#ffffff', fontWeight: 700 }}>{s.weight || 0} kg × {s.reps || 0} rip</span>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-            <button className="btn-primary" onClick={() => setActiveModal(null)} style={{ width: '100%', marginTop: '14px' }}>
-              Chiudi
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* 7. PRIVACY POLICY MODAL */}
+      {/* 6. PRIVACY POLICY MODAL */}
       {activeModal === 'privacy' && (
         <div className="drawer-backdrop" onClick={() => setActiveModal(null)}>
           <div className="drawer-content animate-fade-in-up" onClick={e => e.stopPropagation()} style={{ maxHeight: '85vh', paddingBottom: '24px' }}>
