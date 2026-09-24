@@ -182,40 +182,28 @@ export const WorkoutDetailView: React.FC<WorkoutDetailViewProps> = ({
     setShowMenu(false);
   };
 
-  // Generate Heart Rate SVG Path
+  // Generate Heart Rate SVG Path from real recorded samples
   const renderHeartRateChart = () => {
-    const avgBpm = workout.avgHeartRate || 117;
-    const duration = workout.durationMinutes || 48;
-    
-    // 25 synthetic realistic points creating the wave profile seen in screenshot
-    const pointsCount = 28;
+    if (!workout.heartRateData || workout.heartRateData.length === 0) return null;
+
+    const samples = workout.heartRateData;
+    const duration = workout.durationMinutes || Math.max(1, Math.round(samples[samples.length - 1].time / 60));
     const svgW = 340;
     const svgH = 80;
-    const minBpm = 75;
-    const maxBpm = 154;
 
-    const dataPoints: { x: number; y: number }[] = [];
-    for (let i = 0; i < pointsCount; i++) {
-      const tNorm = i / (pointsCount - 1);
-      const x = tNorm * svgW;
-      
-      // Cardiovascular wave simulation matching Hevy screenshot
-      const wave1 = Math.sin(tNorm * Math.PI * 3.5);
-      const wave2 = Math.sin(tNorm * Math.PI * 7.0) * 0.4;
-      const spike = (i === 6 || i === 8 || i === 15 || i === 22) ? 0.35 : 0;
-      
-      let bpmVal = avgBpm + (wave1 * 18) + (wave2 * 10) + (spike * 22);
-      if (i < 3) bpmVal = 82 + i * 8; // warmup
-      if (i > pointsCount - 4) bpmVal = avgBpm - 12 - (i - (pointsCount - 4)) * 6; // cooldown
+    const bpms = samples.map(s => s.bpm);
+    const minBpm = Math.max(40, Math.min(...bpms) - 5);
+    const maxBpm = Math.max(...bpms) + 5;
+    const bpmRange = Math.max(10, maxBpm - minBpm);
 
-      bpmVal = Math.max(minBpm + 2, Math.min(maxBpm - 4, bpmVal));
-      
-      // Invert Y because SVG coordinates start from top
-      const yNorm = (bpmVal - minBpm) / (maxBpm - minBpm);
-      const y = svgH - yNorm * (svgH - 12) - 6;
+    const maxTime = Math.max(1, samples[samples.length - 1].time || duration * 60);
 
-      dataPoints.push({ x, y });
-    }
+    const dataPoints = samples.map(s => {
+      const x = (s.time / maxTime) * svgW;
+      const yNorm = (s.bpm - minBpm) / bpmRange;
+      const y = svgH - yNorm * (svgH - 14) - 7;
+      return { x, y };
+    });
 
     const pathD = dataPoints.reduce((acc, p, idx) => {
       return idx === 0 ? `M ${p.x} ${p.y}` : `${acc} L ${p.x} ${p.y}`;
@@ -464,40 +452,54 @@ export const WorkoutDetailView: React.FC<WorkoutDetailViewProps> = ({
           </div>
         </div>
 
-        {/* Row 2: Record (optional), Bpm medi, Calorie */}
-        <div style={{ display: 'grid', gridTemplateColumns: workout.recordsCount ? 'repeat(3, 1fr)' : 'repeat(2, 1fr)', gap: '10px' }}>
-          {workout.recordsCount ? (
-            <div>
-              <span style={{ fontSize: '0.72rem', color: '#8e8e93', display: 'block', marginBottom: '2px' }}>
-                Record
-              </span>
-              <span style={{ fontSize: '1.1rem', fontWeight: 800, color: '#ffffff', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <Trophy size={16} color="var(--color-primary, #d4af37)" />
-                {workout.recordsCount}
-              </span>
-            </div>
-          ) : null}
+        {/* Row 2: Record (optional), Bpm medi (only if measured by device), Calorie (only if present) */}
+        {(workout.recordsCount || (workout.avgHeartRate && workout.avgHeartRate > 0) || (workout.calories && workout.calories > 0)) ? (
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: `repeat(${
+              (workout.recordsCount ? 1 : 0) +
+              ((workout.avgHeartRate && workout.avgHeartRate > 0) ? 1 : 0) +
+              ((workout.calories && workout.calories > 0) ? 1 : 0)
+            }, 1fr)`,
+            gap: '10px'
+          }}>
+            {workout.recordsCount ? (
+              <div>
+                <span style={{ fontSize: '0.72rem', color: '#8e8e93', display: 'block', marginBottom: '2px' }}>
+                  Record
+                </span>
+                <span style={{ fontSize: '1.1rem', fontWeight: 800, color: '#ffffff', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <Trophy size={16} color="var(--color-primary, #d4af37)" />
+                  {workout.recordsCount}
+                </span>
+              </div>
+            ) : null}
 
-          <div>
-            <span style={{ fontSize: '0.72rem', color: '#8e8e93', display: 'block', marginBottom: '2px' }}>
-              Bpm medi
-            </span>
-            <span style={{ fontSize: '1.1rem', fontWeight: 800, color: '#ffffff', display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <Heart size={15} color="#ef4444" fill="#ef4444" />
-              {workout.avgHeartRate || 117}
-            </span>
-          </div>
+            {workout.avgHeartRate && workout.avgHeartRate > 0 ? (
+              <div>
+                <span style={{ fontSize: '0.72rem', color: '#8e8e93', display: 'block', marginBottom: '2px' }}>
+                  Bpm medi
+                </span>
+                <span style={{ fontSize: '1.1rem', fontWeight: 800, color: '#ffffff', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <Heart size={15} color="#ef4444" fill="#ef4444" />
+                  {workout.avgHeartRate}
+                </span>
+              </div>
+            ) : null}
 
-          <div>
-            <span style={{ fontSize: '0.72rem', color: '#8e8e93', display: 'block', marginBottom: '2px' }}>
-              Calorie
-            </span>
-            <span style={{ fontSize: '1.1rem', fontWeight: 800, color: '#ffffff', display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <Flame size={15} color="#f59e0b" fill="#f59e0b" />
-              {workout.calories || 388}
-            </span>
+            {workout.calories && workout.calories > 0 ? (
+              <div>
+                <span style={{ fontSize: '0.72rem', color: '#8e8e93', display: 'block', marginBottom: '2px' }}>
+                  Calorie
+                </span>
+                <span style={{ fontSize: '1.1rem', fontWeight: 800, color: '#ffffff', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <Flame size={15} color="#f59e0b" fill="#f59e0b" />
+                  {workout.calories}
+                </span>
+              </div>
+            ) : null}
           </div>
-        </div>
+        ) : null}
       </div>
 
       {/* 5. SOCIAL ACTIONS ROW (Like, Comment, Share) */}
@@ -601,24 +603,28 @@ export const WorkoutDetailView: React.FC<WorkoutDetailViewProps> = ({
         </div>
       </div>
 
-      {/* 7. AVG. HEART RATE (BPM) WITH SVG CHART */}
-      <div style={{ marginBottom: '28px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#8e8e93' }}>
-              Avg. Heart Rate (bpm)
+      {/* 7. AVG. HEART RATE (BPM) WITH SVG CHART - Only shown if measured by smartwatch/cardio device! */}
+      {(workout.avgHeartRate && workout.avgHeartRate > 0 && workout.heartRateData && workout.heartRateData.length > 0) ? (
+        <div style={{ marginBottom: '28px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#8e8e93' }}>
+                Avg. Heart Rate (bpm)
+              </span>
+              <ChevronRight size={15} color="#8e8e93" />
+            </div>
+            <span style={{ fontSize: '0.78rem', color: '#71717a' }}>
+              {Math.max(...workout.heartRateData.map(d => d.bpm))} max
             </span>
-            <ChevronRight size={15} color="#8e8e93" />
           </div>
-          <span style={{ fontSize: '0.78rem', color: '#71717a' }}>154</span>
+
+          <span style={{ fontSize: '1.25rem', fontWeight: 800, color: '#ffffff', display: 'block' }}>
+            {workout.avgHeartRate}
+          </span>
+
+          {renderHeartRateChart()}
         </div>
-
-        <span style={{ fontSize: '1.25rem', fontWeight: 800, color: '#ffffff', display: 'block' }}>
-          {workout.avgHeartRate || 117}
-        </span>
-
-        {renderHeartRateChart()}
-      </div>
+      ) : null}
 
       {/* 8. ALLENAMENTO SECTION */}
       <div style={{ marginBottom: '24px' }}>
@@ -646,11 +652,13 @@ export const WorkoutDetailView: React.FC<WorkoutDetailViewProps> = ({
           )}
         </div>
 
-        {/* Wearable device badge */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.76rem', color: '#8e8e93', marginBottom: '16px' }}>
-          <Watch size={14} color="#8e8e93" />
-          <span>Registrato con {workout.deviceSynced || 'WearOS Watch'}</span>
-        </div>
+        {/* Wearable device badge (only if actually synced) */}
+        {workout.deviceSynced ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.76rem', color: '#8e8e93', marginBottom: '16px' }}>
+            <Watch size={14} color="var(--color-primary, #d4af37)" />
+            <span>Registrato con {workout.deviceSynced}</span>
+          </div>
+        ) : null}
 
         {/* Exercises list with all sets */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>
@@ -743,10 +751,10 @@ export const WorkoutDetailView: React.FC<WorkoutDetailViewProps> = ({
                             )}
                           </span>
 
-                          {/* PR Badges (Volume / 1RM) matching Screenshot 3 */}
+                          {/* PR Badges (Volume / 1RM) matching Single-Trophy Rule */}
                           {hasPR && (
                             <div style={{ display: 'flex', gap: '8px', marginTop: '3px' }}>
-                              {(s.isMaxVolume || s.is1RM) && (
+                              {s.isMaxVolume && (
                                 <span style={{
                                   fontSize: '0.68rem',
                                   fontWeight: 800,
@@ -768,6 +776,54 @@ export const WorkoutDetailView: React.FC<WorkoutDetailViewProps> = ({
                                   gap: '3px'
                                 }}>
                                   🏆 1RM
+                                </span>
+                              )}
+                              {(s.isMaxWeight && !s.is1RM) && (
+                                <span style={{
+                                  fontSize: '0.68rem',
+                                  fontWeight: 800,
+                                  color: 'var(--color-primary, #d4af37)',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '3px'
+                                }}>
+                                  🏆 Peso Max
+                                </span>
+                              )}
+                              {s.isMaxReps && (
+                                <span style={{
+                                  fontSize: '0.68rem',
+                                  fontWeight: 800,
+                                  color: 'var(--color-primary, #d4af37)',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '3px'
+                                }}>
+                                  🏆 Max Reps
+                                </span>
+                              )}
+                              {s.isMaxDistance && (
+                                <span style={{
+                                  fontSize: '0.68rem',
+                                  fontWeight: 800,
+                                  color: 'var(--color-primary, #d4af37)',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '3px'
+                                }}>
+                                  🏆 Distanza Max
+                                </span>
+                              )}
+                              {s.isMaxTime && (
+                                <span style={{
+                                  fontSize: '0.68rem',
+                                  fontWeight: 800,
+                                  color: 'var(--color-primary, #d4af37)',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '3px'
+                                }}>
+                                  🏆 Tempo Max
                                 </span>
                               )}
                             </div>

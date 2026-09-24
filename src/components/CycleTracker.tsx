@@ -46,10 +46,13 @@ export const CycleTracker: React.FC = () => {
 
   // Determine cycle status for a specific day in the grid
   const getDayStatus = (day: number) => {
+    if (!cycleData.lastPeriodStart) return 'normal';
+
     // FIX #4: azzera le ore per evitare sfasamenti timezone/ora legale
     const checkDate = new Date(currentYear, currentMonth, day);
     checkDate.setHours(0, 0, 0, 0);
     const startDate = new Date(cycleData.lastPeriodStart);
+    if (isNaN(startDate.getTime())) return 'normal';
     startDate.setHours(0, 0, 0, 0);
     
     // Total days difference — ora timezone-safe
@@ -70,13 +73,28 @@ export const CycleTracker: React.FC = () => {
     return 'normal';
   };
 
-
-
   // Calculate current phase today
   const getTodayCyclePhase = () => {
+    if (!cycleData.lastPeriodStart) {
+      return {
+        name: 'Non configurato',
+        day: '-',
+        advice: 'Nessun dato registrato. Inserisci la data di inizio del tuo ultimo ciclo per visualizzare i consigli personalizzati sulle fasi ormonali e l\'allenamento.',
+        color: 'var(--text-muted)'
+      };
+    }
+
     const todayDate = new Date();
     todayDate.setHours(0,0,0,0);
     const startDate = new Date(cycleData.lastPeriodStart);
+    if (isNaN(startDate.getTime())) {
+      return {
+        name: 'Non configurato',
+        day: '-',
+        advice: 'Data non valida. Aggiorna la data dalle impostazioni del ciclo.',
+        color: 'var(--text-muted)'
+      };
+    }
     startDate.setHours(0,0,0,0);
 
     const diffDays = Math.floor((todayDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
@@ -85,7 +103,7 @@ export const CycleTracker: React.FC = () => {
       return {
         name: 'Fase Follicolare',
         day: 1,
-        advice: 'Nessun dato registrato o data futura selezionata. Sincronizza l\'inizio del ciclo per visualizzare i consigli.',
+        advice: 'Data futura selezionata. Sincronizza l\'inizio del ciclo per visualizzare i consigli corretti.',
         color: 'var(--color-secondary)'
       };
     }
@@ -224,6 +242,22 @@ export const CycleTracker: React.FC = () => {
 
           <button className="btn-primary" onClick={handleSaveSettings} style={{ padding: '10px' }}>
             <Check size={16} /> Salva Configurazione
+          </button>
+        </div>
+      ) : !cycleData.lastPeriodStart ? (
+        /* Empty State Card - No fake data */
+        <div className="glass-card" style={{ border: '1px dashed rgba(236, 72, 153, 0.4)', padding: '24px 18px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+          <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'rgba(236, 72, 153, 0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Heart size={24} color="var(--color-female)" />
+          </div>
+          <div>
+            <h3 style={{ fontSize: '1.08rem', fontWeight: 800, color: '#ffffff', marginBottom: '4px' }}>Configura il tuo ciclo</h3>
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', maxWidth: '320px', margin: '0 auto', lineHeight: 1.4 }}>
+              Inserisci la data di inizio del tuo ultimo ciclo per calcolare con precisione le fasi ormonali, l'ovulazione e ricevere raccomandazioni per l'allenamento.
+            </p>
+          </div>
+          <button className="btn-primary" onClick={() => setEditing(true)} style={{ padding: '8px 20px', fontSize: '0.84rem', marginTop: '4px' }}>
+            Configura Adesso
           </button>
         </div>
       ) : (

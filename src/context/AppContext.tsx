@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useMemo, useCall
 import confetti from 'canvas-confetti';
 import { createClient } from '@supabase/supabase-js';
 import { mockExercises, isDistanceTimeExercise, isTimeOnlyExercise, type Exercise } from '../data/mockExercises';
+import { calculateWorkoutCalories } from '../utils/calorieCalculator';
 
 // Supabase client configuration & initialization (reads from localStorage fallback or Vite .env)
 export const getStoredSupabaseConfig = () => {
@@ -83,6 +84,11 @@ export interface ExerciseLog {
   sets: SetLog[];
 }
 
+export interface HeartRateSample {
+  time: number; // in seconds from start
+  bpm: number;
+}
+
 export interface WorkoutLog {
   id: string;
   name: string;
@@ -90,6 +96,15 @@ export interface WorkoutLog {
   duration: number; // in seconds
   volume: number; // total kg
   exercises: ExerciseLog[];
+  avgHeartRate?: number;
+  heartRateSamples?: HeartRateSample[];
+  caloriesBurned?: number;
+  deviceSource?: string;
+  activityType?: 'strength' | 'running' | 'other';
+  distanceKm?: number;
+  elevationMeters?: number;
+  pace?: string;
+  notes?: string;
 }
 
 export interface Routine {
@@ -178,7 +193,8 @@ interface AppContextType {
   toggleCompleteSet: (exerciseId: string, setIndex: number) => void;
   addExerciseToActiveWorkout: (exerciseId: string, restSeconds?: number) => void;
   addExercisesToActiveWorkout: (exerciseIds: string[]) => void;
-  saveActiveWorkout: (customName?: string) => void;
+  saveActiveWorkout: (customName?: string, metrics?: { avgHeartRate?: number; heartRateSamples?: HeartRateSample[]; caloriesBurned?: number; deviceSource?: string }) => void;
+  addPastWorkoutLog: (pastLog: WorkoutLog) => void;
   cancelActiveWorkout: () => void;
   foodLogs: FoodLogs;
   addFoodLog: (dateStr: string, item: Omit<FoodLogItem, 'id'>) => void;
@@ -264,7 +280,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [cycleData, setCycleData] = useState<CycleData>(() => {
     const saved = localStorage.getItem('df_cycle_data');
     return saved ? JSON.parse(saved) : {
-      lastPeriodStart: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      lastPeriodStart: '',
       cycleLength: 28,
       periodLength: 5
     };
@@ -498,7 +514,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           date: w.date,
           duration: w.duration || 0,
           volume: w.volume || 0,
-          exercises: Array.isArray(w.exercises) ? w.exercises : []
+          exercises: Array.isArray(w.exercises) ? w.exercises : [],
+          avgHeartRate: w.avg_heart_rate ? Number(w.avg_heart_rate) : undefined,
+          heartRateSamples: Array.isArray(w.heart_rate_samples) ? w.heart_rate_samples : undefined,
+          caloriesBurned: w.calories_burned ? Number(w.calories_burned) : undefined,
+          deviceSource: w.device_source || undefined,
+          activityType: w.activity_type || 'strength',
+          distanceKm: w.distance_km ? Number(w.distance_km) : undefined,
+          elevationMeters: w.elevation_meters ? Number(w.elevation_meters) : undefined,
+          pace: w.pace || undefined,
+          notes: w.notes || undefined
         }));
         setWorkoutHistory(parsedWorkouts);
       }
@@ -590,7 +615,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           date: w.date,
           duration: w.duration,
           volume: w.volume,
-          exercises: w.exercises
+          exercises: w.exercises,
+          avg_heart_rate: w.avgHeartRate ?? null,
+          heart_rate_samples: w.heartRateSamples ? JSON.stringify(w.heartRateSamples) : null,
+          calories_burned: w.caloriesBurned ?? null,
+          device_source: w.deviceSource ?? null,
+          activity_type: w.activityType ?? 'strength',
+          distance_km: w.distanceKm ?? null,
+          elevation_meters: w.elevationMeters ?? null,
+          pace: w.pace ?? null,
+          notes: w.notes ?? null
         }));
         await supabaseClient.from('workout_logs').upsert(historyPayload, { onConflict: 'id' });
       }
@@ -893,7 +927,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         date: updatedLog.date,
         duration: updatedLog.duration,
         volume: updatedLog.volume,
-        exercises: updatedLog.exercises
+        exercises: updatedLog.exercises,
+        avg_heart_rate: updatedLog.avgHeartRate ?? null,
+        heart_rate_samples: updatedLog.heartRateSamples ? JSON.stringify(updatedLog.heartRateSamples) : null,
+        calories_burned: updatedLog.caloriesBurned ?? null,
+        device_source: updatedLog.deviceSource ?? null,
+        activity_type: updatedLog.activityType ?? 'strength',
+        distance_km: updatedLog.distanceKm ?? null,
+        elevation_meters: updatedLog.elevationMeters ?? null,
+        pace: updatedLog.pace ?? null,
+        notes: updatedLog.notes ?? null
       }, { onConflict: 'id' }).then(({ error }) => {
         if (error) console.warn('Errore update workout cloud:', error);
       });
@@ -1046,96 +1089,128 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const updatedExercises = activeWorkout.exercises.map(ex => {
       if (ex.exerciseId === exerciseId) {
-        const updatedSets = [...ex.sets];
+        let updatedSets = [...ex.sets];
         const isCompleting = !updatedSets[setIndex].completed;
-        
-        if (isCompleting) {
-          const currentSet = updatedSets[setIndex];
+        updatedSets[setIndex] = {
+          ...updatedSets[setIndex],
+          completed: isCompleting
+        };
 
-          let is1RM = false;
-          let isMaxVolume = false;
-          let isMaxWeight = false;
-          let isMaxReps = false;
-          let isMaxDistance = false;
-          let isMaxTime = false;
+        // Single-Trophy Rule: calculate historical PRs
+        let historicalMax1RM = 0;
+        let historicalMaxVol = 0;
+        let historicalMaxWeight = 0;
+        let historicalMaxReps = 0;
+        let historicalMaxDistance = 0;
+        let historicalMaxTime = 0;
 
-          let historicalMax1RM = 0;
-          let historicalMaxVol = 0;
-          let historicalMaxWeight = 0;
-          let historicalMaxReps = 0;
-          let historicalMaxDistance = 0;
-          let historicalMaxTime = 0;
+        workoutHistory.forEach(log => {
+          const pastEx = log.exercises.find(pe => pe.exerciseId === exerciseId);
+          if (pastEx) {
+            pastEx.sets.forEach(ps => {
+              if (!ps.completed) return;
+              const past1RM = ps.weight > 0 ? (ps.reps === 1 ? ps.weight : ps.weight * (1 + ps.reps / 30)) : 0;
+              const pastVol = (ps.weight || 0) * (ps.reps || 0);
+              if (past1RM > historicalMax1RM) historicalMax1RM = past1RM;
+              if (pastVol > historicalMaxVol) historicalMaxVol = pastVol;
+              if (ps.weight > historicalMaxWeight) historicalMaxWeight = ps.weight;
+              if (ps.reps > historicalMaxReps) historicalMaxReps = ps.reps;
+              if ((ps.distance || 0) > historicalMaxDistance) historicalMaxDistance = ps.distance || 0;
+              if ((ps.time || 0) > historicalMaxTime) historicalMaxTime = ps.time || 0;
+            });
+          }
+        });
 
-          workoutHistory.forEach(log => {
-            const pastEx = log.exercises.find(pe => pe.exerciseId === exerciseId);
-            if (pastEx) {
-              pastEx.sets.forEach(ps => {
-                if (!ps.completed) return;
-                // Strength / Weight 1RM (with 1 rep fix)
-                const past1RM = ps.weight > 0 ? (ps.reps === 1 ? ps.weight : ps.weight * (1 + ps.reps / 30)) : 0;
-                const pastVol = ps.weight * ps.reps;
-                if (past1RM > historicalMax1RM) historicalMax1RM = past1RM;
-                if (pastVol > historicalMaxVol) historicalMaxVol = pastVol;
-                if (ps.weight > historicalMaxWeight) historicalMaxWeight = ps.weight;
-                if (ps.reps > historicalMaxReps) historicalMaxReps = ps.reps;
-                if ((ps.distance || 0) > historicalMaxDistance) historicalMaxDistance = ps.distance || 0;
-                if ((ps.time || 0) > historicalMaxTime) historicalMaxTime = ps.time || 0;
-              });
-            }
-          });
+        // Determine the SINGLE BEST set for each PR metric among completed sets
+        let best1RMIdx = -1;
+        let max1RMVal = historicalMax1RM;
+
+        let bestVolIdx = -1;
+        let maxVolVal = historicalMaxVol;
+
+        let bestWeightIdx = -1;
+        let maxWeightVal = historicalMaxWeight;
+
+        let bestRepsIdx = -1;
+        let maxRepsVal = historicalMaxReps;
+
+        let bestDistIdx = -1;
+        let maxDistVal = historicalMaxDistance;
+
+        let bestTimeIdx = -1;
+        let maxTimeVal = historicalMaxTime;
+
+        updatedSets.forEach((s, idx) => {
+          if (!s.completed) return;
 
           if (isCardio) {
-            // Cardio: check distance and time
-            const curDist = currentSet.distance || 0;
-            const curTime = currentSet.time || 0;
-            isMaxDistance = curDist > 0 && curDist >= historicalMaxDistance;
-            isMaxTime = curTime > 0 && curTime >= historicalMaxTime;
-            if (isMaxDistance || isMaxTime) recordTriggered = true;
+            const curDist = s.distance || 0;
+            const curTime = s.time || 0;
+            if (curDist > 0 && curDist >= maxDistVal) {
+              maxDistVal = curDist;
+              bestDistIdx = idx;
+            }
+            if (curTime > 0 && curTime >= maxTimeVal) {
+              maxTimeVal = curTime;
+              bestTimeIdx = idx;
+            }
           } else if (isIso) {
-            // Isometric: check time
-            const curTime = currentSet.time || 0;
-            isMaxTime = curTime > 0 && curTime >= historicalMaxTime;
-            if (isMaxTime) recordTriggered = true;
-          } else if (isBodyweight && currentSet.weight === 0) {
-            // Bodyweight reps record
-            isMaxReps = currentSet.reps > 0 && currentSet.reps >= historicalMaxReps;
-            if (isMaxReps) recordTriggered = true;
+            const curTime = s.time || 0;
+            if (curTime > 0 && curTime >= maxTimeVal) {
+              maxTimeVal = curTime;
+              bestTimeIdx = idx;
+            }
+          } else if (isBodyweight && s.weight === 0) {
+            if (s.reps > 0 && s.reps >= maxRepsVal) {
+              maxRepsVal = s.reps;
+              bestRepsIdx = idx;
+            }
           } else {
-            // Standard weightlifting (reps === 1 gives exact weight as 1RM)
-            const current1RM = currentSet.reps === 1 
-              ? currentSet.weight 
-              : currentSet.weight * (1 + currentSet.reps / 30);
-            const currentVol = currentSet.weight * currentSet.reps;
+            const current1RM = s.reps === 1 ? s.weight : s.weight * (1 + s.reps / 30);
+            const currentVol = (s.weight || 0) * (s.reps || 0);
 
-            is1RM = current1RM > 0 && current1RM >= historicalMax1RM;
-            isMaxVolume = currentVol > 0 && currentVol >= historicalMaxVol;
-            isMaxWeight = currentSet.weight > 0 && currentSet.weight >= historicalMaxWeight;
-
-            if (is1RM || isMaxVolume || isMaxWeight) recordTriggered = true;
+            if (current1RM > 0 && current1RM >= max1RMVal) {
+              max1RMVal = current1RM;
+              best1RMIdx = idx;
+            }
+            if (currentVol > 0 && currentVol >= maxVolVal) {
+              maxVolVal = currentVol;
+              bestVolIdx = idx;
+            }
+            if ((s.weight || 0) > 0 && (s.weight || 0) >= maxWeightVal) {
+              maxWeightVal = s.weight;
+              bestWeightIdx = idx;
+            }
           }
+        });
 
-          updatedSets[setIndex] = {
-            ...currentSet,
-            completed: true,
-            is1RM,
-            isMaxVolume,
-            isMaxWeight,
-            isMaxReps,
-            isMaxDistance,
-            isMaxTime
-          };
-        } else {
-          updatedSets[setIndex] = {
-            ...updatedSets[setIndex],
-            completed: false,
-            is1RM: false,
-            isMaxVolume: false,
-            isMaxWeight: false,
-            isMaxReps: false,
-            isMaxDistance: false,
-            isMaxTime: false
-          };
+        if (isCompleting && (best1RMIdx === setIndex || bestVolIdx === setIndex || bestWeightIdx === setIndex || bestRepsIdx === setIndex || bestDistIdx === setIndex || bestTimeIdx === setIndex)) {
+          recordTriggered = true;
         }
+
+        updatedSets = updatedSets.map((s, idx) => {
+          if (!s.completed) {
+            return {
+              ...s,
+              is1RM: false,
+              isMaxVolume: false,
+              isMaxWeight: false,
+              isMaxReps: false,
+              isMaxDistance: false,
+              isMaxTime: false
+            };
+          }
+          return {
+            ...s,
+            is1RM: idx === best1RMIdx && best1RMIdx !== -1,
+            isMaxVolume: idx === bestVolIdx && bestVolIdx !== -1,
+            isMaxWeight: idx === bestWeightIdx && bestWeightIdx !== -1,
+            isMaxReps: idx === bestRepsIdx && bestRepsIdx !== -1,
+            isMaxDistance: idx === bestDistIdx && bestDistIdx !== -1,
+            isMaxTime: idx === bestTimeIdx && bestTimeIdx !== -1
+          };
+        });
+
         return { ...ex, sets: updatedSets };
       }
       return ex;
@@ -1226,12 +1301,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const saveActiveWorkout = (customName?: string) => {
+  const saveActiveWorkout = (
+    customName?: string,
+    metrics?: { avgHeartRate?: number; heartRateSamples?: HeartRateSample[]; caloriesBurned?: number; deviceSource?: string }
+  ) => {
     if (!activeWorkout || !activeWorkout.startTime) return;
 
     const duration = Math.round((Date.now() - activeWorkout.startTime) / 1000);
     let totalVolume = 0;
     let recordsCount = 0;
+    let totalCompletedSets = 0;
     const exercisesToSave = activeWorkout.exercises
       .map(ex => ({ ...ex, sets: ex.sets.filter(s => s.completed) }))
       .filter(ex => ex.sets.length > 0);
@@ -1243,8 +1322,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       ex.sets.forEach(s => {
         if (s.completed) {
+          totalCompletedSets++;
           if (!isCardio && !isIso) {
-            totalVolume += s.weight * s.reps;
+            totalVolume += (s.weight || 0) * (s.reps || 0);
           }
           if (s.is1RM || s.isMaxVolume || s.isMaxWeight || s.isMaxReps || s.isMaxDistance || s.isMaxTime) {
             recordsCount++;
@@ -1253,13 +1333,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       });
     });
 
+    // Calculate calories scientifically
+    const calculatedCalories = metrics?.caloriesBurned ?? calculateWorkoutCalories(
+      { weightKg: profile.weight, gender: profile.gender },
+      {
+        durationSeconds: duration,
+        avgHeartRate: metrics?.avgHeartRate,
+        totalVolumeKg: totalVolume,
+        completedSetsCount: totalCompletedSets,
+        activityType: 'strength'
+      }
+    );
+
     const newLog: WorkoutLog = {
       id: `log-${Date.now()}`,
       name: customName || activeWorkout.name,
       date: new Date().toISOString(),
       duration,
       volume: totalVolume,
-      exercises: exercisesToSave
+      exercises: exercisesToSave,
+      avgHeartRate: metrics?.avgHeartRate && metrics.avgHeartRate > 0 ? Math.round(metrics.avgHeartRate) : undefined,
+      heartRateSamples: metrics?.heartRateSamples && metrics.heartRateSamples.length > 0 ? metrics.heartRateSamples : undefined,
+      caloriesBurned: calculatedCalories,
+      deviceSource: metrics?.deviceSource,
+      activityType: 'strength'
     };
 
     setWorkoutHistory(prev => [newLog, ...prev]);
@@ -1272,7 +1369,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         date: newLog.date,
         duration: newLog.duration,
         volume: newLog.volume,
-        exercises: newLog.exercises
+        exercises: newLog.exercises,
+        avg_heart_rate: newLog.avgHeartRate ?? null,
+        heart_rate_samples: newLog.heartRateSamples ? JSON.stringify(newLog.heartRateSamples) : null,
+        calories_burned: newLog.caloriesBurned ?? null,
+        device_source: newLog.deviceSource ?? null,
+        activity_type: newLog.activityType ?? 'strength'
       }, { onConflict: 'id' }).then(({ error }) => {
         if (error) console.warn('Errore salvataggio workout cloud:', error);
       });
@@ -1293,6 +1395,38 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     updateProfile({ lastLoggedDate: todayStr });
 
     setActiveWorkout(null);
+    triggerConfetti();
+  };
+
+  const addPastWorkoutLog = (pastLog: WorkoutLog) => {
+    setWorkoutHistory(prev => {
+      const merged = [pastLog, ...prev];
+      return merged.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    });
+
+    if (user && supabaseClient) {
+      supabaseClient.from('workout_logs').upsert({
+        id: pastLog.id,
+        user_id: user.id,
+        name: pastLog.name,
+        date: pastLog.date,
+        duration: pastLog.duration,
+        volume: pastLog.volume,
+        exercises: pastLog.exercises,
+        avg_heart_rate: pastLog.avgHeartRate ?? null,
+        heart_rate_samples: pastLog.heartRateSamples ? JSON.stringify(pastLog.heartRateSamples) : null,
+        calories_burned: pastLog.caloriesBurned ?? null,
+        device_source: pastLog.deviceSource ?? null,
+        activity_type: pastLog.activityType ?? 'strength',
+        distance_km: pastLog.distanceKm ?? null,
+        elevation_meters: pastLog.elevationMeters ?? null,
+        pace: pastLog.pace ?? null,
+        notes: pastLog.notes ?? null
+      }, { onConflict: 'id' }).then(({ error }) => {
+        if (error) console.warn('Errore salvataggio past workout cloud:', error);
+      });
+    }
+
     triggerConfetti();
   };
 
@@ -1421,6 +1555,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       addExerciseToActiveWorkout,
       addExercisesToActiveWorkout,
       saveActiveWorkout,
+      addPastWorkoutLog,
       cancelActiveWorkout,
       foodLogs,
       addFoodLog,

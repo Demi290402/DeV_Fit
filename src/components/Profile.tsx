@@ -11,6 +11,7 @@ import { mockExercises, renderMuscleIcon, type MuscleGroup } from '../data/mockE
 import { CycleTracker } from './CycleTracker';
 import { DeviceSyncHub } from './DeviceSyncHub';
 import { WorkoutDetailView, type DetailedWorkout, type DetailedWorkoutExercise } from './WorkoutDetailView';
+import { MuscleHeatmap } from './MuscleHeatmap';
 
 const compressImage = (file: File, maxWidth: number, maxHeight: number): Promise<string> => {
   return new Promise((resolve, reject) => {
@@ -95,7 +96,7 @@ export const Profile: React.FC = () => {
 
   // Active Modals state
   const [activeModal, setActiveModal] = useState<
-    'settings' | 'stats' | 'exercises' | 'measurements' | 'calendar' | 'privacy' | null
+    'settings' | 'stats' | 'exercises' | 'measurements' | 'calendar' | 'privacy' | 'recovery' | null
   >(null);
   
   // Selected Workout for full detailed view
@@ -147,9 +148,10 @@ export const Profile: React.FC = () => {
       volume: totalVolume,
       totalSets,
       recordsCount,
-      avgHeartRate: 117,
-      calories: Math.round((log.duration / 60) * 7.8),
-      deviceSynced: 'WearOS Watch',
+      avgHeartRate: log.avgHeartRate && log.avgHeartRate > 0 ? log.avgHeartRate : undefined,
+      heartRateData: log.heartRateSamples && log.heartRateSamples.length > 0 ? log.heartRateSamples : undefined,
+      calories: log.caloriesBurned,
+      deviceSynced: log.deviceSource,
       exercises: exercisesDetailed,
       likes: [],
       comments: [],
@@ -798,6 +800,16 @@ export const Profile: React.FC = () => {
           <CalendarIcon size={20} color="var(--color-primary)" />
           <span>Calendario</span>
         </div>
+
+        {/* Recupero & Manichino Muscolare */}
+        <div 
+          className="hevy-control-card"
+          onClick={() => setActiveModal('recovery')}
+          style={{ gridColumn: 'span 2' }}
+        >
+          <Activity size={20} color="var(--color-primary)" />
+          <span>Recupero & Manichino Muscolare</span>
+        </div>
       </div>
 
       {/* 7. ALLENAMENTI SECTION (Past Workouts List) matching Screenshot 2 */}
@@ -1419,6 +1431,26 @@ export const Profile: React.FC = () => {
 
             <button className="btn-primary" onClick={() => setActiveModal(null)} style={{ width: '100%', marginTop: '16px' }}>
               Ho Capito
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 7. RECUPERO MUSCOLARE & HEATMAP MODAL */}
+      {activeModal === 'recovery' && (
+        <div className="drawer-backdrop" onClick={() => setActiveModal(null)}>
+          <div className="drawer-content animate-fade-in-up" onClick={e => e.stopPropagation()} style={{ maxHeight: '90vh', overflowY: 'auto' }}>
+            <div className="drawer-header" style={{ marginBottom: '16px' }}>
+              <h3 className="section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Activity size={20} color="var(--color-primary)" /> Manichino & Recupero Muscolare
+              </h3>
+              <button className="drawer-close" onClick={() => setActiveModal(null)}><X size={20} /></button>
+            </div>
+
+            <MuscleHeatmap />
+
+            <button className="btn-primary" onClick={() => setActiveModal(null)} style={{ width: '100%', marginTop: '20px' }}>
+              Chiudi
             </button>
           </div>
         </div>

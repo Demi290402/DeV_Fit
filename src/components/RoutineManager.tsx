@@ -15,6 +15,7 @@ import { ExerciseDetailModal } from './ExerciseDetailModal';
 import { EditWorkoutLogModal } from './EditWorkoutLogModal';
 import { RoutineDetailView } from './RoutineDetailView';
 import { RoutineBottomSheetModal } from './RoutineBottomSheetModal';
+import { LogPastWorkoutModal } from './LogPastWorkoutModal';
 
 interface SelectedRoutineExercise {
   exerciseId: string;
@@ -58,6 +59,7 @@ export const RoutineManager: React.FC = () => {
   // Modals for exercise details & workout editing
   const [selectedDetailExerciseId, setSelectedDetailExerciseId] = useState<string | null>(null);
   const [editingWorkoutLog, setEditingWorkoutLog] = useState<WorkoutLog | null>(null);
+  const [isLogPastModalOpen, setIsLogPastModalOpen] = useState(false);
 
   const allExercises = [...customExercises, ...mockExercises];
 
@@ -609,16 +611,28 @@ export const RoutineManager: React.FC = () => {
         </div>
       )}
 
-      {/* Quick Start Empty Workout Card */}
-      <button
-        type="button"
-        className="hevy-quick-action"
-        onClick={() => startWorkout()}
-        style={{ height: '48px', margin: '4px 0 10px 0' }}
-      >
-        <Plus size={18} color="var(--color-primary)" />
-        <span style={{ fontSize: '0.92rem', fontWeight: 600 }}>Inizia un allenamento vuoto</span>
-      </button>
+      {/* Quick Start Empty Workout & Log Past Workout */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', margin: '4px 0 10px 0' }}>
+        <button
+          type="button"
+          className="hevy-quick-action"
+          onClick={() => startWorkout()}
+          style={{ height: '48px', margin: 0, justifyContent: 'center' }}
+        >
+          <Plus size={18} color="var(--color-primary)" />
+          <span style={{ fontSize: '0.86rem', fontWeight: 700 }}>Nuovo Vuoto</span>
+        </button>
+
+        <button
+          type="button"
+          className="hevy-quick-action"
+          onClick={() => setIsLogPastModalOpen(true)}
+          style={{ height: '48px', margin: 0, justifyContent: 'center' }}
+        >
+          <Calendar size={18} color="var(--color-primary)" />
+          <span style={{ fontSize: '0.86rem', fontWeight: 700 }}>Registra Passato</span>
+        </button>
+      </div>
 
       {/* "Routine" Section Header & Quick Action Buttons */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -1066,6 +1080,12 @@ export const RoutineManager: React.FC = () => {
         onDuplicate={handleDuplicateRoutine}
         onEdit={handleEditRoutine}
         onDelete={handleDeleteRoutine}
+      />
+
+      {/* Log Past Workout Modal */}
+      <LogPastWorkoutModal
+        isOpen={isLogPastModalOpen}
+        onClose={() => setIsLogPastModalOpen(false)}
       />
     </div>
   );

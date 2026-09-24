@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Plus, Check, Clock, X, ChevronDown, Disc, Dumbbell, MoreVertical, Info, ArrowLeftRight, Trash2 } from 'lucide-react';
+import { Plus, Check, Clock, X, ChevronDown, Disc, Dumbbell, MoreVertical, Info, ArrowLeftRight, Trash2, Heart, Bluetooth, Watch } from 'lucide-react';
 
 import { useApp } from '../context/AppContext';
 import type { SetLog } from '../context/AppContext';
@@ -48,6 +48,81 @@ export const ActiveWorkout: React.FC = () => {
   const [plateModalInitialWeight, setPlateModalInitialWeight] = useState(60);
   const [plateModalInitialReps, setPlateModalInitialReps] = useState(8);
   const [activeTargetSet, setActiveTargetSet] = useState<{ exId: string; setIdx: number } | null>(null);
+
+  // Web Bluetooth Live Heart Rate State
+  const [bleDeviceName, setBleDeviceName] = useState<string | null>(null);
+  const [liveBpm, setLiveBpm] = useState<number | null>(null);
+  const [isConnectingBle, setIsConnectingBle] = useState(false);
+  const [hrSamples, setHrSamples] = useState<{ time: number; bpm: number }[]>([]);
+  const bleDeviceRef = useRef<any>(null);
+
+  const handleConnectBleHeartRate = async () => {
+    if (!('bluetooth' in navigator)) {
+      alert('Web Bluetooth non supportato su questo browser (usa Google Chrome o Microsoft Edge).');
+      return;
+    }
+    try {
+      setIsConnectingBle(true);
+      const device = await (navigator as any).bluetooth.requestDevice({
+        filters: [{ services: ['heart_rate'] }]
+      });
+      if (!device || !device.gatt) {
+        setIsConnectingBle(false);
+        return;
+      }
+      bleDeviceRef.current = device;
+      const server = await device.gatt.connect();
+      const service = await server.getPrimaryService('heart_rate');
+      const characteristic = await service.getCharacteristic('heart_rate_measurement');
+      await characteristic.startNotifications();
+      characteristic.addEventListener('characteristicvaluechanged', (event: any) => {
+        const value = event.target.value;
+        const flags = value.getUint8(0);
+        let hr = 0;
+        if (flags & 0x01) {
+          hr = value.getUint16(1, true);
+        } else {
+          hr = value.getUint8(1);
+        }
+        if (hr > 30 && hr < 240) {
+          setLiveBpm(hr);
+          const currentSecond = Math.round((Date.now() - (activeWorkout?.startTime || Date.now())) / 1000);
+          setHrSamples(prev => [...prev, { time: currentSecond, bpm: hr }]);
+        }
+      });
+      const name = device.name || 'Cardiofrequenzimetro';
+      setBleDeviceName(name);
+      setIsConnectingBle(false);
+    } catch (err: any) {
+      console.warn('Bluetooth HR error:', err);
+      setIsConnectingBle(false);
+    }
+  };
+
+  const handleDisconnectBle = () => {
+    try {
+      if (bleDeviceRef.current?.gatt?.connected) {
+        bleDeviceRef.current.gatt.disconnect();
+      }
+    } catch {}
+    bleDeviceRef.current = null;
+    setBleDeviceName(null);
+    setLiveBpm(null);
+  };
+
+  const handleFinishWorkout = () => {
+    let avgHr: number | undefined = undefined;
+    if (hrSamples.length > 0) {
+      const sum = hrSamples.reduce((acc, s) => acc + s.bpm, 0);
+      avgHr = Math.round(sum / hrSamples.length);
+    }
+    saveActiveWorkout(undefined, {
+      avgHeartRate: avgHr,
+      heartRateSamples: hrSamples.length > 0 ? hrSamples : undefined,
+      deviceSource: bleDeviceName || undefined
+    });
+    handleDisconnectBle();
+  };
 
   // Web Audio synthetic beeper
   const playAudioTone = (freq: number, duration: number, type: OscillatorType = 'sine') => {
@@ -404,7 +479,7 @@ export const ActiveWorkout: React.FC = () => {
 
           <button
             type="button"
-            onClick={() => saveActiveWorkout()}
+            onClick={handleFinishWorkout}
             style={{
               background: 'var(--color-primary, #d4af37)',
               color: '#000000',
@@ -423,17 +498,70 @@ export const ActiveWorkout: React.FC = () => {
         </div>
       </div>
 
-      {/* 2. SUBHEADER: WearOS Status Row */}
+      {/* 2. SUBHEADER: Smart Device & Heart Rate Status Row (No fake data!) */}
       <div style={{
         display: 'flex',
         alignItems: 'center',
-        gap: '8px',
+        justifyContent: 'space-between',
         padding: '6px 4px 12px 4px',
         borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
         marginBottom: '14px'
       }}>
-        <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#22c55e', boxShadow: '0 0 8px #22c55e' }} />
-        <span style={{ fontSize: '0.78rem', color: '#94a3b8', fontWeight: 500 }}>WearOS Watch connesso</span>
+        {bleDeviceName ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#22c55e', boxShadow: '0 0 8px #22c55e' }} />
+            <span style={{ fontSize: '0.78rem', color: '#ffffff', fontWeight: 600 }}>{bleDeviceName}</span>
+            {liveBpm && (
+              <span style={{ fontSize: '0.78rem', color: '#ef4444', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <Heart size={13} fill="#ef4444" /> {liveBpm} bpm
+              </span>
+            )}
+          </div>
+        ) : (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.76rem', color: '#8e8e93' }}>
+            <Watch size={14} color="#8e8e93" />
+            <span>Nessun orologio cardio connesso</span>
+          </div>
+        )}
+
+        {bleDeviceName ? (
+          <button
+            type="button"
+            onClick={handleDisconnectBle}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#8e8e93',
+              fontSize: '0.74rem',
+              cursor: 'pointer',
+              padding: '2px 6px'
+            }}
+          >
+            Disconnetti
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={handleConnectBleHeartRate}
+            disabled={isConnectingBle}
+            style={{
+              background: 'rgba(212, 175, 55, 0.1)',
+              border: '1px solid rgba(212, 175, 55, 0.3)',
+              borderRadius: '6px',
+              color: 'var(--color-primary, #d4af37)',
+              fontSize: '0.74rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              padding: '4px 9px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '5px'
+            }}
+          >
+            <Bluetooth size={13} />
+            <span>{isConnectingBle ? 'Ricerca...' : 'Connetti Smartwatch / HR'}</span>
+          </button>
+        )}
       </div>
 
       {/* 3. WORKOUT STATS BAR (Durata in Gold | Volume | Serie | Duo-Mannequins) */}
